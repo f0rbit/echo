@@ -44,6 +44,18 @@ The recorder script uses `@dw/resources.ts` once. Bun's runtime resolves it via 
 
 `.github/workflows/pages.yml` does `cp "$d/index.html" "_site/$name/index.html"` then `cp -r "$d/dist/." "_site/$name/dist/"`. The user's spec says ship a self-contained `dist/` (with index.html inside) referencing `./main.js`. Those two are inconsistent: deployed `_site/<name>/index.html` references `./main.js` but `main.js` lives at `_site/<name>/dist/main.js`. The build script copies `index.html` into `dist/` (per spec), AND a copy stays at the subsystem root for the workflow to pick up. **Either** the workflow should copy `dist/.` flat (matching spec), **or** the root `index.html` should reference `./dist/main.js`. The fix belongs in echo's pages.yml (out of scope for this run — flagged for the verifier).
 
-## 10. `presets.movement2d` axis-only — no edge actions
+## 10. LOS-aware FOV is hand-rolled
+
+Dungeon-walk's FOV started as a Chebyshev radius (`chebyshev(p, c) <= r`), which "sees through" walls — a cell behind a blocker lit up just because it was within range. Replaced with an 8-octant recursive shadowcast (~60 LOC, `src/fov-calc.ts`). Algorithm is well-known and the same shape will appear in every game with vision: bestiary's enemy AI sight cones, boss-arena reveal triggers, stealth detection. **Forge wants:** `forge.fov.shadowcast({ from, radius, is_blocking })` returning `Set<cellKey>`. Game-side it just feeds the output to a `sprite_c.visible` toggle. Promote when bestiary surfaces the same need.
+
+## 11. Bresenham line iteration
+
+Not used here yet (shadowcast skipped it), but a sibling utility — raycasting for hit-line predictions, line-of-fire checks, line drawing for path previews — is the obvious second use case once enemies need ranged-attack telegraphs. **Forge wants:** `forge.line(a, b)` as a generator yielding cells. ~20 LOC. Candidate, not yet a duplication.
+
+## 12. Movement-with-collision pattern
+
+Every tile game writes the same loop: read direction, compute candidate target cell(s), check passability, maybe move. Bestiary's enemy stepping will be identical with a different `is_blocked` predicate. The current dungeon-walk version (`src/systems/movement.ts`) is also doing axis-by-axis sliding (try X then Y from the resulting cell) to forbid corner-cutting through diagonal walls — a subtle correctness detail every tile-stepper needs. **Forge wants:** `forge.move_tile(world, entity, dir, { blocked_by: (cell) => bool })` baking in the slide semantics. ~15 LOC. Candidate, see if bestiary surfaces same need.
+
+## 13. `presets.movement2d` axis-only — no edge actions
 
 The preset gives `move.x` / `move.y` axes but no `just_pressed` digital actions for tile-step "press once → step once" semantics. The spec said "hold-to-step is fine" so we treated the axis as a continuous direction, but a true tile-stepper wants edge-triggered movement (one press = one cell). Workaround: read the axis sign, gate movement on the periodic timer. Works, but loses the snappy "tap = single step" feel. **Forge wants:** `presets.tile_movement` that exposes `move.left`/`move.right`/`move.up`/`move.down` as digital edges, and pairs nicely with `add_periodic`.
