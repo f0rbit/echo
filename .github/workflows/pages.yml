@@ -56,20 +56,20 @@ jobs:
             name=$(basename "$d")
             if [ -d "$d/dist" ]; then
               echo "Staging subsystem $name"
-              mkdir -p "_site/$name/dist"
+              mkdir -p "_site/$name"
               if [ -f "$d/index.html" ]; then
                 cp "$d/index.html" "_site/$name/index.html"
               fi
-              cp -r "$d/dist/." "_site/$name/dist/"
+              cp -r "$d/dist/." "_site/$name/"
             fi
           done
           if [ -d main/dist ]; then
             echo "Staging main"
-            mkdir -p _site/main/dist
+            mkdir -p _site/main
             if [ -f main/index.html ]; then
               cp main/index.html _site/main/index.html
             fi
-            cp -r main/dist/. _site/main/dist/
+            cp -r main/dist/. _site/main/
           fi
 
       - name: Configure Pages
