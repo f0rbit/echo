@@ -1,5 +1,5 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
-import { score_r } from "./resources.ts";
+import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
@@ -8,10 +8,9 @@ import { sprite_attach_system } from "./systems/sprite-attach.ts";
 
 const win_overlay_system: System = (_w, ctx) => {
 	const score = ctx.res.get(score_r);
-	if (!score.ok) return;
-	if (score.value.reached_exit) {
-		ctx.debug.text({ x: 160, y: 90 }, "You won!");
-	}
+	const overlay = ctx.res.get(win_overlay_r);
+	if (!score.ok || !overlay.ok) return;
+	overlay.value.show(score.value.reached_exit);
 };
 
 export const game_plugin = (_w: World, sch: Schedule): void => {

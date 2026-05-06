@@ -12,6 +12,9 @@ const passable = (floors: ReadonlySet<number>, x: number, y: number): boolean =>
 export const movement_system: System = (w, ctx) => {
 	if (ctx.time.tick % step_every !== 0) return;
 
+	const score = ctx.res.get(score_r);
+	if (score.ok && score.value.reached_exit) return;
+
 	const dungeon = ctx.res.get(dungeon_r);
 	if (!dungeon.ok) return;
 	const { floors, exit } = dungeon.value;

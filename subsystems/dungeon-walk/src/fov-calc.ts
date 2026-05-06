@@ -1,63 +1,38 @@
-import { in_bounds, key } from "./grid.ts";
+import { chebyshev, in_bounds, key } from "./grid.ts";
 
 export const fov_radius = 6;
 
-type Octant = { xx: number; xy: number; yx: number; yy: number };
+const is_floor = (floors: ReadonlySet<number>, x: number, y: number): boolean =>
+	in_bounds(x, y) && floors.has(key(x, y));
 
-const octants: readonly Octant[] = [
-	{ xx: 1, xy: 0, yx: 0, yy: 1 },
-	{ xx: 0, xy: 1, yx: 1, yy: 0 },
-	{ xx: 0, xy: -1, yx: 1, yy: 0 },
-	{ xx: -1, xy: 0, yx: 0, yy: 1 },
-	{ xx: -1, xy: 0, yx: 0, yy: -1 },
-	{ xx: 0, xy: -1, yx: -1, yy: 0 },
-	{ xx: 0, xy: 1, yx: -1, yy: 0 },
-	{ xx: 1, xy: 0, yx: 0, yy: -1 },
-];
-
-const blocking = (floors: ReadonlySet<number>, x: number, y: number): boolean =>
-	!in_bounds(x, y) || !floors.has(key(x, y));
-
-const cast = (
-	out: Set<number>,
+const line_clear = (
 	floors: ReadonlySet<number>,
-	px: number,
-	py: number,
-	row: number,
-	start: number,
-	end: number,
-	radius: number,
-	o: Octant,
-): void => {
-	if (start < end) return;
-	let new_start = start;
-	let blocked = false;
-	for (let distance = row; distance <= radius && !blocked; distance++) {
-		const dy = -distance;
-		for (let dx = -distance; dx <= 0; dx++) {
-			const cx = px + dx * o.xx + dy * o.xy;
-			const cy = py + dx * o.yx + dy * o.yy;
-			const l_slope = (dx - 0.5) / (dy + 0.5);
-			const r_slope = (dx + 0.5) / (dy - 0.5);
-			if (start < r_slope) continue;
-			if (end > l_slope) break;
-			if (dx * dx + dy * dy <= radius * radius && in_bounds(cx, cy)) {
-				if (floors.has(key(cx, cy))) out.add(key(cx, cy));
-			}
-			if (blocked) {
-				if (blocking(floors, cx, cy)) {
-					new_start = r_slope;
-					continue;
-				}
-				blocked = false;
-				start = new_start;
-			} else if (blocking(floors, cx, cy) && distance < radius) {
-				blocked = true;
-				cast(out, floors, px, py, distance + 1, start, l_slope, radius, o);
-				new_start = r_slope;
-			}
+	x0: number,
+	y0: number,
+	x1: number,
+	y1: number,
+): boolean => {
+	let x = x0;
+	let y = y0;
+	const dx = Math.abs(x1 - x0);
+	const dy = Math.abs(y1 - y0);
+	const sx = x0 < x1 ? 1 : -1;
+	const sy = y0 < y1 ? 1 : -1;
+	let err = dx - dy;
+	while (x !== x1 || y !== y1) {
+		const e2 = 2 * err;
+		if (e2 > -dy) {
+			err -= dy;
+			x += sx;
 		}
+		if (e2 < dx) {
+			err += dx;
+			y += sy;
+		}
+		if (x === x1 && y === y1) break;
+		if (!is_floor(floors, x, y)) return false;
 	}
+	return true;
 };
 
 export const visible_keys = (
@@ -66,7 +41,18 @@ export const visible_keys = (
 	floors: ReadonlySet<number>,
 ): ReadonlySet<number> => {
 	const out = new Set<number>();
-	if (in_bounds(px, py)) out.add(key(px, py));
-	for (const o of octants) cast(out, floors, px, py, 1, 1.0, 0.0, fov_radius, o);
+	if (!in_bounds(px, py)) return out;
+	out.add(key(px, py));
+	for (let dy = -fov_radius; dy <= fov_radius; dy++) {
+		for (let dx = -fov_radius; dx <= fov_radius; dx++) {
+			if (dx === 0 && dy === 0) continue;
+			const tx = px + dx;
+			const ty = py + dy;
+			if (!in_bounds(tx, ty)) continue;
+			if (chebyshev(px, py, tx, ty) > fov_radius) continue;
+			if (!is_floor(floors, tx, ty)) continue;
+			if (line_clear(floors, px, py, tx, ty)) out.add(key(tx, ty));
+		}
+	}
 	return out;
 };
