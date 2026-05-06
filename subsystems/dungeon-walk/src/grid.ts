@@ -1,6 +1,6 @@
-export const cols = 40;
-export const rows = 22;
-export const tile = 8;
+export const cols = 20;
+export const rows = 11;
+export const tile = 16;
 
 export const key = (x: number, y: number): number => y * cols + x;
 

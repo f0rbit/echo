@@ -5,7 +5,7 @@ import { presets } from "@f0rbit/forge/presets";
 import { game_plugin } from "../src/plugin.ts";
 import { dungeon_r, score_r } from "../src/resources.ts";
 import { step_every } from "../src/systems/movement.ts";
-import { key, neighbors } from "../src/grid.ts";
+import { cols, key, neighbors } from "../src/grid.ts";
 
 const seed = 42;
 const fixed_dt = 1 / 60;
@@ -24,8 +24,8 @@ const bfs = (
 	while (queue.length > 0) {
 		const cur = queue.shift()!;
 		if (cur === goal_k) break;
-		const cx = cur % 40;
-		const cy = Math.floor(cur / 40);
+		const cx = cur % cols;
+		const cy = Math.floor(cur / cols);
 		for (const n of neighbors(cx, cy)) {
 			const nk = key(n.x, n.y);
 			if (seen.has(nk)) continue;
@@ -41,7 +41,7 @@ const bfs = (
 	const path: Cell[] = [];
 	let cur = goal_k;
 	while (cur !== start_k) {
-		path.push({ x: cur % 40, y: Math.floor(cur / 40) });
+		path.push({ x: cur % cols, y: Math.floor(cur / cols) });
 		const prev = came_from.get(cur);
 		if (prev === undefined) break;
 		cur = prev;

@@ -6,9 +6,9 @@ import { cell_to_world, cols, in_bounds, key, rows } from "../grid.ts";
 
 type Room = { x: number; y: number; w: number; h: number };
 
-const room_min = 4;
-const room_max = 8;
-const room_count = 8;
+const room_min = 3;
+const room_max = 5;
+const room_count = 6;
 
 const random_room = (r: Rng): Room => {
 	const w = r.int(room_min, room_max);

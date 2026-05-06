@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { fov_radius, visible_keys } from "../src/fov-calc.ts";
-import { key } from "../src/grid.ts";
+import { cols, key, rows } from "../src/grid.ts";
 
 type Cell = { x: number; y: number };
 
@@ -82,17 +82,19 @@ describe("fov visibility symmetry", () => {
 	});
 
 	test("cells outside fov_radius are never visible (chebyshev bound)", () => {
-		const floors = rect_floors(0, 0, 30, 30);
-		const seen = visible_keys(15, 15, floors);
-		for (let y = 0; y < 30; y++) {
-			for (let x = 0; x < 30; x++) {
-				const cheb = Math.max(Math.abs(x - 15), Math.abs(y - 15));
+		const cx = Math.floor(cols / 2);
+		const cy = Math.floor(rows / 2);
+		const floors = rect_floors(0, 0, cols - 1, rows - 1);
+		const seen = visible_keys(cx, cy, floors);
+		for (let y = 0; y < rows; y++) {
+			for (let x = 0; x < cols; x++) {
+				const cheb = Math.max(Math.abs(x - cx), Math.abs(y - cy));
 				if (cheb > fov_radius && seen.has(key(x, y))) {
 					throw new Error(`cell (${x},${y}) outside radius is visible`);
 				}
 			}
 		}
-		expect(seen.has(key(15, 15))).toBe(true);
+		expect(seen.has(key(cx, cy))).toBe(true);
 	});
 
 	test("the player's own cell is always visible", () => {

@@ -26,9 +26,9 @@ const main = async (): Promise<void> => {
 		mount: "#root",
 		window: { width: globalThis.innerWidth, height: globalThis.innerHeight },
 		camera: {
-			design: { width: 320, height: 180 },
+			design: { width: 320, height: 176 },
 			mode: "extend",
-			min: { width: 320, height: 180 },
+			min: { width: 320, height: 176 },
 		},
 		bindings: presets.movement2d,
 	});
