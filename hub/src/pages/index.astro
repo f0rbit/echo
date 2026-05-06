@@ -1,0 +1,67 @@
+---
+import { Anvil } from "lucide-astro";
+import DemoCard from "../components/DemoCard.astro";
+import "../styles/global.css";
+
+const subsystems = [
+	{ slug: "dungeon-walk", title: "dungeon-walk", description: "Procedurally generated floors with shadow-cast FOV. Walk the dungeon, find the staircase, descend." },
+	{ slug: "bestiary", title: "bestiary", description: "Five enemy archetypes — chaser, patroller, ranged, summoner, idle. Survive 60 seconds." },
+	{ slug: "arena", title: "arena", description: "Tactile combat with hitstop, camera shake, particles, sprite flash. Three waves of chasers." },
+	{ slug: "loot", title: "loot", description: "Pickups, inventory grid, equipment slots, composed stat modifiers, snapshot round-trip." },
+	{ slug: "progress", title: "progress", description: "XP and levels, perks, save/load via engine_store. Palette commands for dev." },
+	{ slug: "boss", title: "boss", description: "Three-phase scripted boss fight. Telegraphed slams, projectile spirals, summoned adds." },
+	{ slug: "hub", title: "hub", description: "Persistent home base. NPCs, dialogue trees, a graveyard of past runs." },
+];
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>echo — an infinite dungeon crawler, built on @f0rbit/forge</title>
+		<meta name="description" content="An infinite dungeon crawler built on @f0rbit/forge. Seven small playable subsystems composing into the full game." />
+		<link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL.endsWith("/") ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + "/"}favicon.svg`} />
+	</head>
+	<body>
+		<main class="page">
+			<section class="hero">
+				<div class="hero-mark">
+					<Anvil aria-hidden="true" />
+				</div>
+				<h1>echo</h1>
+				<p>An infinite dungeon crawler, built on <code>@f0rbit/forge</code>.</p>
+			</section>
+
+			<section class="section">
+				<h2>Subsystems</h2>
+				<div class="grid">
+					{subsystems.map((s) => (
+						<DemoCard
+							title={s.title}
+							description={s.description}
+							slug={s.slug}
+							status="planned"
+						/>
+					))}
+				</div>
+			</section>
+
+			<section class="section">
+				<h2>The game</h2>
+				<div class="grid">
+					<DemoCard
+						title="main"
+						description="The composed game. Hub between runs, descend procedural floors, fight, level up, beat the boss every fifth, ascend or die. Coming after subsystems."
+						slug="main"
+						status="planned"
+					/>
+				</div>
+			</section>
+
+			<footer>
+				<a href="https://www.npmjs.com/package/@f0rbit/forge">@f0rbit/forge</a>
+				<a href="https://github.com/f0rbit/echo">GitHub</a>
+			</footer>
+		</main>
+	</body>
+</html>

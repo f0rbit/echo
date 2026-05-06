@@ -1,0 +1,92 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build hub
+        run: bun run hub:build
+
+      - name: Build subsystems
+        run: |
+          for d in subsystems/*/; do
+            if [ -f "$d/package.json" ]; then
+              echo "Building $d"
+              (cd "$d" && bun run build)
+            fi
+          done
+
+      - name: Build main
+        run: |
+          if [ -f main/package.json ]; then
+            echo "Building main"
+            (cd main && bun run build)
+          fi
+
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp -r hub/dist/. _site/
+          for d in subsystems/*/; do
+            name=$(basename "$d")
+            if [ -d "$d/dist" ]; then
+              echo "Staging subsystem $name"
+              mkdir -p "_site/$name/dist"
+              if [ -f "$d/index.html" ]; then
+                cp "$d/index.html" "_site/$name/index.html"
+              fi
+              cp -r "$d/dist/." "_site/$name/dist/"
+            fi
+          done
+          if [ -d main/dist ]; then
+            echo "Staging main"
+            mkdir -p _site/main/dist
+            if [ -f main/index.html ]; then
+              cp main/index.html _site/main/index.html
+            fi
+            cp -r main/dist/. _site/main/dist/
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
