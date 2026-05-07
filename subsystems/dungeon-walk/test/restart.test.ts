@@ -4,8 +4,10 @@ import { game_bindings } from "../src/bindings.ts";
 import { game_plugin } from "../src/plugin.ts";
 import { dungeon_r, run_seed_r, score_r } from "../src/resources.ts";
 import { floor_c, player_c } from "../src/components.ts";
-import { cell_to_world, key, world_to_cell } from "../src/grid.ts";
+import { g } from "../src/grid.ts";
 import { step_every } from "../src/systems/movement.ts";
+
+const { cell_to_world, world_to_cell, key } = g;
 
 const seed = 42;
 const fixed_dt = 1 / 60;

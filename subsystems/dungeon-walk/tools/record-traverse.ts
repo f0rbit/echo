@@ -2,10 +2,10 @@ import { writeFileSync } from "node:fs";
 import { harness, replay } from "@f0rbit/forge";
 import type { Cell } from "@dw/resources.ts";
 import { game_bindings } from "../src/bindings.ts";
+import { g } from "../src/grid.ts";
 import { game_plugin } from "../src/plugin.ts";
 import { dungeon_r, score_r } from "../src/resources.ts";
 import { step_every } from "../src/systems/movement.ts";
-import { cols, key, neighbors } from "../src/grid.ts";
 
 const seed = 42;
 const fixed_dt = 1 / 60;
@@ -16,18 +16,17 @@ const bfs = (
 	from: Cell,
 	to: Cell,
 ): readonly Cell[] => {
-	const start_k = key(from.x, from.y);
-	const goal_k = key(to.x, to.y);
+	const start_k = g.key(from.x, from.y);
+	const goal_k = g.key(to.x, to.y);
 	const came_from = new Map<number, number>();
 	const queue: number[] = [start_k];
 	const seen = new Set<number>([start_k]);
 	while (queue.length > 0) {
 		const cur = queue.shift()!;
 		if (cur === goal_k) break;
-		const cx = cur % cols;
-		const cy = Math.floor(cur / cols);
-		for (const n of neighbors(cx, cy)) {
-			const nk = key(n.x, n.y);
+		const c = g.unkey(cur);
+		for (const n of g.neighbors4(c.x, c.y)) {
+			const nk = g.key(n.x, n.y);
 			if (seen.has(nk)) continue;
 			if (!floors.has(nk)) continue;
 			seen.add(nk);
@@ -41,7 +40,7 @@ const bfs = (
 	const path: Cell[] = [];
 	let cur = goal_k;
 	while (cur !== start_k) {
-		path.push({ x: cur % cols, y: Math.floor(cur / cols) });
+		path.push(g.unkey(cur));
 		const prev = came_from.get(cur);
 		if (prev === undefined) break;
 		cur = prev;

@@ -1,8 +1,8 @@
-import type { Ctx, System, Rng, Id, World } from "@f0rbit/forge";
+import type { Ctx, System, Rng, World } from "@f0rbit/forge";
 import { pos_c, rng as make_rng } from "@f0rbit/forge";
 import { dir_c, exit_c, floor_c, player_c } from "../components.ts";
-import { cell_index_r, dungeon_r, run_seed_r, score_r, type Cell } from "../resources.ts";
-import { cell_to_world, cols, in_bounds, key, rows } from "../grid.ts";
+import { g } from "../grid.ts";
+import { dungeon_r, run_seed_r, score_r, type Cell } from "../resources.ts";
 
 type Room = { x: number; y: number; w: number; h: number };
 
@@ -13,8 +13,8 @@ const room_count = 6;
 const random_room = (r: Rng): Room => {
 	const w = r.int(room_min, room_max);
 	const h = r.int(room_min, room_max);
-	const x = r.int(1, cols - w - 2);
-	const y = r.int(1, rows - h - 2);
+	const x = r.int(1, g.cols - w - 2);
+	const y = r.int(1, g.rows - h - 2);
 	return { x, y, w, h };
 };
 
@@ -29,32 +29,31 @@ const room_center = (r: Room): Cell => ({
 const carve_room = (floors: Set<number>, r: Room): void => {
 	for (let y = r.y; y < r.y + r.h; y++) {
 		for (let x = r.x; x < r.x + r.w; x++) {
-			if (in_bounds(x, y)) floors.add(key(x, y));
+			if (g.in_bounds(x, y)) floors.add(g.key(x, y));
 		}
-	}
-};
-
-const carve_corridor = (floors: Set<number>, a: Cell, b: Cell, r: Rng): void => {
-	const horizontal_first = r.next() < 0.5;
-	if (horizontal_first) {
-		carve_h(floors, a.x, b.x, a.y);
-		carve_v(floors, a.y, b.y, b.x);
-	} else {
-		carve_v(floors, a.y, b.y, a.x);
-		carve_h(floors, a.x, b.x, b.y);
 	}
 };
 
 const carve_h = (floors: Set<number>, x1: number, x2: number, y: number): void => {
 	const lo = Math.min(x1, x2);
 	const hi = Math.max(x1, x2);
-	for (let x = lo; x <= hi; x++) if (in_bounds(x, y)) floors.add(key(x, y));
+	for (let x = lo; x <= hi; x++) if (g.in_bounds(x, y)) floors.add(g.key(x, y));
 };
 
 const carve_v = (floors: Set<number>, y1: number, y2: number, x: number): void => {
 	const lo = Math.min(y1, y2);
 	const hi = Math.max(y1, y2);
-	for (let y = lo; y <= hi; y++) if (in_bounds(x, y)) floors.add(key(x, y));
+	for (let y = lo; y <= hi; y++) if (g.in_bounds(x, y)) floors.add(g.key(x, y));
+};
+
+const carve_corridor = (floors: Set<number>, a: Cell, b: Cell, r: Rng): void => {
+	if (r.next() < 0.5) {
+		carve_h(floors, a.x, b.x, a.y);
+		carve_v(floors, a.y, b.y, b.x);
+	} else {
+		carve_v(floors, a.y, b.y, a.x);
+		carve_h(floors, a.x, b.x, b.y);
+	}
 };
 
 const generate = (r: Rng): { floors: Set<number>; spawn: Cell; exit: Cell } => {
@@ -80,28 +79,28 @@ const generate = (r: Rng): { floors: Set<number>; spawn: Cell; exit: Cell } => {
 export const build_dungeon = (w: World, ctx: Ctx, rng: Rng): void => {
 	const { floors, spawn, exit } = generate(rng);
 
-	ctx.res.set(dungeon_r, { cols, rows, floors, spawn, exit });
+	ctx.res.set(dungeon_r, { cols: g.cols, rows: g.rows, floors, spawn, exit });
 	ctx.res.set(score_r, { reached_exit: false });
 
-	const floor_at = new Map<number, Id>();
-	for (const k of floors) {
-		const cell = { x: k % cols, y: Math.floor(k / cols) };
-		const world = cell_to_world(cell.x, cell.y);
-		const id = w.spawn([pos_c, { x: world.x, y: world.y }], [floor_c, true]);
-		floor_at.set(k, id);
-	}
+	const floor_keys = [...floors];
+	w.spawn_many(floor_keys.length, i => {
+		const cell = g.unkey(floor_keys[i]!);
+		const wp = g.cell_to_world(cell.x, cell.y);
+		return [
+			[pos_c, { x: wp.x, y: wp.y }],
+			[floor_c, true],
+		];
+	});
 
-	const exit_world = cell_to_world(exit.x, exit.y);
-	const exit_id = w.spawn([pos_c, { x: exit_world.x, y: exit_world.y }], [exit_c, true]);
+	const exit_world = g.cell_to_world(exit.x, exit.y);
+	w.spawn([pos_c, { x: exit_world.x, y: exit_world.y }], [exit_c, true]);
 
-	const spawn_world = cell_to_world(spawn.x, spawn.y);
+	const spawn_world = g.cell_to_world(spawn.x, spawn.y);
 	w.spawn(
 		[pos_c, { x: spawn_world.x, y: spawn_world.y }],
 		[player_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 	);
-
-	ctx.res.set(cell_index_r, { floor_at, exit_id });
 };
 
 export const dungeon_gen_system: System = (w, ctx) => {

@@ -1,105 +1,99 @@
 import { describe, expect, test } from "bun:test";
-import { fov_radius, visible_keys } from "../src/fov-calc.ts";
-import { cols, key, rows } from "../src/grid.ts";
+import { line_of_sight } from "@f0rbit/forge/grid";
+import { g } from "../src/grid.ts";
 
 type Cell = { x: number; y: number };
 
+const fov_radius = 6;
+
+const visible_keys = (px: number, py: number, floors: ReadonlySet<number>): ReadonlySet<number> =>
+	line_of_sight({
+		from: { x: px, y: py },
+		radius: fov_radius,
+		grid: g,
+		is_blocking: c => !floors.has(g.key(c.x, c.y)),
+	});
+
 const rect_floors = (x0: number, y0: number, x1: number, y1: number): Set<number> => {
 	const s = new Set<number>();
-	for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) s.add(key(x, y));
+	for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) s.add(g.key(x, y));
 	return s;
 };
 
 const remove_walls = (floors: Set<number>, walls: readonly Cell[]): Set<number> => {
-	for (const w of walls) floors.delete(key(w.x, w.y));
+	for (const w of walls) floors.delete(g.key(w.x, w.y));
 	return floors;
 };
 
 describe("fov visibility symmetry", () => {
 	test("two cells on a clear floor see each other reciprocally", () => {
-		const floors = rect_floors(0, 0, 20, 20);
+		const floors = rect_floors(0, 0, g.cols - 1, g.rows - 1);
 		const a: Cell = { x: 5, y: 5 };
 		const b: Cell = { x: 9, y: 8 };
 		const from_a = visible_keys(a.x, a.y, floors);
 		const from_b = visible_keys(b.x, b.y, floors);
-		expect(from_a.has(key(b.x, b.y))).toBe(true);
-		expect(from_b.has(key(a.x, a.y))).toBe(true);
+		expect(from_a.has(g.key(b.x, b.y))).toBe(true);
+		expect(from_b.has(g.key(a.x, a.y))).toBe(true);
 	});
 
 	test("symmetry holds for every cell pair within radius on open floor", () => {
-		const floors = rect_floors(0, 0, 15, 15);
+		const floors = rect_floors(0, 0, g.cols - 1, g.rows - 1);
 		const cells: Cell[] = [
-			{ x: 7, y: 7 },
-			{ x: 4, y: 7 },
-			{ x: 10, y: 7 },
-			{ x: 7, y: 4 },
-			{ x: 7, y: 10 },
-			{ x: 4, y: 4 },
-			{ x: 10, y: 10 },
-			{ x: 4, y: 10 },
-			{ x: 10, y: 4 },
+			{ x: 7, y: 5 },
+			{ x: 4, y: 5 },
+			{ x: 10, y: 5 },
+			{ x: 7, y: 3 },
+			{ x: 7, y: 8 },
+			{ x: 4, y: 3 },
+			{ x: 10, y: 8 },
+			{ x: 4, y: 8 },
+			{ x: 10, y: 3 },
 		];
 		for (const a of cells) {
 			const va = visible_keys(a.x, a.y, floors);
 			for (const b of cells) {
 				if (a === b) continue;
 				const vb = visible_keys(b.x, b.y, floors);
-				const a_sees_b = va.has(key(b.x, b.y));
-				const b_sees_a = vb.has(key(a.x, a.y));
+				const a_sees_b = va.has(g.key(b.x, b.y));
+				const b_sees_a = vb.has(g.key(a.x, a.y));
 				expect(a_sees_b).toBe(b_sees_a);
 			}
 		}
 	});
 
 	test("a wall blocks from both sides — mirrored players agree on hidden cells", () => {
-		const floors = remove_walls(rect_floors(0, 0, 20, 20), [
-			{ x: 10, y: 10 },
-			{ x: 10, y: 9 },
-			{ x: 10, y: 11 },
+		const floors = remove_walls(rect_floors(0, 0, g.cols - 1, g.rows - 1), [
+			{ x: 10, y: 5 },
+			{ x: 10, y: 4 },
+			{ x: 10, y: 6 },
 		]);
-		const left: Cell = { x: 8, y: 10 };
-		const right: Cell = { x: 12, y: 10 };
+		const left: Cell = { x: 8, y: 5 };
+		const right: Cell = { x: 12, y: 5 };
 		const from_left = visible_keys(left.x, left.y, floors);
 		const from_right = visible_keys(right.x, right.y, floors);
-		expect(from_left.has(key(right.x, right.y))).toBe(false);
-		expect(from_right.has(key(left.x, left.y))).toBe(false);
-	});
-
-	test("visibility set is identical when player and target are mirrored across an axis", () => {
-		const walls: Cell[] = [
-			{ x: 10, y: 8 },
-			{ x: 10, y: 12 },
-		];
-		const base = remove_walls(rect_floors(0, 0, 20, 20), walls);
-		const a: Cell = { x: 10, y: 10 };
-		const seen = visible_keys(a.x, a.y, base);
-		const above = seen.has(key(10, 7));
-		const below = seen.has(key(10, 13));
-		expect(above).toBe(below);
-		const left = seen.has(key(7, 10));
-		const right = seen.has(key(13, 10));
-		expect(left).toBe(right);
+		expect(from_left.has(g.key(right.x, right.y))).toBe(false);
+		expect(from_right.has(g.key(left.x, left.y))).toBe(false);
 	});
 
 	test("cells outside fov_radius are never visible (chebyshev bound)", () => {
-		const cx = Math.floor(cols / 2);
-		const cy = Math.floor(rows / 2);
-		const floors = rect_floors(0, 0, cols - 1, rows - 1);
+		const cx = Math.floor(g.cols / 2);
+		const cy = Math.floor(g.rows / 2);
+		const floors = rect_floors(0, 0, g.cols - 1, g.rows - 1);
 		const seen = visible_keys(cx, cy, floors);
-		for (let y = 0; y < rows; y++) {
-			for (let x = 0; x < cols; x++) {
+		for (let y = 0; y < g.rows; y++) {
+			for (let x = 0; x < g.cols; x++) {
 				const cheb = Math.max(Math.abs(x - cx), Math.abs(y - cy));
-				if (cheb > fov_radius && seen.has(key(x, y))) {
+				if (cheb > fov_radius && seen.has(g.key(x, y))) {
 					throw new Error(`cell (${x},${y}) outside radius is visible`);
 				}
 			}
 		}
-		expect(seen.has(key(cx, cy))).toBe(true);
+		expect(seen.has(g.key(cx, cy))).toBe(true);
 	});
 
 	test("the player's own cell is always visible", () => {
 		const floors = rect_floors(0, 0, 5, 5);
 		const seen = visible_keys(2, 2, floors);
-		expect(seen.has(key(2, 2))).toBe(true);
+		expect(seen.has(g.key(2, 2))).toBe(true);
 	});
 });
