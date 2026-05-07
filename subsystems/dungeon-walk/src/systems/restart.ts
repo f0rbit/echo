@@ -4,8 +4,6 @@ import { regenerate_dungeon } from "./dungeon-gen.ts";
 
 export const restart_system: System = (w, ctx) => {
 	if (!ctx.input.just("restart")) return;
-	w.despawn_marked(floor_c);
-	w.despawn_marked(exit_c);
-	w.despawn_marked(player_c);
+	for (const m of [floor_c, exit_c, player_c]) w.despawn_marked(m);
 	regenerate_dungeon(w, ctx);
 };

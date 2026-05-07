@@ -1,8 +1,9 @@
 import type { Ctx, System, Rng, World } from "@f0rbit/forge";
 import { pos_c, rng as make_rng } from "@f0rbit/forge";
+import type { Cell } from "@f0rbit/forge/grid";
 import { dir_c, exit_c, floor_c, player_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { dungeon_r, run_seed_r, score_r, type Cell } from "../resources.ts";
+import { dungeon_r, run_seed_r, score_r } from "../resources.ts";
 
 type Room = { x: number; y: number; w: number; h: number };
 
@@ -82,40 +83,22 @@ export const build_dungeon = (w: World, ctx: Ctx, rng: Rng): void => {
 	ctx.res.set(dungeon_r, { cols: g.cols, rows: g.rows, floors, spawn, exit });
 	ctx.res.set(score_r, { reached_exit: false });
 
-	const floor_keys = [...floors];
-	w.spawn_many(floor_keys.length, i => {
-		const cell = g.unkey(floor_keys[i]!);
-		const wp = g.cell_to_world(cell.x, cell.y);
-		return [
-			[pos_c, { x: wp.x, y: wp.y }],
-			[floor_c, true],
-		];
-	});
-
-	const exit_world = g.cell_to_world(exit.x, exit.y);
-	w.spawn([pos_c, { x: exit_world.x, y: exit_world.y }], [exit_c, true]);
-
-	const spawn_world = g.cell_to_world(spawn.x, spawn.y);
-	w.spawn(
-		[pos_c, { x: spawn_world.x, y: spawn_world.y }],
-		[player_c, true],
-		[dir_c, { dx: 0, dy: 0 }],
-	);
+	const at = (c: Cell): { x: number; y: number } => g.cell_to_world(c.x, c.y);
+	w.spawn_many([...floors].map(k => [[pos_c, at(g.unkey(k))], [floor_c, true]]));
+	w.spawn([pos_c, at(exit)], [exit_c, true]);
+	w.spawn([pos_c, at(spawn)], [player_c, true], [dir_c, { dx: 0, dy: 0 }]);
 };
 
 export const dungeon_gen_system: System = (w, ctx) => {
 	if (ctx.res.has(dungeon_r)) return;
-	if (!ctx.res.has(run_seed_r)) {
-		ctx.res.set(run_seed_r, { base: ctx.rng.seed, restart_count: 0 });
-	}
+	if (!ctx.res.has(run_seed_r)) ctx.res.set(run_seed_r, { base: ctx.rng.seed, restart_count: 0 });
 	build_dungeon(w, ctx, ctx.rng);
 };
 
 export const regenerate_dungeon = (w: World, ctx: Ctx): void => {
 	const seed = ctx.res.get(run_seed_r);
 	const base = seed.ok ? seed.value.base : ctx.rng.seed;
-	const next_count = seed.ok ? seed.value.restart_count + 1 : 1;
-	ctx.res.set(run_seed_r, { base, restart_count: next_count });
-	const fresh = make_rng(base + next_count);
-	build_dungeon(w, ctx, fresh);
+	const restart_count = (seed.ok ? seed.value.restart_count : 0) + 1;
+	ctx.res.set(run_seed_r, { base, restart_count });
+	build_dungeon(w, ctx, make_rng(base + restart_count));
 };

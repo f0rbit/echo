@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { harness, replay } from "@f0rbit/forge";
-import type { Cell } from "@dw/resources.ts";
+import type { Cell } from "@f0rbit/forge/grid";
 import { game_bindings } from "../src/bindings.ts";
 import { g } from "../src/grid.ts";
 import { game_plugin } from "../src/plugin.ts";
@@ -53,7 +53,7 @@ const bfs = (
 const sign = (n: number): -1 | 0 | 1 => (n > 0 ? 1 : n < 0 ? -1 : 0);
 
 const h = harness({ seed, fixed_dt, bindings: game_bindings });
-const recorder = replay.record_engine(h.input, h.ctx, { seed });
+const recorder = replay.record(h.input, h.ctx, { seed });
 
 game_plugin(h.world, h.schedule);
 

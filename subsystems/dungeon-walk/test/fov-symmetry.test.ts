@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { line_of_sight } from "@f0rbit/forge/grid";
 import { g } from "../src/grid.ts";
 
 type Cell = { x: number; y: number };
@@ -7,11 +6,10 @@ type Cell = { x: number; y: number };
 const fov_radius = 6;
 
 const visible_keys = (px: number, py: number, floors: ReadonlySet<number>): ReadonlySet<number> =>
-	line_of_sight({
+	g.line_of_sight({
 		from: { x: px, y: py },
 		radius: fov_radius,
-		grid: g,
-		is_blocking: c => !floors.has(g.key(c.x, c.y)),
+		is_blocking: (c: Cell) => !floors.has(g.key(c.x, c.y)),
 	});
 
 const rect_floors = (x0: number, y0: number, x1: number, y1: number): Set<number> => {

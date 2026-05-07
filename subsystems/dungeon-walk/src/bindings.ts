@@ -7,4 +7,4 @@ const restart_only: Bindings = {
 	deadzone: 0.15,
 };
 
-export const game_bindings: Bindings = merge_bindings(presets.movement2d, restart_only);
+export const game_bindings: Bindings = merge_bindings(presets.movement_2d, restart_only);

@@ -1,10 +1,9 @@
 import { resource, type ResKey } from "@f0rbit/forge";
+import type { Cell } from "@f0rbit/forge/grid";
 
 export type Score = { reached_exit: boolean };
 
 export type WinOverlay = { show: (visible: boolean) => void };
-
-export type Cell = { x: number; y: number };
 
 export type Dungeon = {
 	cols: number;

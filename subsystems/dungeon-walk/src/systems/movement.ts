@@ -1,6 +1,5 @@
 import type { System } from "@f0rbit/forge";
-import { pos_c } from "@f0rbit/forge";
-import { move_tile, ticks_per_step } from "@f0rbit/forge/grid";
+import { ticks_per_step } from "@f0rbit/forge/grid";
 import { dir_c, player_c } from "../components.ts";
 import { g } from "../grid.ts";
 import { dungeon_r, score_r } from "../resources.ts";
@@ -16,8 +15,8 @@ export const movement_system: System = (w, ctx) => {
 	const blocked_by = (cell: { x: number; y: number }): boolean =>
 		!floors.has(g.key(cell.x, cell.y));
 
-	for (const [id, d] of w.query_data([dir_c] as const, [player_c] as const).collect()) {
-		const r = move_tile(w, id, pos_c, g, d, { blocked_by });
+	for (const [id, d] of w.query([dir_c, player_c] as const).collect()) {
+		const r = g.move_tile(w, id, d, { blocked_by });
 		if (r.ok && r.value.moved && r.value.to.x === exit.x && r.value.to.y === exit.y) {
 			if (score.ok) score.value.reached_exit = true;
 		}

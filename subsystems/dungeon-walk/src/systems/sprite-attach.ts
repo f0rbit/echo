@@ -1,24 +1,21 @@
-import type { System } from "@f0rbit/forge";
+import type { Component, System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { sprite_c } from "@f0rbit/forge/pixi";
 import { exit_c, floor_c, player_c } from "../components.ts";
 
 const anchor = { x: 0.5, y: 0.5 } as const;
 
+const tiles: readonly [Component<true>, string, boolean][] = [
+	[floor_c, "__default_1__", false],
+	[exit_c, "__default_2__", false],
+	[player_c, "__default_0__", true],
+];
+
 export const sprite_attach_system: System = w => {
-	for (const [id] of w.query_data([pos_c] as const, [floor_c] as const)) {
-		if (!w.has(id, sprite_c)) {
-			w.set(id, sprite_c, { texture: "__default__", frame: "__default_1__", anchor, visible: false });
-		}
-	}
-	for (const [id] of w.query_data([pos_c] as const, [exit_c] as const)) {
-		if (!w.has(id, sprite_c)) {
-			w.set(id, sprite_c, { texture: "__default__", frame: "__default_2__", anchor, visible: false });
-		}
-	}
-	for (const [id] of w.query_data([pos_c] as const, [player_c] as const)) {
-		if (!w.has(id, sprite_c)) {
-			w.set(id, sprite_c, { texture: "__default__", frame: "__default_0__", anchor });
+	for (const [marker, frame, visible] of tiles) {
+		for (const [id] of w.query([pos_c, marker] as const)) {
+			if (w.has(id, sprite_c)) continue;
+			w.set(id, sprite_c, { texture: "__default__", frame, anchor, visible });
 		}
 	}
 };

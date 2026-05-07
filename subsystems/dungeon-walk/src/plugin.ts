@@ -18,7 +18,7 @@ export const game_plugin = (_w: World, sch: Schedule): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
 	sch.add("pre", restart_system, "dw.restart");
 	sch.add("update", input_system, "dw.input");
-	sch.add_periodic("update", movement_system, { every: step_every }, "dw.movement");
+	sch.add("update", movement_system, { every: step_every, name: "dw.movement" });
 	sch.add("post", sprite_attach_system, "dw.sprites");
 	sch.add("post", fov_system, "dw.fov");
 	sch.add("render", win_overlay_system, "dw.win");
