@@ -4,6 +4,7 @@ import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
 import { movement_system } from "./systems/movement.ts";
+import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 
 const win_overlay_system: System = (_w, ctx) => {
@@ -15,6 +16,7 @@ const win_overlay_system: System = (_w, ctx) => {
 
 export const game_plugin = (_w: World, sch: Schedule): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
+	sch.add("pre", restart_system, "dw.restart");
 	sch.add("update", input_system, "dw.input");
 	sch.add("update", movement_system, "dw.movement");
 	sch.add("post", sprite_attach_system, "dw.sprites");

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { harness, pos_c, type Ctx, type World } from "@f0rbit/forge";
-import { presets } from "@f0rbit/forge/presets";
+import { game_bindings } from "../src/bindings.ts";
 import { game_plugin } from "../src/plugin.ts";
 import { dungeon_r, score_r, win_overlay_r } from "../src/resources.ts";
 import { player_c } from "../src/components.ts";
@@ -18,7 +18,7 @@ type Sim = {
 };
 
 const make_sim = (overlay_calls?: boolean[]): Sim => {
-	const h = harness({ seed, fixed_dt, bindings: presets.movement2d });
+	const h = harness({ seed, fixed_dt, bindings: game_bindings });
 	if (overlay_calls) {
 		h.res.set(win_overlay_r, {
 			show: visible => {

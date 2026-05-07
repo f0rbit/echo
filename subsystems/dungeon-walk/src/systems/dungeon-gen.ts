@@ -1,7 +1,7 @@
-import type { System, Rng, Id } from "@f0rbit/forge";
-import { pos_c } from "@f0rbit/forge";
+import type { Ctx, System, Rng, Id, World } from "@f0rbit/forge";
+import { pos_c, rng as make_rng } from "@f0rbit/forge";
 import { dir_c, exit_c, floor_c, player_c } from "../components.ts";
-import { cell_index_r, dungeon_r, score_r, type Cell } from "../resources.ts";
+import { cell_index_r, dungeon_r, run_seed_r, score_r, type Cell } from "../resources.ts";
 import { cell_to_world, cols, in_bounds, key, rows } from "../grid.ts";
 
 type Room = { x: number; y: number; w: number; h: number };
@@ -77,10 +77,8 @@ const generate = (r: Rng): { floors: Set<number>; spawn: Cell; exit: Cell } => {
 	return { floors, spawn: room_center(first), exit: room_center(last) };
 };
 
-export const dungeon_gen_system: System = (w, ctx) => {
-	if (ctx.res.has(dungeon_r)) return;
-
-	const { floors, spawn, exit } = generate(ctx.rng);
+export const build_dungeon = (w: World, ctx: Ctx, rng: Rng): void => {
+	const { floors, spawn, exit } = generate(rng);
 
 	ctx.res.set(dungeon_r, { cols, rows, floors, spawn, exit });
 	ctx.res.set(score_r, { reached_exit: false });
@@ -104,4 +102,21 @@ export const dungeon_gen_system: System = (w, ctx) => {
 	);
 
 	ctx.res.set(cell_index_r, { floor_at, exit_id });
+};
+
+export const dungeon_gen_system: System = (w, ctx) => {
+	if (ctx.res.has(dungeon_r)) return;
+	if (!ctx.res.has(run_seed_r)) {
+		ctx.res.set(run_seed_r, { base: ctx.rng.seed, restart_count: 0 });
+	}
+	build_dungeon(w, ctx, ctx.rng);
+};
+
+export const regenerate_dungeon = (w: World, ctx: Ctx): void => {
+	const seed = ctx.res.get(run_seed_r);
+	const base = seed.ok ? seed.value.base : ctx.rng.seed;
+	const next_count = seed.ok ? seed.value.restart_count + 1 : 1;
+	ctx.res.set(run_seed_r, { base, restart_count: next_count });
+	const fresh = make_rng(base + next_count);
+	build_dungeon(w, ctx, fresh);
 };

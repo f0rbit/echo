@@ -1,6 +1,6 @@
 import { boot } from "@f0rbit/forge/pixi";
-import { presets } from "@f0rbit/forge/presets";
 import { Text } from "pixi.js";
+import { game_bindings } from "./bindings.ts";
 import { game_plugin } from "./plugin.ts";
 import { win_overlay_r } from "./resources.ts";
 
@@ -30,7 +30,7 @@ const main = async (): Promise<void> => {
 			mode: "extend",
 			min: { width: 320, height: 176 },
 		},
-		bindings: presets.movement2d,
+		bindings: game_bindings,
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

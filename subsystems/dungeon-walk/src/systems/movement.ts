@@ -4,7 +4,10 @@ import { dir_c, player_c } from "../components.ts";
 import { dungeon_r, score_r } from "../resources.ts";
 import { cell_to_world, key, world_to_cell } from "../grid.ts";
 
-export const step_every = 6;
+// 10 ticks at fixed_dt=1/60 → 6 steps/second — comfortable roguelike pace.
+// Coupled with grid.tile (16px): one step covers `tile` world-units, so halving
+// the grid resolution doubles perceived speed unless this constant is retuned.
+export const step_every = 10;
 
 const passable = (floors: ReadonlySet<number>, x: number, y: number): boolean =>
 	floors.has(key(x, y));

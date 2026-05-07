@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { harness, replay } from "@f0rbit/forge";
 import type { Cell } from "@dw/resources.ts";
-import { presets } from "@f0rbit/forge/presets";
+import { game_bindings } from "../src/bindings.ts";
 import { game_plugin } from "../src/plugin.ts";
 import { dungeon_r, score_r } from "../src/resources.ts";
 import { step_every } from "../src/systems/movement.ts";
@@ -53,7 +53,7 @@ const bfs = (
 
 const sign = (n: number): -1 | 0 | 1 => (n > 0 ? 1 : n < 0 ? -1 : 0);
 
-const h = harness({ seed, fixed_dt, bindings: presets.movement2d });
+const h = harness({ seed, fixed_dt, bindings: game_bindings });
 const recorder = replay.record_engine(h.input, h.ctx, { seed });
 
 game_plugin(h.world, h.schedule);
