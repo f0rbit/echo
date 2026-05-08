@@ -1,18 +1,14 @@
-import type { Schedule, System, World } from "@f0rbit/forge";
-import { component, pos_c, type Component } from "@f0rbit/forge";
-import { sprite_c } from "@f0rbit/forge/pixi";
-
-const player_c: Component<true> = component<true>("bst.player");
-
-const spawn_player_system: System = w => {
-	for (const _ of w.query([player_c] as const)) return;
-	w.spawn(
-		[pos_c, { x: 240, y: 160 }],
-		[player_c, true],
-		[sprite_c, { texture: "__default__", frame: "__default_0__", anchor: { x: 0.5, y: 0.5 } }],
-	);
-};
+import type { Schedule, World } from "@f0rbit/forge";
+import { arena_gen_system } from "./arena-gen.ts";
+import { fov_system } from "./systems/fov.ts";
+import { input_system } from "./systems/input.ts";
+import { movement_system, step_every } from "./systems/movement.ts";
+import { sprite_attach_system } from "./systems/sprite-attach.ts";
 
 export const game_plugin = (_w: World, sch: Schedule): void => {
-	sch.add("startup", spawn_player_system, "bst.spawn_player");
+	sch.add("startup", arena_gen_system, "bst.gen");
+	sch.add("update", input_system, "bst.input");
+	sch.add("update", movement_system, { every: step_every, name: "bst.movement" });
+	sch.add("post", sprite_attach_system, "bst.sprites");
+	sch.add("post", fov_system, "bst.fov");
 };
