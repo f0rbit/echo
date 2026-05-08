@@ -1,5 +1,9 @@
 # bestiary — friction notes
 
+## Status
+
+Bestiary subsystem complete (v0.3.x against forge 0.3.0). All 4 archetypes + minions. Replay-deterministic. Live at https://f0rbit.github.io/echo/bestiary/.
+
 Pain points hit while building this subsystem on `@f0rbit/forge` 0.3.0. Each entry is a candidate forge abstraction or a project convention worth recording. Order roughly by surface area / promotion strength.
 
 > **Status (P6 first draft)**: live. v0.4.0 promotion candidates: A* (strong), `gfx_overlay` (strong), richer `__default__` atlas (medium). Game-side LOC at end of P6: ~700 source + ~480 tests.
