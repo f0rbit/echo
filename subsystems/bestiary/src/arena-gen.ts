@@ -8,6 +8,7 @@ import {
 	patrol_c,
 	patroller_c,
 	player_c,
+	ranged_c,
 	state_c,
 } from "./components.ts";
 import { fsm } from "./fsm.ts";
@@ -29,6 +30,7 @@ const patroller_waypoints: readonly Cell[] = [
 	{ x: 22, y: 15 },
 	{ x: 8, y: 15 },
 ];
+const ranged_cell: Cell = { x: 20, y: 5 };
 
 const interior_floor_keys = (): Set<number> => {
 	const floors = new Set<number>();
@@ -43,6 +45,7 @@ const place_pillars = (floors: Set<number>, r: Rng): Set<number> => {
 	const reserved = new Set<number>([
 		g.key(spawn_cell.x, spawn_cell.y),
 		g.key(patroller_cell.x, patroller_cell.y),
+		g.key(ranged_cell.x, ranged_cell.y),
 		...chaser_cells.map(c => g.key(c.x, c.y)),
 		...patroller_waypoints.map(c => g.key(c.x, c.y)),
 	]);
@@ -87,6 +90,11 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 			aggro_radius: patroller_aggro,
 			fsm: fsm("patrolling", ctx.time.tick),
 		}],
+	);
+	w.spawn(
+		[pos_c, at(ranged_cell)],
+		[ranged_c, true],
+		[dir_c, { dx: 0, dy: 0 }],
 	);
 };
 

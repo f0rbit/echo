@@ -1,6 +1,8 @@
 import { boot } from "@f0rbit/forge/pixi";
 import { game_bindings } from "./bindings.ts";
+import { g } from "./grid.ts";
 import { game_plugin } from "./plugin.ts";
+import { make_telegraph_render } from "./systems/telegraph-render.ts";
 
 const main = async (): Promise<void> => {
 	const r = await boot({
@@ -19,7 +21,8 @@ const main = async (): Promise<void> => {
 		return;
 	}
 	const app = r.value;
-	game_plugin(app.world, app.schedule);
+	const telegraph_render = make_telegraph_render(app.render.world, g);
+	game_plugin(app.world, app.schedule, { telegraph_render });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 	});

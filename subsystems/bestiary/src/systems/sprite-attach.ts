@@ -1,7 +1,7 @@
 import type { Component, System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { sprite_c } from "@f0rbit/forge/pixi";
-import { chaser_c, floor_c, patroller_c, player_c } from "../components.ts";
+import { chaser_c, floor_c, patroller_c, player_c, ranged_c } from "../components.ts";
 
 const anchor = { x: 0.5, y: 0.5 } as const;
 
@@ -17,6 +17,7 @@ const tiles: readonly Tile[] = [
 	{ marker: player_c, frame: "__default_0__", visible: true },
 	{ marker: chaser_c, frame: "__default_2__", visible: true },
 	{ marker: patroller_c, frame: "__default_2__", visible: true, tint: 0xff8000 },
+	{ marker: ranged_c, frame: "__default_2__", visible: true, tint: 0x00ff00 },
 ];
 
 export const sprite_attach_system: System = w => {
