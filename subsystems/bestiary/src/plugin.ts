@@ -9,9 +9,11 @@ import {
 	telegraph_tick_system,
 } from "./systems/ai/ranged.ts";
 import { summoner_spawn_system } from "./systems/ai/summoner.ts";
+import { debug_toggle_system } from "./systems/debug-toggle.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
+import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 
 const ai_tick = 12;
@@ -19,10 +21,13 @@ const projectile_step_every = 3;
 
 export type GamePluginOpts = {
 	telegraph_render?: System;
+	debug_overlay?: System;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", arena_gen_system, "bst.gen");
+	sch.add("pre", restart_system, "bst.restart");
+	sch.add("pre", debug_toggle_system, "bst.debug_toggle");
 	sch.add("update", input_system, "bst.input");
 	sch.add("update", movement_system, { every: step_every, name: "bst.movement" });
 	sch.add("update", chaser_think_system, { every: ai_tick, phase: 0, name: "bst.ai_chaser_think" });
@@ -35,4 +40,5 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("post", sprite_attach_system, "bst.sprites");
 	sch.add("post", fov_system, "bst.fov");
 	if (opts.telegraph_render) sch.add("post", opts.telegraph_render, "bst.telegraph_render");
+	if (opts.debug_overlay) sch.add("post", opts.debug_overlay, "bst.debug_overlay");
 };

@@ -8,7 +8,8 @@
 		"dev": "bun build src/main.ts --outdir dist --watch --target browser",
 		"build": "bun build src/main.ts --outdir dist --target browser && cp index.html dist/",
 		"test": "bun test",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"record:arena": "bun run tools/record-arena.ts"
 	},
 	"dependencies": {
 		"@f0rbit/corpus": "^0.3.5",

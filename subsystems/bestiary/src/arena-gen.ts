@@ -1,5 +1,5 @@
 import type { Ctx, Rng, System, World } from "@f0rbit/forge";
-import { pos_c } from "@f0rbit/forge";
+import { pos_c, rng as make_rng } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
 import {
 	chaser_c,
@@ -130,4 +130,12 @@ export const arena_gen_system: System = (w, ctx) => {
 	if (ctx.res.has(arena_r)) return;
 	if (!ctx.res.has(run_seed_r)) ctx.res.set(run_seed_r, { base: ctx.rng.seed, restart_count: 0 });
 	build_arena(w, ctx, ctx.rng);
+};
+
+export const regenerate_arena = (w: World, ctx: Ctx): void => {
+	const seed = ctx.res.get(run_seed_r);
+	const base = seed.ok ? seed.value.base : ctx.rng.seed;
+	const restart_count = (seed.ok ? seed.value.restart_count : 0) + 1;
+	ctx.res.set(run_seed_r, { base, restart_count });
+	build_arena(w, ctx, make_rng(base + restart_count));
 };
