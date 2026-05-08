@@ -36,3 +36,4 @@ export const telegraph_c: Component<Telegraph> = component<Telegraph>("bst.teleg
 export const projectile_c: Component<Projectile> = component<Projectile>("bst.projectile");
 export const summoner_state_c: Component<SummonerState> = component<SummonerState>("bst.summoner_state");
 export const minion_link_c: Component<MinionLink> = component<MinionLink>("bst.minion_link");
+export const visual_pos_c: Component<{ x: number; y: number }> = component<{ x: number; y: number }>("bst.visual_pos");

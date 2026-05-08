@@ -15,6 +15,7 @@ import { input_system } from "./systems/input.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
+import { tween_step_system } from "./systems/tween.ts";
 
 const ai_tick = 12;
 const projectile_step_every = 3;
@@ -38,6 +39,7 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", path_step_system, { every: step_every, name: "bst.ai_path_step" });
 	sch.add("update", projectile_step_system, { every: projectile_step_every, name: "bst.ai_projectile_step" });
 	sch.add("post", sprite_attach_system, "bst.sprites");
+	sch.add("post", tween_step_system, "bst.tween");
 	sch.add("post", fov_system, "bst.fov");
 	if (opts.telegraph_render) sch.add("post", opts.telegraph_render, "bst.telegraph_render");
 	if (opts.debug_overlay) sch.add("post", opts.debug_overlay, "bst.debug_overlay");

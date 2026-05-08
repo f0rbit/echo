@@ -1,5 +1,6 @@
 import { boot } from "@f0rbit/forge/pixi";
 import { game_bindings } from "./bindings.ts";
+import { visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { game_plugin } from "./plugin.ts";
 import { make_debug_overlay } from "./systems/debug-overlay.ts";
@@ -16,6 +17,7 @@ const main = async (): Promise<void> => {
 			pixel_perfect: true,
 		},
 		bindings: game_bindings,
+		pos: visual_pos_c,
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

@@ -10,6 +10,7 @@ import {
 	state_c,
 	summoner_c,
 	summoner_state_c,
+	visual_pos_c,
 } from "../../components.ts";
 import { g } from "../../grid.ts";
 import { arena_r } from "../../resources.ts";
@@ -72,6 +73,7 @@ export const summoner_spawn_system: System = (w, ctx) => {
 
 		w.spawn(
 			[pos_c, at],
+			[visual_pos_c, { ...at }],
 			[chaser_c, true],
 			[minion_c, true],
 			[dir_c, { dx: 0, dy: 0 }],

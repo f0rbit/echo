@@ -12,6 +12,7 @@ import {
 	state_c,
 	summoner_c,
 	summoner_state_c,
+	visual_pos_c,
 } from "./components.ts";
 import { fsm } from "./fsm.ts";
 import { g } from "./grid.ts";
@@ -88,18 +89,31 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 	ctx.res.set(arena_r, { cols: g.cols, rows: g.rows, floors, pillars, spawn: spawn_cell });
 
 	const at = (c: Cell): { x: number; y: number } => g.cell_to_world(c.x, c.y);
-	w.spawn_many([...floors].map(k => [[pos_c, at(g.unkey(k))], [floor_c, true]]));
-	w.spawn([pos_c, at(spawn_cell)], [player_c, true], [dir_c, { dx: 0, dy: 0 }]);
+	w.spawn_many([...floors].map(k => {
+		const p = at(g.unkey(k));
+		return [[pos_c, p], [visual_pos_c, { ...p }], [floor_c, true]];
+	}));
+	const spawn_pos = at(spawn_cell);
+	w.spawn(
+		[pos_c, spawn_pos],
+		[visual_pos_c, { ...spawn_pos }],
+		[player_c, true],
+		[dir_c, { dx: 0, dy: 0 }],
+	);
 	for (const c of chaser_cells) {
+		const cp = at(c);
 		w.spawn(
-			[pos_c, at(c)],
+			[pos_c, cp],
+			[visual_pos_c, { ...cp }],
 			[chaser_c, true],
 			[dir_c, { dx: 0, dy: 0 }],
 			[state_c, { kind: "idle", aggro_radius: chaser_aggro }],
 		);
 	}
+	const pat_pos = at(patroller_cell);
 	w.spawn(
-		[pos_c, at(patroller_cell)],
+		[pos_c, pat_pos],
+		[visual_pos_c, { ...pat_pos }],
 		[patroller_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 		[patrol_c, {
@@ -109,13 +123,17 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 			fsm: fsm("patrolling", ctx.time.tick),
 		}],
 	);
+	const rng_pos = at(ranged_cell);
 	w.spawn(
-		[pos_c, at(ranged_cell)],
+		[pos_c, rng_pos],
+		[visual_pos_c, { ...rng_pos }],
 		[ranged_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 	);
+	const sum_pos = at(summoner_cell);
 	w.spawn(
-		[pos_c, at(summoner_cell)],
+		[pos_c, sum_pos],
+		[visual_pos_c, { ...sum_pos }],
 		[summoner_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 		[summoner_state_c, {
