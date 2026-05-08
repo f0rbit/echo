@@ -6,6 +6,7 @@ import { input_system } from "./systems/input.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
+import { tween_step_system } from "./systems/tween.ts";
 
 const win_overlay_system: System = (_w, ctx) => {
 	const score = ctx.res.get(score_r);
@@ -20,6 +21,7 @@ export const game_plugin = (_w: World, sch: Schedule): void => {
 	sch.add("update", input_system, "dw.input");
 	sch.add("update", movement_system, { every: step_every, name: "dw.movement" });
 	sch.add("post", sprite_attach_system, "dw.sprites");
+	sch.add("post", tween_step_system, "dw.tween");
 	sch.add("post", fov_system, "dw.fov");
 	sch.add("render", win_overlay_system, "dw.win");
 };

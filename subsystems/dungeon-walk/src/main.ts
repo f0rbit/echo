@@ -1,6 +1,7 @@
 import { boot } from "@f0rbit/forge/pixi";
 import { Text } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
+import { visual_pos_c } from "./components.ts";
 import { game_plugin } from "./plugin.ts";
 import { win_overlay_r } from "./resources.ts";
 
@@ -31,6 +32,7 @@ const main = async (): Promise<void> => {
 			min: { width: 320, height: 176 },
 		},
 		bindings: game_bindings,
+		pos: visual_pos_c,
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);
