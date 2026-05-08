@@ -10,6 +10,8 @@ import {
 	player_c,
 	ranged_c,
 	state_c,
+	summoner_c,
+	summoner_state_c,
 } from "./components.ts";
 import { fsm } from "./fsm.ts";
 import { g } from "./grid.ts";
@@ -31,6 +33,20 @@ const patroller_waypoints: readonly Cell[] = [
 	{ x: 8, y: 15 },
 ];
 const ranged_cell: Cell = { x: 20, y: 5 };
+const summoner_cell: Cell = { x: 15, y: 4 };
+const summoner_spawn_every = 60;
+const summoner_max_minions = 4;
+
+const adjacent_keys = (c: Cell): readonly number[] => {
+	const keys: number[] = [];
+	for (let dy = -1; dy <= 1; dy++) {
+		for (let dx = -1; dx <= 1; dx++) {
+			if (dx === 0 && dy === 0) continue;
+			keys.push(g.key(c.x + dx, c.y + dy));
+		}
+	}
+	return keys;
+};
 
 const interior_floor_keys = (): Set<number> => {
 	const floors = new Set<number>();
@@ -46,8 +62,10 @@ const place_pillars = (floors: Set<number>, r: Rng): Set<number> => {
 		g.key(spawn_cell.x, spawn_cell.y),
 		g.key(patroller_cell.x, patroller_cell.y),
 		g.key(ranged_cell.x, ranged_cell.y),
+		g.key(summoner_cell.x, summoner_cell.y),
 		...chaser_cells.map(c => g.key(c.x, c.y)),
 		...patroller_waypoints.map(c => g.key(c.x, c.y)),
+		...adjacent_keys(summoner_cell),
 	]);
 	let attempts = 0;
 	while (pillars.size < pillar_count && attempts < 200) {
@@ -95,6 +113,16 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 		[pos_c, at(ranged_cell)],
 		[ranged_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
+	);
+	w.spawn(
+		[pos_c, at(summoner_cell)],
+		[summoner_c, true],
+		[dir_c, { dx: 0, dy: 0 }],
+		[summoner_state_c, {
+			spawn_every: summoner_spawn_every,
+			next_spawn_tick: ctx.time.tick + summoner_spawn_every,
+			max_minions: summoner_max_minions,
+		}],
 	);
 };
 
