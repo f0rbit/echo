@@ -40,7 +40,7 @@ const subsystems = [
 							title={s.title}
 							description={s.description}
 							slug={s.slug}
-							status={s.slug === "dungeon-walk" ? "live" : "planned"}
+							status={s.slug === "dungeon-walk" || s.slug === "bestiary" ? "live" : "planned"}
 						/>
 					))}
 				</div>
