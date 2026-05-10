@@ -5,7 +5,7 @@ import { astar } from "../../astar.ts";
 import { patrol_c, patroller_c, path_c, player_c } from "../../components.ts";
 import { enter } from "../../fsm.ts";
 import { g } from "../../grid.ts";
-import { arena_r, enemy_occupancy_r } from "../../resources.ts";
+import { arena_r, creature_occupancy_r } from "../../resources.ts";
 
 const same_cell = (a: Cell, b: Cell): boolean => a.x === b.x && a.y === b.y;
 
@@ -23,7 +23,7 @@ export const patroller_think_system: System = (w, ctx) => {
 	const arena = ctx.res.get(arena_r);
 	if (!arena.ok) return;
 	const { floors } = arena.value;
-	const occ = ctx.res.get(enemy_occupancy_r);
+	const occ = ctx.res.get(creature_occupancy_r);
 	const occupancy = occ.ok ? occ.value.cells : new Set<number>();
 	const tick = ctx.time.tick;
 	const players = w.query([pos_c, player_c] as const).collect();
@@ -32,6 +32,7 @@ export const patroller_think_system: System = (w, ctx) => {
 	const player_cell = g.world_to_cell(pp.x, pp.y);
 	const is_blocking = (c: Cell): boolean => !floors.has(g.key(c.x, c.y));
 
+	const player_key = g.key(player_cell.x, player_cell.y);
 	for (const [id, p, pat] of w.query([pos_c, patrol_c, patroller_c] as const).collect()) {
 		const my_cell = g.world_to_cell(p.x, p.y);
 		const my_key = g.key(my_cell.x, my_cell.y);
@@ -39,6 +40,7 @@ export const patroller_think_system: System = (w, ctx) => {
 			const k = g.key(c.x, c.y);
 			if (!floors.has(k)) return false;
 			if (k === my_key) return true;
+			if (k === player_key) return true;
 			if (occupancy.has(k)) return false;
 			return true;
 		};

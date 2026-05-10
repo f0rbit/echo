@@ -1,7 +1,7 @@
 import type { System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
-import { dir_c, enemy_c, path_c } from "../../components.ts";
+import { dir_c, enemy_c, path_c, player_c } from "../../components.ts";
 import { g } from "../../grid.ts";
 import { arena_r } from "../../resources.ts";
 
@@ -16,6 +16,10 @@ export const path_step_system: System = (w, ctx) => {
 	for (const [, ep] of w.query([pos_c, enemy_c] as const).collect()) {
 		const ec = g.world_to_cell(ep.x, ep.y);
 		occupancy.add(g.key(ec.x, ec.y));
+	}
+	for (const [, pp] of w.query([pos_c, player_c] as const).collect()) {
+		const pc = g.world_to_cell(pp.x, pp.y);
+		occupancy.add(g.key(pc.x, pc.y));
 	}
 
 	for (const [id, p, pth] of w.query([pos_c, path_c] as const).collect()) {

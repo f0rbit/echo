@@ -4,7 +4,7 @@ import type { Cell } from "@f0rbit/forge/grid";
 import { astar } from "../../astar.ts";
 import { path_c, player_c, projectile_c, ranged_c, telegraph_c } from "../../components.ts";
 import { g } from "../../grid.ts";
-import { arena_r, enemy_occupancy_r } from "../../resources.ts";
+import { arena_r, creature_occupancy_r } from "../../resources.ts";
 
 const close_band = 4;
 const far_band = 8;
@@ -38,7 +38,7 @@ export const ranged_think_system: System = (w, ctx) => {
 	const arena = ctx.res.get(arena_r);
 	if (!arena.ok) return;
 	const { floors } = arena.value;
-	const occ = ctx.res.get(enemy_occupancy_r);
+	const occ = ctx.res.get(creature_occupancy_r);
 	const occupancy = occ.ok ? occ.value.cells : new Set<number>();
 	const players = w.query([pos_c, player_c] as const).collect();
 	if (players.length === 0) return;
@@ -46,13 +46,22 @@ export const ranged_think_system: System = (w, ctx) => {
 	const player_cell = g.world_to_cell(pp.x, pp.y);
 	const is_blocking = (c: Cell): boolean => !floors.has(g.key(c.x, c.y));
 
+	const player_key = g.key(player_cell.x, player_cell.y);
 	for (const [id, p] of w.query([pos_c, ranged_c] as const).collect()) {
 		const my_cell = g.world_to_cell(p.x, p.y);
 		const my_key = g.key(my_cell.x, my_cell.y);
-		const passable = (c: Cell): boolean => {
+		const passable_kite = (c: Cell): boolean => {
 			const k = g.key(c.x, c.y);
 			if (!floors.has(k)) return false;
 			if (k === my_key) return true;
+			if (occupancy.has(k)) return false;
+			return true;
+		};
+		const passable_chase = (c: Cell): boolean => {
+			const k = g.key(c.x, c.y);
+			if (!floors.has(k)) return false;
+			if (k === my_key) return true;
+			if (k === player_key) return true;
 			if (occupancy.has(k)) return false;
 			return true;
 		};
@@ -68,15 +77,15 @@ export const ranged_think_system: System = (w, ctx) => {
 		if (w.has(id, telegraph_c)) continue;
 
 		if (dist < close_band) {
-			const target = farthest_cell_from(my_cell, player_cell, passable);
+			const target = farthest_cell_from(my_cell, player_cell, passable_kite);
 			if (!target) continue;
-			const path = astar(g, my_cell, target, { passable, max_steps: 200 });
+			const path = astar(g, my_cell, target, { passable: passable_kite, max_steps: 200 });
 			if (path && path.length > 0) w.set(id, path_c, { cells: path, index: 0 });
 			continue;
 		}
 
 		if (dist > far_band) {
-			const path = astar(g, my_cell, player_cell, { passable, max_steps: 200 });
+			const path = astar(g, my_cell, player_cell, { passable: passable_chase, max_steps: 200 });
 			if (path && path.length > 0) w.set(id, path_c, { cells: path, index: 0 });
 			continue;
 		}

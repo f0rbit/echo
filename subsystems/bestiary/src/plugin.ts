@@ -11,7 +11,7 @@ import {
 } from "./systems/ai/ranged.ts";
 import { summoner_spawn_system } from "./systems/ai/summoner.ts";
 import { debug_toggle_system } from "./systems/debug-toggle.ts";
-import { enemy_occupancy_system } from "./systems/enemy-occupancy.ts";
+import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
 import { light_follow_system } from "./systems/light.ts";
@@ -33,7 +33,7 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("startup", arena_gen_system, "bst.gen");
 	sch.add("pre", restart_system, "bst.restart");
 	sch.add("pre", debug_toggle_system, "bst.debug_toggle");
-	sch.add("pre", enemy_occupancy_system, "bst.enemy_occupancy");
+	sch.add("pre", creature_occupancy_system, "bst.creature_occupancy");
 	sch.add("update", input_system, "bst.input");
 	sch.add("update", movement_system, { every: step_every, name: "bst.movement" });
 	sch.add("update", chaser_think_system, { every: ai_tick, phase: 0, name: "bst.ai_chaser_think" });

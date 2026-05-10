@@ -55,6 +55,12 @@ const has_overlap = (cells: readonly number[]): boolean => {
 	return false;
 };
 
+const player_cell = (sim: Sim): number => {
+	const pl = sim.w.query([pos_c, player_c] as const).collect();
+	const c = g.world_to_cell(pl[0]![1].x, pl[0]![1].y);
+	return g.key(c.x, c.y);
+};
+
 describe("enemy collision", () => {
 	test("no two enemies share a cell across the default arena run", () => {
 		const sim = make_sim();
@@ -62,6 +68,33 @@ describe("enemy collision", () => {
 			sim.tick();
 			const cells = enemy_cells(sim);
 			expect(has_overlap(cells)).toBe(false);
+		}
+	});
+
+	test("no enemy ever shares the player's cell across the default arena run", () => {
+		const sim = make_sim();
+		for (let i = 0; i < 600; i++) {
+			sim.tick();
+			const pk = player_cell(sim);
+			const cells = enemy_cells(sim);
+			expect(cells.includes(pk)).toBe(false);
+		}
+	});
+
+	test("chasers funneled toward a cornered player never stand on the player", () => {
+		const sim = make_sim();
+		teleport_player(sim, 1, 1);
+		for (let i = 0; i < 200; i++) {
+			sim.tick();
+			const pk = player_cell(sim);
+			const ch_keys = sim.w
+				.query([pos_c, chaser_c] as const)
+				.collect()
+				.map(([, p]) => {
+					const c = g.world_to_cell(p.x, p.y);
+					return g.key(c.x, c.y);
+				});
+			expect(ch_keys.includes(pk)).toBe(false);
 		}
 	});
 
