@@ -1,10 +1,9 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
-import type { Sprite } from "pixi.js";
 import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
-import { light_follow_system } from "./systems/light.ts";
+import { type LightFilter, light_follow_system } from "./systems/light.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
@@ -18,7 +17,7 @@ const win_overlay_system: System = (_w, ctx) => {
 };
 
 export type GamePluginOpts = {
-	light?: Sprite;
+	light?: LightFilter;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {

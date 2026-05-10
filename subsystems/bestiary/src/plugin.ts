@@ -1,5 +1,4 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
-import type { Sprite } from "pixi.js";
 import { arena_gen_system } from "./arena-gen.ts";
 import { chaser_think_system } from "./systems/ai/chaser.ts";
 import { path_step_system } from "./systems/ai/path-step.ts";
@@ -14,7 +13,7 @@ import { debug_toggle_system } from "./systems/debug-toggle.ts";
 import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
-import { light_follow_system } from "./systems/light.ts";
+import { type LightFilter, light_follow_system } from "./systems/light.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
@@ -26,7 +25,7 @@ const projectile_step_every = 3;
 export type GamePluginOpts = {
 	telegraph_render?: System;
 	debug_overlay?: System;
-	light?: Sprite;
+	light?: LightFilter;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {

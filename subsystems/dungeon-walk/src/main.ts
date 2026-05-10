@@ -1,10 +1,10 @@
 import { boot } from "@f0rbit/forge/pixi";
-import { Text } from "pixi.js";
+import { Rectangle, Text } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
 import { visual_pos_c } from "./components.ts";
 import { game_plugin } from "./plugin.ts";
 import { win_overlay_r } from "./resources.ts";
-import { make_light_sprite } from "./systems/light.ts";
+import { make_light_filter } from "./systems/light.ts";
 
 const make_overlay = (width: number, height: number): Text => {
 	const text = new Text({
@@ -23,14 +23,16 @@ const make_overlay = (width: number, height: number): Text => {
 	return text;
 };
 
+const design = { width: 320, height: 176 };
+
 const main = async (): Promise<void> => {
 	const r = await boot({
 		mount: "#root",
 		window: { width: globalThis.innerWidth, height: globalThis.innerHeight },
 		camera: {
-			design: { width: 320, height: 176 },
+			design,
 			mode: "extend",
-			min: { width: 320, height: 176 },
+			min: design,
 		},
 		bindings: game_bindings,
 		pos: visual_pos_c,
@@ -47,12 +49,18 @@ const main = async (): Promise<void> => {
 			overlay.visible = visible;
 		},
 	});
-	const light = make_light_sprite();
+	const light = make_light_filter(design);
 	app.render.world.sortableChildren = true;
-	app.render.world.addChild(light);
+	const apply_filter_area = (): void => {
+		const vp = app.render.viewport();
+		app.render.world.filterArea = new Rectangle(0, 0, vp.view.width, vp.view.height);
+	};
+	apply_filter_area();
+	app.render.world.filters = [light.filter];
 	game_plugin(app.world, app.schedule, { light });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
+		apply_filter_area();
 		overlay.position.set(globalThis.innerWidth / 2, globalThis.innerHeight / 2);
 	});
 	app.start();

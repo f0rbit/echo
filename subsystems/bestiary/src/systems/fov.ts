@@ -43,17 +43,10 @@ export const fov_system: System = (w, ctx) => {
 		is_blocking: cell => !arena.value.floors.has(g.key(cell.x, cell.y)),
 	});
 
-	const max_px = fov_radius * g.tile;
 	for (const marker of lit_markers) {
 		for (const [id, p] of w.query([pos_c, marker] as const).collect()) {
 			const c = g.world_to_cell(p.x, p.y);
 			if (!visible.has(g.key(c.x, c.y))) {
-				sprite.set(w, id, { alpha: 0, visible: false });
-				continue;
-			}
-			const dx = p.x - player_visual.x;
-			const dy = p.y - player_visual.y;
-			if (Math.hypot(dx, dy) > max_px) {
 				sprite.set(w, id, { alpha: 0, visible: false });
 				continue;
 			}
