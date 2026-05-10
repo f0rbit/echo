@@ -5,7 +5,7 @@ import { astar } from "../../astar.ts";
 import { patrol_c, patroller_c, path_c, player_c } from "../../components.ts";
 import { enter } from "../../fsm.ts";
 import { g } from "../../grid.ts";
-import { arena_r } from "../../resources.ts";
+import { arena_r, enemy_occupancy_r } from "../../resources.ts";
 
 const same_cell = (a: Cell, b: Cell): boolean => a.x === b.x && a.y === b.y;
 
@@ -23,16 +23,25 @@ export const patroller_think_system: System = (w, ctx) => {
 	const arena = ctx.res.get(arena_r);
 	if (!arena.ok) return;
 	const { floors } = arena.value;
+	const occ = ctx.res.get(enemy_occupancy_r);
+	const occupancy = occ.ok ? occ.value.cells : new Set<number>();
 	const tick = ctx.time.tick;
 	const players = w.query([pos_c, player_c] as const).collect();
 	if (players.length === 0) return;
 	const pp = players[0]![1];
 	const player_cell = g.world_to_cell(pp.x, pp.y);
 	const is_blocking = (c: Cell): boolean => !floors.has(g.key(c.x, c.y));
-	const passable = (c: Cell): boolean => floors.has(g.key(c.x, c.y));
 
 	for (const [id, p, pat] of w.query([pos_c, patrol_c, patroller_c] as const).collect()) {
 		const my_cell = g.world_to_cell(p.x, p.y);
+		const my_key = g.key(my_cell.x, my_cell.y);
+		const passable = (c: Cell): boolean => {
+			const k = g.key(c.x, c.y);
+			if (!floors.has(k)) return false;
+			if (k === my_key) return true;
+			if (occupancy.has(k)) return false;
+			return true;
+		};
 		const dist = g.chebyshev(my_cell, player_cell);
 		const visible = g.line_of_sight({
 			from: my_cell,
@@ -66,17 +75,15 @@ export const patroller_think_system: System = (w, ctx) => {
 		const fsm_next = enter(pat.fsm, next_state, tick);
 		const need_replan = fsm_next !== pat.fsm || next_index !== pat.index || !w.has(id, path_c);
 
-		if (need_replan) {
-			if (same_cell(my_cell, target)) {
-				if (w.has(id, path_c)) w.remove(id, path_c);
-			} else {
-				const planned = replan(my_cell, target, passable);
-				if (planned) w.set(id, path_c, planned);
-				else if (w.has(id, path_c)) w.remove(id, path_c);
-			}
-		} else if (next_state === "pursuing") {
+		if (same_cell(my_cell, target)) {
+			if (w.has(id, path_c)) w.remove(id, path_c);
+		} else if (need_replan || next_state === "pursuing" || next_state === "patrolling") {
 			const planned = replan(my_cell, target, passable);
 			if (planned) w.set(id, path_c, planned);
+			else {
+				if (w.has(id, path_c)) w.remove(id, path_c);
+				if (next_state === "patrolling") next_index = (next_index + 1) % pat.waypoints.length;
+			}
 		}
 
 		w.set(id, patrol_c, {

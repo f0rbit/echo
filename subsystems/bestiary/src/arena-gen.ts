@@ -4,6 +4,7 @@ import type { Cell } from "@f0rbit/forge/grid";
 import {
 	chaser_c,
 	dir_c,
+	enemy_c,
 	floor_c,
 	patrol_c,
 	patroller_c,
@@ -106,6 +107,7 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 			[pos_c, cp],
 			[visual_pos_c, { ...cp }],
 			[chaser_c, true],
+			[enemy_c, true],
 			[dir_c, { dx: 0, dy: 0 }],
 			[state_c, { kind: "idle", aggro_radius: chaser_aggro }],
 		);
@@ -115,6 +117,7 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 		[pos_c, pat_pos],
 		[visual_pos_c, { ...pat_pos }],
 		[patroller_c, true],
+		[enemy_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 		[patrol_c, {
 			waypoints: patroller_waypoints,
@@ -128,6 +131,7 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 		[pos_c, rng_pos],
 		[visual_pos_c, { ...rng_pos }],
 		[ranged_c, true],
+		[enemy_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 	);
 	const sum_pos = at(summoner_cell);
@@ -135,6 +139,7 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 		[pos_c, sum_pos],
 		[visual_pos_c, { ...sum_pos }],
 		[summoner_c, true],
+		[enemy_c, true],
 		[dir_c, { dx: 0, dy: 0 }],
 		[summoner_state_c, {
 			spawn_every: summoner_spawn_every,

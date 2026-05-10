@@ -4,6 +4,7 @@ import type { Cell } from "@f0rbit/forge/grid";
 import {
 	chaser_c,
 	dir_c,
+	enemy_c,
 	floor_c,
 	minion_c,
 	minion_link_c,
@@ -76,6 +77,7 @@ export const summoner_spawn_system: System = (w, ctx) => {
 			[visual_pos_c, { ...at }],
 			[chaser_c, true],
 			[minion_c, true],
+			[enemy_c, true],
 			[dir_c, { dx: 0, dy: 0 }],
 			[state_c, { kind: "idle", aggro_radius: minion_aggro }],
 			[minion_link_c, { source_id: id }],

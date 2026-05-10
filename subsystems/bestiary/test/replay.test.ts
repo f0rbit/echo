@@ -20,7 +20,7 @@ import { game_plugin } from "../src/plugin.ts";
 
 const replay_path = new URL("../replays/arena.replay.json", import.meta.url).pathname;
 const replay_json = readFileSync(replay_path, "utf8");
-const expected_hash = "d171ad9fbb39cfc98e642b36dd5d6390be516e136b2254580f395b035a1cd444";
+const expected_hash = "85f19424057f9f2a25d98138265dcf5f96e3a2f5aaf213f227393f658581847a";
 
 type Sim = { ctx: Ctx; w: World; tick: () => void };
 

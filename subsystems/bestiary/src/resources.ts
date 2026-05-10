@@ -13,6 +13,9 @@ export type RunSeed = { base: number; restart_count: number };
 
 export type DebugVisible = { on: boolean };
 
+export type EnemyOccupancy = { cells: ReadonlySet<number> };
+
 export const arena_r: ResKey<Arena> = resource<Arena>("bst.arena");
 export const run_seed_r: ResKey<RunSeed> = resource<RunSeed>("bst.run_seed");
 export const debug_visible_r: ResKey<DebugVisible> = resource<DebugVisible>("bst.debug_visible");
+export const enemy_occupancy_r: ResKey<EnemyOccupancy> = resource<EnemyOccupancy>("bst.enemy_occupancy");
