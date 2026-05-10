@@ -5,7 +5,7 @@ import { exit_c, floor_c, player_c, visual_pos_c } from "../components.ts";
 import { g } from "../grid.ts";
 import { dungeon_r } from "../resources.ts";
 
-const fov_radius = 6;
+export const fov_radius = 6;
 
 const lit_markers: readonly Component<true>[] = [floor_c, exit_c];
 
@@ -26,8 +26,8 @@ export const fov_system: System = (w, ctx) => {
 		radius: fov_radius,
 		is_blocking: cell => !dungeon.value.floors.has(g.key(cell.x, cell.y)),
 	});
-	const max_px = fov_radius * g.tile;
 
+	const max_px = fov_radius * g.tile;
 	for (const marker of lit_markers) {
 		for (const [id, p] of w.query([pos_c, marker] as const).collect()) {
 			const c = g.world_to_cell(p.x, p.y);
@@ -37,9 +37,11 @@ export const fov_system: System = (w, ctx) => {
 			}
 			const dx = p.x - player_visual.x;
 			const dy = p.y - player_visual.y;
-			const dist_px = Math.hypot(dx, dy);
-			const intensity = Math.max(0, 1 - (dist_px / max_px) ** 1.5);
-			sprite.set(w, id, { alpha: intensity, visible: intensity > 0.01 });
+			if (Math.hypot(dx, dy) > max_px) {
+				sprite.set(w, id, { alpha: 0, visible: false });
+				continue;
+			}
+			sprite.set(w, id, { alpha: 1, visible: true });
 		}
 	}
 

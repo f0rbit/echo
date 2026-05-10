@@ -4,6 +4,7 @@ import { game_bindings } from "./bindings.ts";
 import { visual_pos_c } from "./components.ts";
 import { game_plugin } from "./plugin.ts";
 import { win_overlay_r } from "./resources.ts";
+import { make_light_sprite } from "./systems/light.ts";
 
 const make_overlay = (width: number, height: number): Text => {
 	const text = new Text({
@@ -46,7 +47,10 @@ const main = async (): Promise<void> => {
 			overlay.visible = visible;
 		},
 	});
-	game_plugin(app.world, app.schedule);
+	const light = make_light_sprite();
+	app.render.world.sortableChildren = true;
+	app.render.world.addChild(light);
+	game_plugin(app.world, app.schedule, { light });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 		overlay.position.set(globalThis.innerWidth / 2, globalThis.innerHeight / 2);

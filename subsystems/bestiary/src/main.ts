@@ -4,6 +4,7 @@ import { visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { game_plugin } from "./plugin.ts";
 import { make_debug_overlay } from "./systems/debug-overlay.ts";
+import { make_light_sprite } from "./systems/light.ts";
 import { make_telegraph_render } from "./systems/telegraph-render.ts";
 
 const main = async (): Promise<void> => {
@@ -26,7 +27,10 @@ const main = async (): Promise<void> => {
 	const app = r.value;
 	const telegraph_render = make_telegraph_render(app.render.world, g);
 	const debug_overlay = make_debug_overlay(app.render.world, g);
-	game_plugin(app.world, app.schedule, { telegraph_render, debug_overlay });
+	const light = make_light_sprite();
+	app.render.world.sortableChildren = true;
+	app.render.world.addChild(light);
+	game_plugin(app.world, app.schedule, { telegraph_render, debug_overlay, light });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 	});

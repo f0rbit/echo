@@ -1,8 +1,10 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
+import type { Sprite } from "pixi.js";
 import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
+import { light_follow_system } from "./systems/light.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
@@ -15,7 +17,11 @@ const win_overlay_system: System = (_w, ctx) => {
 	overlay.value.show(score.value.reached_exit);
 };
 
-export const game_plugin = (_w: World, sch: Schedule): void => {
+export type GamePluginOpts = {
+	light?: Sprite;
+};
+
+export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
 	sch.add("pre", restart_system, "dw.restart");
 	sch.add("update", input_system, "dw.input");
@@ -23,5 +29,6 @@ export const game_plugin = (_w: World, sch: Schedule): void => {
 	sch.add("post", sprite_attach_system, "dw.sprites");
 	sch.add("post", tween_step_system, "dw.tween");
 	sch.add("post", fov_system, "dw.fov");
+	if (opts.light) sch.add("post", light_follow_system(opts.light), "dw.light_follow");
 	sch.add("render", win_overlay_system, "dw.win");
 };
