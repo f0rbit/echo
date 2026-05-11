@@ -49,7 +49,7 @@ const main = async (): Promise<void> => {
 			overlay.visible = visible;
 		},
 	});
-	const light = make_light_filter(design);
+	const light = make_light_filter(design, { ambient: [0.08, 0.04, 0.02], falloff: 1.6 });
 	app.render.world.sortableChildren = true;
 	const apply_filter_area = (): void => {
 		const vp = app.render.viewport();

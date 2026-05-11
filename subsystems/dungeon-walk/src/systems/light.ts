@@ -121,14 +121,25 @@ export type LightFilter = {
 	}>;
 };
 
-export const make_light_filter = (design: { width: number; height: number }): LightFilter => {
-	const radius_px = fov_radius * g.tile;
+export type LightPalette = {
+	ambient?: readonly [number, number, number];
+	falloff?: number;
+	radius_px?: number;
+};
+
+export const make_light_filter = (
+	design: { width: number; height: number },
+	palette: LightPalette = {},
+): LightFilter => {
+	const ambient = palette.ambient ?? [0.04, 0.04, 0.08] as const;
+	const falloff = palette.falloff ?? 1.4;
+	const radius_px = palette.radius_px ?? fov_radius * g.tile;
 	const uniforms = new UniformGroup({
 		uPlayerPx: { value: new Float32Array([design.width / 2, design.height / 2]), type: "vec2<f32>" as const },
 		uDesignPx: { value: new Float32Array([design.width, design.height]), type: "vec2<f32>" as const },
 		uRadiusPx: { value: radius_px, type: "f32" as const },
-		uFalloff: { value: 1.4, type: "f32" as const },
-		uAmbient: { value: new Float32Array([0.04, 0.04, 0.08]), type: "vec3<f32>" as const },
+		uFalloff: { value: falloff, type: "f32" as const },
+		uAmbient: { value: new Float32Array([ambient[0], ambient[1], ambient[2]]), type: "vec3<f32>" as const },
 	});
 	const filter = new Filter({
 		glProgram: GlProgram.from({ vertex, fragment, name: "dw-light-filter" }),
