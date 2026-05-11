@@ -36,6 +36,9 @@ const patroller_waypoints: readonly Cell[] = [
 ];
 const ranged_cell: Cell = { x: 20, y: 5 };
 const summoner_cell: Cell = { x: 15, y: 4 };
+export const brazier_cells: readonly Cell[] = [
+	{ x: 8, y: 6 },
+];
 const summoner_spawn_every = 60;
 const summoner_max_minions = 4;
 
@@ -67,6 +70,7 @@ const place_pillars = (floors: Set<number>, r: Rng): Set<number> => {
 		g.key(summoner_cell.x, summoner_cell.y),
 		...chaser_cells.map(c => g.key(c.x, c.y)),
 		...patroller_waypoints.map(c => g.key(c.x, c.y)),
+		...brazier_cells.map(c => g.key(c.x, c.y)),
 		...adjacent_keys(summoner_cell),
 	]);
 	let attempts = 0;
