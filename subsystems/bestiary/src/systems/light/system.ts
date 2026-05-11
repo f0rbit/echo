@@ -126,9 +126,9 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 	const uniforms = new UniformGroup({
 		uAmbient: { value: ambient_buf, type: "vec3<f32>" as const },
 		uCount: { value: 0, type: "i32" as const },
-		uLights: { value: lights_buf, type: `array<vec4<f32>, ${max_lights}>` as const, size: max_lights },
-		uLightColors: { value: colors_buf, type: `array<vec4<f32>, ${max_lights}>` as const, size: max_lights },
-		uLightCones: { value: cones_buf, type: `array<vec4<f32>, ${max_lights}>` as const, size: max_lights },
+		uLights: { value: lights_buf, type: "vec4<f32>" as const, size: max_lights },
+		uLightColors: { value: colors_buf, type: "vec4<f32>" as const, size: max_lights },
+		uLightCones: { value: cones_buf, type: "vec4<f32>" as const, size: max_lights },
 	});
 
 	const filter = new Filter({
