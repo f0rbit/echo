@@ -79,7 +79,6 @@ const main = async (): Promise<void> => {
 		debug_overlay,
 		light: ls,
 		summoner_glow,
-		world_container: app.render.world,
 	});
 
 	globalThis.addEventListener("resize", () => {

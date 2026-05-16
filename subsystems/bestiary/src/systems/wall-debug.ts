@@ -1,9 +1,8 @@
 import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
-import { Text, TextStyle, Container } from "pixi.js";
+import { sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { PATTERN_TO_TILE } from "./wall-autotile.ts";
 
 declare global {
 	var echoWallDebug: ((on?: boolean) => boolean) | undefined;
@@ -14,7 +13,27 @@ const E = 2;
 const S = 4;
 const W = 8;
 
-const labels = new Map<Id, Text>();
+const PATTERN_COLORS: Record<number, { color: number; name: string }> = {
+	0x0: { color: 0xffffff, name: "isolated" },
+	0x1: { color: 0xff5555, name: "N only" },
+	0x2: { color: 0x55ff55, name: "E only" },
+	0x3: { color: 0xff8800, name: "NE (corner SW-open)" },
+	0x4: { color: 0x5555ff, name: "S only" },
+	0x5: { color: 0xaa00ff, name: "NS (vertical)" },
+	0x6: { color: 0x00ddff, name: "ES (corner NW-open)" },
+	0x7: { color: 0x880000, name: "NES (T-W edge)" },
+	0x8: { color: 0xffff00, name: "W only" },
+	0x9: { color: 0xff00ff, name: "NW (corner SE-open)" },
+	0xa: { color: 0x00ffff, name: "EW (horizontal)" },
+	0xb: { color: 0x008800, name: "NEW (T-S edge top)" },
+	0xc: { color: 0xff66bb, name: "SW (corner NE-open)" },
+	0xd: { color: 0x000088, name: "NSW (T-E edge left)" },
+	0xe: { color: 0x888800, name: "ESW (T-N edge bottom)" },
+	0xf: { color: 0x888888, name: "NESW (4-way / interior)" },
+};
+
+const wall_pattern = new Map<Id, number>();
+let active_world: World | null = null;
 let visible_state = false;
 
 const compute_pattern = (cx: number, cy: number, cells: Set<number>): number => {
@@ -28,7 +47,19 @@ const compute_pattern = (cx: number, cy: number, cells: Set<number>): number => 
 	return mask;
 };
 
-export const make_wall_debug_system = (container: Container): System => (w: World) => {
+const apply_tints = (on: boolean): void => {
+	if (!active_world) return;
+	for (const [id, pattern] of wall_pattern) {
+		const tint = on ? PATTERN_COLORS[pattern]!.color : 0xffffff;
+		const r = active_world.get(id, sprite_c);
+		if (r.ok) {
+			active_world.set(id, sprite_c, { ...r.value, tint });
+		}
+	}
+};
+
+export const wall_debug_system: System = (w: World) => {
+	active_world = w;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {
 		const c = g.world_to_cell(p.x, p.y);
@@ -36,33 +67,25 @@ export const make_wall_debug_system = (container: Container): System => (w: Worl
 	}
 
 	for (const [id, p] of w.query([pos_c, wall_c] as const).collect()) {
-		if (labels.has(id)) continue;
 		const c = g.world_to_cell(p.x, p.y);
 		const pattern = compute_pattern(c.x, c.y, cells);
-		const tile = PATTERN_TO_TILE[pattern]!;
-		const text = new Text({
-			text: `${pattern.toString(16).toUpperCase()}→${tile.col},${tile.row}`,
-			style: new TextStyle({
-				fontFamily: "monospace",
-				fontSize: 10,
-				fill: 0xffff00,
-				stroke: { color: 0x000000, width: 1 },
-			}),
-			resolution: 4,
-		});
-		text.anchor.set(0.5);
-		text.position.set(p.x, p.y);
-		text.scale.set(0.5);
-		text.visible = visible_state;
-		text.zIndex = 1000;
-		container.addChild(text);
-		labels.set(id, text);
+		wall_pattern.set(id, pattern);
 	}
 
 	if (!globalThis.echoWallDebug) {
 		globalThis.echoWallDebug = (on) => {
 			visible_state = on === undefined ? !visible_state : on;
-			for (const label of labels.values()) label.visible = visible_state;
+			apply_tints(visible_state);
+			if (visible_state) {
+				console.log("Wall pattern legend:");
+				console.table(
+					Object.entries(PATTERN_COLORS).map(([p, v]) => ({
+						hex: p,
+						color: "#" + v.color.toString(16).padStart(6, "0"),
+						name: v.name,
+					}))
+				);
+			}
 			return visible_state;
 		};
 	}

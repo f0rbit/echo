@@ -1,5 +1,4 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
-import type { Container } from "pixi.js";
 import { arena_gen_system } from "./arena-gen.ts";
 import { player_c, summoner_c, visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
@@ -29,7 +28,7 @@ import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
 import { wall_autotile_system } from "./systems/wall-autotile.ts";
 import { wall_index_system } from "./systems/wall-index.ts";
-import { make_wall_debug_system } from "./systems/wall-debug.ts";
+import { wall_debug_system } from "./systems/wall-debug.ts";
 
 const ai_tick = 12;
 const projectile_step_every = 3;
@@ -39,15 +38,12 @@ export type GamePluginOpts = {
 	debug_overlay?: System;
 	light?: LightSystem;
 	summoner_glow?: LightHandle;
-	world_container?: Container;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", arena_gen_system, "bst.gen");
 	sch.add("startup", wall_autotile_system, "bst.wall_autotile");
-	if (opts.world_container) {
-		sch.add("startup", make_wall_debug_system(opts.world_container), "bst.wall_debug");
-	}
+	sch.add("startup", wall_debug_system, "bst.wall_debug");
 	sch.add("pre", restart_system, "bst.restart");
 	sch.add("pre", wall_index_system, "bst.wall_index");
 	sch.add("pre", debug_toggle_system, "bst.debug_toggle");
