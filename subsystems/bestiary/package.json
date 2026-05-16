@@ -6,7 +6,7 @@
 	"main": "src/main.ts",
 	"scripts": {
 		"dev": "bun build src/main.ts --outdir dist --watch --target browser",
-		"build": "bun build src/main.ts --outdir dist --target browser && cp index.html dist/",
+		"build": "bun build src/main.ts --outdir dist --target browser && cp index.html dist/ && cp -r public/* dist/",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"record:arena": "bun run tools/record-arena.ts"

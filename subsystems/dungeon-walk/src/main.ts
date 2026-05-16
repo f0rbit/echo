@@ -37,6 +37,7 @@ const main = async (): Promise<void> => {
 		},
 		bindings: game_bindings,
 		pos: visual_pos_c,
+		assets: [{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" }],
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

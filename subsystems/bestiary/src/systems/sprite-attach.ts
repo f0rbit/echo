@@ -11,31 +11,29 @@ import {
 	summoner_c,
 } from "../components.ts";
 
-const anchor = { x: 0.5, y: 0.5 } as const;
-
 type Tile = {
 	marker: Component<true>;
+	texture: string;
 	frame: string;
 	visible: boolean;
-	tint?: number;
-	scale?: { x: number; y: number };
+	anchor: { x: number; y: number };
 };
 
 const tiles: readonly Tile[] = [
-	{ marker: floor_c, frame: "__default_1__", visible: true },
-	{ marker: player_c, frame: "__default_0__", visible: true },
-	{ marker: minion_c, frame: "__default_2__", visible: true, tint: 0xffff66, scale: { x: 0.6, y: 0.6 } },
-	{ marker: summoner_c, frame: "__default_2__", visible: true, tint: 0x8800ff, scale: { x: 2, y: 2 } },
-	{ marker: chaser_c, frame: "__default_2__", visible: true },
-	{ marker: patroller_c, frame: "__default_2__", visible: true, tint: 0xff8000 },
-	{ marker: ranged_c, frame: "__default_2__", visible: true, tint: 0x00ff00 },
+	{ marker: floor_c, texture: "dungeon", frame: "floor_1", visible: true, anchor: { x: 0.5, y: 0.5 } },
+	{ marker: player_c, texture: "dungeon", frame: "knight_m_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.75 } },
+	{ marker: minion_c, texture: "dungeon", frame: "tiny_slug_anim_f0", visible: true, anchor: { x: 0.5, y: 0.5 } },
+	{ marker: summoner_c, texture: "dungeon", frame: "necromancer_anim_f0", visible: true, anchor: { x: 0.5, y: 0.65 } },
+	{ marker: chaser_c, texture: "dungeon", frame: "goblin_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.5 } },
+	{ marker: patroller_c, texture: "dungeon", frame: "zombie_anim_f1", visible: true, anchor: { x: 0.5, y: 0.5 } },
+	{ marker: ranged_c, texture: "dungeon", frame: "imp_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.5 } },
 ];
 
 export const sprite_attach_system: System = w => {
-	for (const { marker, frame, visible, tint, scale } of tiles) {
+	for (const { marker, texture, frame, visible, anchor } of tiles) {
 		for (const [id] of w.query([pos_c, marker] as const)) {
 			if (w.has(id, sprite_c)) continue;
-			w.set(id, sprite_c, { texture: "__default__", frame, anchor, visible, tint, scale });
+			w.set(id, sprite_c, { texture, frame, anchor, visible });
 		}
 	}
 };
