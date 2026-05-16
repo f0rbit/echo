@@ -6,7 +6,7 @@ import { visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { game_plugin } from "./plugin.ts";
 import { make_debug_overlay } from "./systems/debug-overlay.ts";
-import { make_light_system, presets } from "./systems/light/index.ts";
+import { make_light_system, presets } from "@f0rbit/forge/light";
 import { make_telegraph_render } from "./systems/telegraph-render.ts";
 
 const design = { width: g.cols * g.tile, height: g.rows * g.tile };

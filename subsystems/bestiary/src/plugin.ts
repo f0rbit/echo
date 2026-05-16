@@ -21,7 +21,7 @@ import {
 	make_eye_follow_system,
 	make_light_update_system,
 	make_marker_light_follow_system,
-} from "./systems/light/index.ts";
+} from "@f0rbit/forge/light";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";

@@ -4,7 +4,7 @@ import { game_bindings } from "./bindings.ts";
 import { player_c, visual_pos_c } from "./components.ts";
 import { game_plugin } from "./plugin.ts";
 import { win_overlay_r } from "./resources.ts";
-import { make_light_system, presets } from "./systems/light/index.ts";
+import { make_light_system, presets } from "@f0rbit/forge/light";
 import { g } from "./grid.ts";
 
 const make_overlay = (width: number, height: number): Text => {

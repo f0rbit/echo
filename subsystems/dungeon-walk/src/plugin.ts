@@ -2,7 +2,7 @@ import type { Schedule, System, World } from "@f0rbit/forge";
 import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { input_system } from "./systems/input.ts";
-import { type LightSystem, make_eye_follow_system, make_light_update_system } from "./systems/light/index.ts";
+import { type LightSystem, make_eye_follow_system, make_light_update_system } from "@f0rbit/forge/light";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
