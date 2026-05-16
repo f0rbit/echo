@@ -35,7 +35,12 @@ const main = async (): Promise<void> => {
 	const ls = make_light_system({
 		grid: g,
 		ambient: presets.moon_cavern.ambient,
-		eye_radius: 6,
+		eye: {
+			color: presets.moon_cavern.default_torch_color,
+			radius_cells: 6,
+			intensity: 0.95,
+			flicker: { kind: "torch", amount: 0.12, seed: 1 },
+		},
 	});
 
 	const brazier_cell = brazier_cells[0]!;

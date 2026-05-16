@@ -1,4 +1,5 @@
 export type {
+	EyeLightConfig,
 	FlickerProfile,
 	LightHandle,
 	LightSpec,

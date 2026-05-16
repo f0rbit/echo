@@ -2,7 +2,7 @@ import type { Schedule, System, World } from "@f0rbit/forge";
 import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { input_system } from "./systems/input.ts";
-import { type LightHandle, type LightSystem, make_eye_follow_system, make_light_update_system, make_marker_light_follow_system } from "./systems/light/index.ts";
+import { type LightSystem, make_eye_follow_system, make_light_update_system } from "./systems/light/index.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
@@ -20,7 +20,6 @@ const win_overlay_system: System = (_w, ctx) => {
 
 export type GamePluginOpts = {
 	light?: LightSystem;
-	player_torch?: LightHandle;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
@@ -32,9 +31,6 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("post", tween_step_system, "dw.tween");
 	if (opts.light) {
 		sch.add("post", make_eye_follow_system(opts.light, g, visual_pos_c, player_c), "dw.eye_follow");
-	}
-	if (opts.light && opts.player_torch) {
-		sch.add("post", make_marker_light_follow_system(opts.light, g, opts.player_torch, player_c, visual_pos_c), "dw.torch_follow");
 	}
 	if (opts.light) {
 		sch.add("render", make_light_update_system(opts.light, (_w, ctx) => {

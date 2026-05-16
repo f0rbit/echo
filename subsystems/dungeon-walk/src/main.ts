@@ -53,16 +53,13 @@ const main = async (): Promise<void> => {
 	const ls = make_light_system({
 		grid: g,
 		ambient: presets.warm_torch.ambient,
-		eye_radius: 6,
-	});
-
-	const player_torch = ls.add({
-		pos_cell: [0, 0],
-		color: presets.warm_torch.default_torch_color,
-		radius_cells: presets.warm_torch.default_torch_radius,
-		intensity: 0.95,
-		falloff: 1.6,
-		flicker: { kind: "torch", amount: 0.12, seed: 1 },
+		eye: {
+			color: presets.warm_torch.default_torch_color,
+			radius_cells: 6,
+			intensity: 1.0,
+			falloff: 1.6,
+			flicker: { kind: "torch", amount: 0.12, seed: 1 },
+		},
 	});
 
 	app.render.world.sortableChildren = true;
@@ -72,7 +69,7 @@ const main = async (): Promise<void> => {
 	};
 	apply_filter_area();
 	app.render.world.filters = [ls.filter];
-	game_plugin(app.world, app.schedule, { light: ls, player_torch });
+	game_plugin(app.world, app.schedule, { light: ls });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 		apply_filter_area();

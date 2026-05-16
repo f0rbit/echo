@@ -32,10 +32,18 @@ export type LightSpec = {
 	readonly flicker?: FlickerProfile;
 };
 
+export type EyeLightConfig = {
+	readonly color?: readonly [number, number, number];
+	readonly radius_cells?: number;
+	readonly intensity?: number;
+	readonly falloff?: number;
+	readonly flicker?: FlickerProfile;
+};
+
 export type LightSystemConfig = {
 	readonly grid: Grid;
 	readonly ambient?: readonly [number, number, number];
-	readonly eye_radius?: number;
+	readonly eye?: EyeLightConfig;
 };
 
 export type LightSystem = {
@@ -94,7 +102,12 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 	const cols = g.cols;
 	const rows = g.rows;
 	const tile = g.tile;
-	const eye_radius = config.eye_radius ?? 6;
+	const eye_cfg = config.eye ?? {};
+	const eye_color: readonly [number, number, number] = eye_cfg.color ?? [1.0, 0.92, 0.78];
+	const eye_radius = eye_cfg.radius_cells ?? 6;
+	const eye_intensity = eye_cfg.intensity ?? 0.95;
+	const eye_falloff = eye_cfg.falloff ?? 1.4;
+	const eye_flicker = eye_cfg.flicker;
 	const ambient_init = config.ambient ?? default_ambient;
 	const shaders = make_shaders();
 
@@ -159,7 +172,14 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 	};
 
 	const eye_slot = make_slot(
-		{ pos_cell: [0, 0], color: [0, 0, 0], radius_cells: eye_radius, intensity: 0 },
+		{
+			pos_cell: [0, 0],
+			color: eye_color,
+			radius_cells: eye_radius,
+			intensity: eye_intensity,
+			falloff: eye_falloff,
+			flicker: eye_flicker,
+		},
 		true,
 	);
 	slots.push(eye_slot);
@@ -248,15 +268,12 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 			if (s.dirty || s.cells_reached === null) recompute_cells_reached(s, is_blocking);
 			const reached = s.cells_reached;
 			if (!reached) continue;
-			if (s.is_eye) {
-				for (const k of reached) grid_acc[k * 4 + 3] = 1.0;
-				continue;
-			}
 			const i_mul = eval_flicker(s.flicker, s.seed, t);
 			const contrib_base = s.intensity * i_mul;
 			const r = s.radius_cells;
 			const inv_r = r > 0 ? 1 / r : 0;
 			const exp = s.falloff;
+			const writes_visibility = s.is_eye;
 			for (const k of reached) {
 				const c = g.unkey(k);
 				const d = euclidean(c.x, c.y, s.pos_cx, s.pos_cy);
@@ -268,6 +285,7 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 				grid_acc[o] = (grid_acc[o] ?? 0) + s.color_r * contrib;
 				grid_acc[o + 1] = (grid_acc[o + 1] ?? 0) + s.color_g * contrib;
 				grid_acc[o + 2] = (grid_acc[o + 2] ?? 0) + s.color_b * contrib;
+				if (writes_visibility) grid_acc[o + 3] = 1.0;
 			}
 		}
 		const n = cols * rows * 4;
