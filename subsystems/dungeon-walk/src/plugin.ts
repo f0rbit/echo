@@ -1,4 +1,5 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
+import type { Container } from "pixi.js";
 import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
 import { input_system } from "./systems/input.ts";
@@ -9,6 +10,7 @@ import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
 import { wall_autotile_system } from "./systems/wall-autotile.ts";
 import { wall_index_system } from "./systems/wall-index.ts";
+import { make_wall_debug_system } from "./systems/wall-debug.ts";
 import { player_c, visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { wall_index_r } from "./resources.ts";
@@ -22,11 +24,15 @@ const win_overlay_system: System = (_w, ctx) => {
 
 export type GamePluginOpts = {
 	light?: LightSystem;
+	world_container?: Container;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
 	sch.add("startup", wall_autotile_system, "dw.wall_autotile");
+	if (opts.world_container) {
+		sch.add("startup", make_wall_debug_system(opts.world_container), "dw.wall_debug");
+	}
 	sch.add("pre", restart_system, "dw.restart");
 	sch.add("pre", wall_index_system, "dw.wall_index");
 	sch.add("update", input_system, "dw.input");

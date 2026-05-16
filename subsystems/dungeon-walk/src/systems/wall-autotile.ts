@@ -9,7 +9,7 @@ const E = 2;
 const S = 4;
 const W = 8;
 
-const PATTERN_TO_TILE: Readonly<Record<number, { col: number; row: number }>> = {
+export const PATTERN_TO_TILE: Readonly<Record<number, { col: number; row: number }>> = {
 	0b0000: { col: 0, row: 0 },   // isolated -> vertical pillar top
 	0b0001: { col: 0, row: 2 },   // N only -> bottom-cap of vertical
 	0b0010: { col: 8, row: 0 },   // E only -> horizontal left-cap (thin wall row 0)
