@@ -1,6 +1,7 @@
 import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
-import { sprite_c, sprite_node_for } from "@f0rbit/forge/pixi";
+import type { Container, FederatedPointerEvent } from "pixi.js";
+import { sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
 import { PATTERN_TO_TILE } from "./wall-autotile.ts";
@@ -55,7 +56,9 @@ const PATTERN_NAMES: Record<number, string> = {
 
 const wall_pattern = new Map<Id, number>();
 const wall_click_index = new Map<Id, number>();
+const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
+let active_container: Container | null = null;
 let visible_state = false;
 let click_state = false;
 
@@ -99,29 +102,32 @@ const handle_click = (id: Id): void => {
 	);
 };
 
+const on_pointer_down = (event: FederatedPointerEvent): void => {
+	if (!click_state || !active_world || !active_container) return;
+	const local = event.getLocalPosition(active_container);
+	const cell = g.world_to_cell(local.x, local.y);
+	if (!g.in_bounds(cell.x, cell.y)) return;
+	const id = cell_to_id.get(g.key(cell.x, cell.y));
+	if (id === undefined) return;
+	handle_click(id);
+};
+
 const apply_interactivity = (on: boolean): void => {
-	if (!active_world) return;
-	for (const id of wall_pattern.keys()) {
-		const sprite = sprite_node_for(active_world, id);
-		if (!sprite) continue;
-		if (on) {
-			sprite.eventMode = "static";
-			sprite.cursor = "pointer";
-			sprite.removeAllListeners?.("pointerdown");
-			const handler = () => handle_click(id);
-			sprite.on("pointerdown", handler);
-			(sprite as Record<string, unknown>).___wall_click_handler = handler;
-		} else {
-			sprite.eventMode = "none";
-			sprite.cursor = "default";
-			sprite.removeAllListeners?.("pointerdown");
-			delete (sprite as Record<string, unknown>).___wall_click_handler;
-		}
+	if (!active_container) return;
+	if (on) {
+		active_container.eventMode = "static";
+		active_container.cursor = "default";
+		active_container.off("pointerdown", on_pointer_down);
+		active_container.on("pointerdown", on_pointer_down);
+	} else {
+		active_container.off("pointerdown", on_pointer_down);
+		active_container.eventMode = "none";
 	}
 };
 
-export const wall_debug_system: System = (w: World) => {
+export const make_wall_debug_system = (container: Container): System => (w: World) => {
 	active_world = w;
+	active_container = container;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {
 		const c = g.world_to_cell(p.x, p.y);
@@ -130,8 +136,10 @@ export const wall_debug_system: System = (w: World) => {
 
 	for (const [id, p] of w.query([pos_c, wall_c] as const).collect()) {
 		const c = g.world_to_cell(p.x, p.y);
+		const k = g.key(c.x, c.y);
 		const pattern = compute_pattern(c.x, c.y, cells);
 		wall_pattern.set(id, pattern);
+		cell_to_id.set(k, id);
 	}
 
 	if (!globalThis.echoWallDebug) {
