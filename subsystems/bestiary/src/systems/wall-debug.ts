@@ -1,11 +1,13 @@
 import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
-import { sprite_c } from "@f0rbit/forge/pixi";
+import { sprite_c, sprite_node_for } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
+import { PATTERN_TO_TILE } from "./wall-autotile.ts";
 
 declare global {
 	var echoWallDebug: ((on?: boolean) => boolean) | undefined;
+	var echoWallClick: ((on?: boolean) => boolean) | undefined;
 }
 
 const N = 1;
@@ -32,9 +34,30 @@ const PATTERN_COLORS: Record<number, { color: number; name: string }> = {
 	0xf: { color: 0x888888, name: "NESW (4-way / interior)" },
 };
 
+const PATTERN_NAMES: Record<number, string> = {
+	0x0: "isolated",
+	0x1: "N only",
+	0x2: "E only",
+	0x3: "NE (corner SW-open)",
+	0x4: "S only",
+	0x5: "NS (vertical)",
+	0x6: "ES (corner NW-open)",
+	0x7: "NES (T-W edge)",
+	0x8: "W only",
+	0x9: "NW (corner SE-open)",
+	0xa: "EW (horizontal)",
+	0xb: "NEW (T-S edge top)",
+	0xc: "SW (corner NE-open)",
+	0xd: "NSW (T-E edge left)",
+	0xe: "ESW (T-N edge bottom)",
+	0xf: "NESW (4-way / interior)",
+};
+
 const wall_pattern = new Map<Id, number>();
+const wall_click_index = new Map<Id, number>();
 let active_world: World | null = null;
 let visible_state = false;
+let click_state = false;
 
 const compute_pattern = (cx: number, cy: number, cells: Set<number>): number => {
 	const is_wall = (x: number, y: number): boolean =>
@@ -54,6 +77,45 @@ const apply_tints = (on: boolean): void => {
 		const r = active_world.get(id, sprite_c);
 		if (r.ok) {
 			active_world.set(id, sprite_c, { ...r.value, tint });
+		}
+	}
+};
+
+const handle_click = (id: Id): void => {
+	if (!active_world) return;
+	const pattern = wall_pattern.get(id);
+	if (pattern === undefined) return;
+	const next_index = (wall_click_index.get(id) ?? -1) + 1;
+	wall_click_index.set(id, next_index);
+	const col = next_index % 12;
+	const row = Math.floor(next_index / 12) % 4;
+	const default_tile = PATTERN_TO_TILE[pattern]!;
+	const r = active_world.get(id, sprite_c);
+	if (r.ok) {
+		active_world.set(id, sprite_c, { ...r.value, frame: `wat_${col}_${row}` });
+	}
+	console.log(
+		`click: pattern=0x${pattern.toString(16).toUpperCase()} (${PATTERN_NAMES[pattern]}) → tile (${col},${row}) [default was (${default_tile.col},${default_tile.row})]`
+	);
+};
+
+const apply_interactivity = (on: boolean): void => {
+	if (!active_world) return;
+	for (const id of wall_pattern.keys()) {
+		const sprite = sprite_node_for(active_world, id);
+		if (!sprite) continue;
+		if (on) {
+			sprite.eventMode = "static";
+			sprite.cursor = "pointer";
+			sprite.removeAllListeners?.("pointerdown");
+			const handler = () => handle_click(id);
+			sprite.on("pointerdown", handler);
+			(sprite as Record<string, unknown>).___wall_click_handler = handler;
+		} else {
+			sprite.eventMode = "none";
+			sprite.cursor = "default";
+			sprite.removeAllListeners?.("pointerdown");
+			delete (sprite as Record<string, unknown>).___wall_click_handler;
 		}
 	}
 };
@@ -87,6 +149,18 @@ export const wall_debug_system: System = (w: World) => {
 				);
 			}
 			return visible_state;
+		};
+	}
+
+	if (!globalThis.echoWallClick) {
+		globalThis.echoWallClick = (on) => {
+			click_state = on === undefined ? !click_state : on;
+			apply_interactivity(click_state);
+			if (click_state) {
+				console.log("Wall click cycling ON. Click any wall to cycle through 48 tiles.");
+				console.log("Toggle off with echoWallClick(false). Patterns + colors via echoWallDebug(true).");
+			}
+			return click_state;
 		};
 	}
 };
