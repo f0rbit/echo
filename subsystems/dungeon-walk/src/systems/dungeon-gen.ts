@@ -1,7 +1,7 @@
 import type { Ctx, System, Rng, World } from "@f0rbit/forge";
 import { pos_c, rng as make_rng } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
-import { dir_c, exit_c, floor_c, player_c, visual_pos_c } from "../components.ts";
+import { dir_c, exit_c, floor_c, player_c, visual_pos_c, wall_c } from "../components.ts";
 import { g } from "../grid.ts";
 import { dungeon_r, run_seed_r, score_r } from "../resources.ts";
 
@@ -83,10 +83,22 @@ export const build_dungeon = (w: World, ctx: Ctx, rng: Rng): void => {
 	ctx.res.set(dungeon_r, { cols: g.cols, rows: g.rows, floors, spawn, exit });
 	ctx.res.set(score_r, { reached_exit: false });
 
+	const wall_cells = new Set<number>();
+	for (let y = 0; y < g.rows; y++) {
+		for (let x = 0; x < g.cols; x++) {
+			const k = g.key(x, y);
+			if (!floors.has(k)) wall_cells.add(k);
+		}
+	}
+
 	const at = (c: Cell): { x: number; y: number } => g.cell_to_world(c.x, c.y);
 	w.spawn_many([...floors].map(k => {
 		const p = at(g.unkey(k));
 		return [[pos_c, p], [visual_pos_c, { ...p }], [floor_c, true]];
+	}));
+	w.spawn_many([...wall_cells].map(k => {
+		const p = at(g.unkey(k));
+		return [[pos_c, p], [wall_c, true]];
 	}));
 	const exit_pos = at(exit);
 	w.spawn([pos_c, exit_pos], [visual_pos_c, { ...exit_pos }], [exit_c, true]);

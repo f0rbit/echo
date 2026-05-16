@@ -4,19 +4,19 @@ import type { Cell } from "@f0rbit/forge/grid";
 import { astar } from "../../astar.ts";
 import { chaser_c, path_c, player_c, state_c } from "../../components.ts";
 import { g } from "../../grid.ts";
-import { arena_r, creature_occupancy_r } from "../../resources.ts";
+import { creature_occupancy_r, wall_index_r } from "../../resources.ts";
 
 export const chaser_think_system: System = (w, ctx) => {
-	const arena = ctx.res.get(arena_r);
-	if (!arena.ok) return;
-	const { floors } = arena.value;
+	const wi = ctx.res.get(wall_index_r);
+	if (!wi.ok) return;
+	const walls = wi.value.cells;
 	const occ = ctx.res.get(creature_occupancy_r);
 	const occupancy = occ.ok ? occ.value.cells : new Set<number>();
 	const players = w.query([pos_c, player_c] as const).collect();
 	if (players.length === 0) return;
 	const pp = players[0]![1];
 	const player_cell = g.world_to_cell(pp.x, pp.y);
-	const is_blocking = (c: Cell): boolean => !floors.has(g.key(c.x, c.y));
+	const is_blocking = (c: Cell): boolean => walls.has(g.key(c.x, c.y));
 
 	const player_key = g.key(player_cell.x, player_cell.y);
 	for (const [id, p, st] of w.query([pos_c, state_c, chaser_c] as const).collect()) {
@@ -24,7 +24,7 @@ export const chaser_think_system: System = (w, ctx) => {
 		const my_key = g.key(my_cell.x, my_cell.y);
 		const passable = (c: Cell): boolean => {
 			const k = g.key(c.x, c.y);
-			if (!floors.has(k)) return false;
+			if (walls.has(k)) return false;
 			if (k === my_key) return true;
 			if (k === player_key) return true;
 			if (occupancy.has(k)) return false;

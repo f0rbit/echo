@@ -7,9 +7,10 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
+import { wall_index_system } from "./systems/wall-index.ts";
 import { player_c, visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
-import { dungeon_r } from "./resources.ts";
+import { wall_index_r } from "./resources.ts";
 
 const win_overlay_system: System = (_w, ctx) => {
 	const score = ctx.res.get(score_r);
@@ -25,6 +26,7 @@ export type GamePluginOpts = {
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
 	sch.add("pre", restart_system, "dw.restart");
+	sch.add("pre", wall_index_system, "dw.wall_index");
 	sch.add("update", input_system, "dw.input");
 	sch.add("update", movement_system, { every: step_every, name: "dw.movement" });
 	sch.add("post", sprite_attach_system, "dw.sprites");
@@ -34,10 +36,10 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	}
 	if (opts.light) {
 		sch.add("render", make_light_update_system(opts.light, (_w, ctx) => {
-			const r = ctx.res.get(dungeon_r);
+			const r = ctx.res.get(wall_index_r);
 			if (!r.ok) return null;
-			const floors = r.value.floors;
-			return (cell: { x: number; y: number }) => !floors.has(g.key(cell.x, cell.y));
+			const walls = r.value.cells;
+			return (cell: { x: number; y: number }) => walls.has(g.key(cell.x, cell.y));
 		}), "dw.light_update");
 	}
 	sch.add("render", win_overlay_system, "dw.win");

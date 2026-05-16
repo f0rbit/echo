@@ -14,6 +14,7 @@ import {
 	summoner_c,
 	summoner_state_c,
 	visual_pos_c,
+	wall_c,
 } from "./components.ts";
 import { fsm } from "./fsm.ts";
 import { g } from "./grid.ts";
@@ -91,12 +92,27 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 	const floors = interior_floor_keys();
 	const pillars = place_pillars(floors, rng);
 
-	ctx.res.set(arena_r, { cols: g.cols, rows: g.rows, floors, pillars, spawn: spawn_cell });
+	ctx.res.set(arena_r, { cols: g.cols, rows: g.rows, floors, spawn: spawn_cell });
+
+	const wall_cells = new Set<number>();
+	for (let x = 0; x < g.cols; x++) {
+		wall_cells.add(g.key(x, 0));
+		wall_cells.add(g.key(x, g.rows - 1));
+	}
+	for (let y = 1; y < g.rows - 1; y++) {
+		wall_cells.add(g.key(0, y));
+		wall_cells.add(g.key(g.cols - 1, y));
+	}
+	for (const k of pillars) wall_cells.add(k);
 
 	const at = (c: Cell): { x: number; y: number } => g.cell_to_world(c.x, c.y);
 	w.spawn_many([...floors].map(k => {
 		const p = at(g.unkey(k));
 		return [[pos_c, p], [visual_pos_c, { ...p }], [floor_c, true]];
+	}));
+	w.spawn_many([...wall_cells].map(k => {
+		const p = at(g.unkey(k));
+		return [[pos_c, p], [wall_c, true]];
 	}));
 	const spawn_pos = at(spawn_cell);
 	w.spawn(

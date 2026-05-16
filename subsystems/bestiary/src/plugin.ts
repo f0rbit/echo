@@ -2,7 +2,7 @@ import type { Schedule, System, World } from "@f0rbit/forge";
 import { arena_gen_system } from "./arena-gen.ts";
 import { player_c, summoner_c, visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
-import { arena_r } from "./resources.ts";
+import { wall_index_r } from "./resources.ts";
 import { chaser_think_system } from "./systems/ai/chaser.ts";
 import { path_step_system } from "./systems/ai/path-step.ts";
 import { patroller_think_system } from "./systems/ai/patroller.ts";
@@ -26,6 +26,7 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
+import { wall_index_system } from "./systems/wall-index.ts";
 
 const ai_tick = 12;
 const projectile_step_every = 3;
@@ -40,6 +41,7 @@ export type GamePluginOpts = {
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", arena_gen_system, "bst.gen");
 	sch.add("pre", restart_system, "bst.restart");
+	sch.add("pre", wall_index_system, "bst.wall_index");
 	sch.add("pre", debug_toggle_system, "bst.debug_toggle");
 	sch.add("pre", creature_occupancy_system, "bst.creature_occupancy");
 	sch.add("update", input_system, "bst.input");
@@ -65,10 +67,10 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	}
 	if (opts.light) {
 		sch.add("render", make_light_update_system(opts.light, (_w, ctx) => {
-			const r = ctx.res.get(arena_r);
+			const r = ctx.res.get(wall_index_r);
 			if (!r.ok) return null;
-			const floors = r.value.floors;
-			return cell => !floors.has(g.key(cell.x, cell.y));
+			const walls = r.value.cells;
+			return cell => walls.has(g.key(cell.x, cell.y));
 		}), "bst.light_update");
 	}
 	if (opts.telegraph_render) sch.add("post", opts.telegraph_render, "bst.telegraph_render");

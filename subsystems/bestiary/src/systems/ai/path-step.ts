@@ -3,14 +3,14 @@ import { pos_c } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
 import { dir_c, enemy_c, path_c, player_c } from "../../components.ts";
 import { g } from "../../grid.ts";
-import { arena_r } from "../../resources.ts";
+import { wall_index_r } from "../../resources.ts";
 
 const sign = (n: number): -1 | 0 | 1 => (n > 0 ? 1 : n < 0 ? -1 : 0);
 
 export const path_step_system: System = (w, ctx) => {
-	const arena = ctx.res.get(arena_r);
-	if (!arena.ok) return;
-	const { floors } = arena.value;
+	const wi = ctx.res.get(wall_index_r);
+	if (!wi.ok) return;
+	const walls = wi.value.cells;
 
 	const occupancy = new Set<number>();
 	for (const [, ep] of w.query([pos_c, enemy_c] as const).collect()) {
@@ -35,7 +35,7 @@ export const path_step_system: System = (w, ctx) => {
 		const cur_key = g.key(cur.x, cur.y);
 		const blocked_by = (c: Cell): boolean => {
 			const k = g.key(c.x, c.y);
-			if (!floors.has(k)) return true;
+			if (walls.has(k)) return true;
 			if (k === cur_key) return false;
 			if (occupancy.has(k)) return true;
 			return false;

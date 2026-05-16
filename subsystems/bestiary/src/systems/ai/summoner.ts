@@ -14,7 +14,7 @@ import {
 	visual_pos_c,
 } from "../../components.ts";
 import { g } from "../../grid.ts";
-import { arena_r } from "../../resources.ts";
+import { wall_index_r } from "../../resources.ts";
 
 const minion_aggro = 8;
 const offsets: readonly Cell[] = [
@@ -25,7 +25,7 @@ const offsets: readonly Cell[] = [
 
 const adjacent_floor_cells = (
 	from: Cell,
-	floors: ReadonlySet<number>,
+	walls: ReadonlySet<number>,
 	occupied: ReadonlySet<number>,
 ): readonly Cell[] => {
 	const cells: Cell[] = [];
@@ -33,7 +33,7 @@ const adjacent_floor_cells = (
 		const c = { x: from.x + o.x, y: from.y + o.y };
 		if (!g.in_bounds(c.x, c.y)) continue;
 		const k = g.key(c.x, c.y);
-		if (!floors.has(k)) continue;
+		if (walls.has(k)) continue;
 		if (occupied.has(k)) continue;
 		cells.push(c);
 	}
@@ -41,9 +41,9 @@ const adjacent_floor_cells = (
 };
 
 export const summoner_spawn_system: System = (w, ctx) => {
-	const arena = ctx.res.get(arena_r);
-	if (!arena.ok) return;
-	const { floors } = arena.value;
+	const wi = ctx.res.get(wall_index_r);
+	if (!wi.ok) return;
+	const walls = wi.value.cells;
 	const tick = ctx.time.tick;
 
 	const occupied = new Set<number>();
@@ -64,7 +64,7 @@ export const summoner_spawn_system: System = (w, ctx) => {
 		if (live >= st.max_minions) continue;
 
 		const my_cell = g.world_to_cell(p.x, p.y);
-		const candidates = adjacent_floor_cells(my_cell, floors, occupied);
+		const candidates = adjacent_floor_cells(my_cell, walls, occupied);
 		if (candidates.length === 0) continue;
 
 		const picked = ctx.rng.pick(candidates);

@@ -5,7 +5,6 @@ export type Arena = {
 	cols: number;
 	rows: number;
 	floors: ReadonlySet<number>;
-	pillars: ReadonlySet<number>;
 	spawn: Cell;
 };
 
@@ -15,7 +14,10 @@ export type DebugVisible = { on: boolean };
 
 export type CreatureOccupancy = { cells: ReadonlySet<number> };
 
+export type WallIndex = { cells: ReadonlySet<number> };
+
 export const arena_r: ResKey<Arena> = resource<Arena>("bst.arena");
 export const run_seed_r: ResKey<RunSeed> = resource<RunSeed>("bst.run_seed");
 export const debug_visible_r: ResKey<DebugVisible> = resource<DebugVisible>("bst.debug_visible");
 export const creature_occupancy_r: ResKey<CreatureOccupancy> = resource<CreatureOccupancy>("bst.creature_occupancy");
+export const wall_index_r: ResKey<WallIndex> = resource<WallIndex>("bst.wall_index");

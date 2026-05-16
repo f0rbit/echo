@@ -9,6 +9,7 @@ import {
 	player_c,
 	ranged_c,
 	summoner_c,
+	wall_c,
 } from "../components.ts";
 
 type Tile = {
@@ -21,6 +22,7 @@ type Tile = {
 
 const tiles: readonly Tile[] = [
 	{ marker: floor_c, texture: "dungeon", frame: "floor_1", visible: true, anchor: { x: 0.5, y: 0.5 } },
+	{ marker: wall_c, texture: "dungeon", frame: "wall_mid", visible: true, anchor: { x: 0.5, y: 0.5 } },
 	{ marker: player_c, texture: "dungeon", frame: "knight_m_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.75 } },
 	{ marker: minion_c, texture: "dungeon", frame: "tiny_slug_anim_f0", visible: true, anchor: { x: 0.5, y: 0.5 } },
 	{ marker: summoner_c, texture: "dungeon", frame: "necromancer_anim_f0", visible: true, anchor: { x: 0.5, y: 0.65 } },

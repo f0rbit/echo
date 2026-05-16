@@ -23,6 +23,7 @@ export type MinionLink = { source_id: Id };
 
 export const player_c: Component<true> = component<true>("bst.player");
 export const floor_c: Component<true> = component<true>("bst.floor");
+export const wall_c: Component<true> = component<true>("bst.wall");
 export const enemy_c: Component<true> = component<true>("bst.enemy");
 export const chaser_c: Component<true> = component<true>("bst.chaser");
 export const patroller_c: Component<true> = component<true>("bst.patroller");
