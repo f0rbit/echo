@@ -1,6 +1,8 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
 import { arena_gen_system } from "./arena-gen.ts";
-import { summoner_c, visual_pos_c } from "./components.ts";
+import { player_c, summoner_c, visual_pos_c } from "./components.ts";
+import { g } from "./grid.ts";
+import { arena_r } from "./resources.ts";
 import { chaser_think_system } from "./systems/ai/chaser.ts";
 import { path_step_system } from "./systems/ai/path-step.ts";
 import { patroller_think_system } from "./systems/ai/patroller.ts";
@@ -12,14 +14,13 @@ import {
 import { summoner_spawn_system } from "./systems/ai/summoner.ts";
 import { debug_toggle_system } from "./systems/debug-toggle.ts";
 import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
-import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
 import {
 	type LightHandle,
 	type LightSystem,
-	light_uniforms_system,
+	make_eye_follow_system,
+	make_light_update_system,
 	make_marker_light_follow_system,
-	player_light_follow_system,
 } from "./systems/light/index.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
@@ -33,7 +34,6 @@ export type GamePluginOpts = {
 	telegraph_render?: System;
 	debug_overlay?: System;
 	light?: LightSystem;
-	player_torch?: LightHandle;
 	summoner_glow?: LightHandle;
 };
 
@@ -53,18 +53,24 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", projectile_step_system, { every: projectile_step_every, name: "bst.ai_projectile_step" });
 	sch.add("post", sprite_attach_system, "bst.sprites");
 	sch.add("post", tween_step_system, "bst.tween");
-	sch.add("post", fov_system, "bst.fov");
-	if (opts.light && opts.player_torch) {
-		sch.add("post", player_light_follow_system(opts.light, opts.player_torch), "bst.light_follow_player");
+	if (opts.light) {
+		sch.add("post", make_eye_follow_system(opts.light, g, visual_pos_c, player_c), "bst.light_eye_follow");
 	}
 	if (opts.light && opts.summoner_glow) {
 		sch.add(
 			"post",
-			make_marker_light_follow_system(opts.light, opts.summoner_glow, summoner_c, visual_pos_c),
+			make_marker_light_follow_system(opts.light, g, opts.summoner_glow, summoner_c, visual_pos_c),
 			"bst.light_follow_summoner",
 		);
 	}
-	if (opts.light) sch.add("render", light_uniforms_system(opts.light), "bst.light_uniforms");
+	if (opts.light) {
+		sch.add("render", make_light_update_system(opts.light, (_w, ctx) => {
+			const r = ctx.res.get(arena_r);
+			if (!r.ok) return null;
+			const floors = r.value.floors;
+			return cell => !floors.has(g.key(cell.x, cell.y));
+		}), "bst.light_update");
+	}
 	if (opts.telegraph_render) sch.add("post", opts.telegraph_render, "bst.telegraph_render");
 	if (opts.debug_overlay) sch.add("post", opts.debug_overlay, "bst.debug_overlay");
 };

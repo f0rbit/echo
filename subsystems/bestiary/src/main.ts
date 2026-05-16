@@ -9,7 +9,7 @@ import { make_debug_overlay } from "./systems/debug-overlay.ts";
 import { make_light_system, presets } from "./systems/light/index.ts";
 import { make_telegraph_render } from "./systems/telegraph-render.ts";
 
-const design = { width: 480, height: 320 };
+const design = { width: g.cols * g.tile, height: g.rows * g.tile };
 
 const main = async (): Promise<void> => {
 	const r = await boot({
@@ -33,34 +33,25 @@ const main = async (): Promise<void> => {
 	const debug_overlay = make_debug_overlay(app.render.world, g);
 
 	const ls = make_light_system({
-		design,
+		grid: g,
 		ambient: presets.moon_cavern.ambient,
-		max_lights: 16,
-	});
-
-	const player_torch = ls.add({
-		pos_px: [design.width / 2, design.height / 2],
-		color: presets.moon_cavern.default_torch_color,
-		radius_px: presets.moon_cavern.default_torch_radius,
-		intensity: 0.95,
-		flicker: { kind: "torch", amount: 0.12, seed: 1 },
+		eye_radius: 6,
 	});
 
 	const brazier_cell = brazier_cells[0]!;
-	const brazier_world = g.cell_to_world(brazier_cell.x, brazier_cell.y);
 	ls.add({
-		pos_px: [brazier_world.x + g.tile / 2, brazier_world.y + g.tile / 2],
+		pos_cell: [brazier_cell.x, brazier_cell.y],
 		color: [1.0, 0.55, 0.25],
-		radius_px: 64,
+		radius_cells: 4,
 		intensity: 0.85,
 		falloff: 1.6,
 		flicker: { kind: "torch", amount: 0.18, seed: 2 },
 	});
 
 	const summoner_glow = ls.add({
-		pos_px: [0, 0],
+		pos_cell: [0, 0],
 		color: [0.6, 0.3, 0.9],
-		radius_px: 56,
+		radius_cells: 4,
 		intensity: 0.75,
 		flicker: { kind: "candle", amount: 0.15, seed: 3 },
 	});
@@ -77,7 +68,6 @@ const main = async (): Promise<void> => {
 		telegraph_render,
 		debug_overlay,
 		light: ls,
-		player_torch,
 		summoner_glow,
 	});
 
