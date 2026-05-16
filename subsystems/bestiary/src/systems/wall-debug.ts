@@ -106,14 +106,21 @@ const handle_click = (id: Id): void => {
 const on_dom_click = (e: PointerEvent): void => {
 	if (!click_state || !active_world || !active_canvas || !active_container) return;
 	const rect = active_canvas.getBoundingClientRect();
-	const cx_px = e.clientX - rect.left;
-	const cy_px = e.clientY - rect.top;
-	const wx = (cx_px - active_container.x) / active_container.scale.x;
-	const wy = (cy_px - active_container.y) / active_container.scale.y;
-	const cell = g.world_to_cell(wx, wy);
-	if (!g.in_bounds(cell.x, cell.y)) return;
+	const canvas_x = e.clientX - rect.left;
+	const canvas_y = e.clientY - rect.top;
+	// Use Pixi's toLocal — handles the full inverse transform stack (stage + container + etc.)
+	const local = active_container.toLocal({ x: canvas_x, y: canvas_y });
+	const cell = g.world_to_cell(local.x, local.y);
+	if (!g.in_bounds(cell.x, cell.y)) {
+		console.log(`click oob: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${local.x.toFixed(1)},${local.y.toFixed(1)}) → cell(${cell.x},${cell.y})`);
+		return;
+	}
 	const id = cell_to_id.get(g.key(cell.x, cell.y));
-	if (id === undefined) return;
+	if (id === undefined) {
+		console.log(`click hit empty cell: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${local.x.toFixed(1)},${local.y.toFixed(1)}) → cell(${cell.x},${cell.y}) — no wall here`);
+		return;
+	}
+	console.log(`click resolved: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${local.x.toFixed(1)},${local.y.toFixed(1)}) → cell(${cell.x},${cell.y})`);
 	handle_click(id);
 };
 
