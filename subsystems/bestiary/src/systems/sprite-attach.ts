@@ -22,7 +22,7 @@ type Tile = {
 };
 
 const tiles: readonly Tile[] = [
-	{ marker: floor_c, frame: "__default_1__", visible: false },
+	{ marker: floor_c, frame: "__default_1__", visible: true },
 	{ marker: player_c, frame: "__default_0__", visible: true },
 	{ marker: minion_c, frame: "__default_2__", visible: true, tint: 0xffff66, scale: { x: 0.6, y: 0.6 } },
 	{ marker: summoner_c, frame: "__default_2__", visible: true, tint: 0x8800ff, scale: { x: 2, y: 2 } },

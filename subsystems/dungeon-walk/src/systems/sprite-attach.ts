@@ -6,8 +6,8 @@ import { exit_c, floor_c, player_c } from "../components.ts";
 const anchor = { x: 0.5, y: 0.5 } as const;
 
 const tiles: readonly [Component<true>, string, boolean][] = [
-	[floor_c, "__default_1__", false],
-	[exit_c, "__default_2__", false],
+	[floor_c, "__default_1__", true],
+	[exit_c, "__default_2__", true],
 	[player_c, "__default_0__", true],
 ];
 
