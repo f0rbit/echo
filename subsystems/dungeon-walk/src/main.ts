@@ -1,10 +1,11 @@
 import { boot } from "@f0rbit/forge/pixi";
 import { Rectangle, Text } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
-import { visual_pos_c } from "./components.ts";
+import { player_c, visual_pos_c } from "./components.ts";
 import { game_plugin } from "./plugin.ts";
 import { win_overlay_r } from "./resources.ts";
-import { make_light_filter } from "./systems/light.ts";
+import { make_light_system, presets } from "./systems/light/index.ts";
+import { g } from "./grid.ts";
 
 const make_overlay = (width: number, height: number): Text => {
 	const text = new Text({
@@ -49,15 +50,29 @@ const main = async (): Promise<void> => {
 			overlay.visible = visible;
 		},
 	});
-	const light = make_light_filter(design, { ambient: [0.08, 0.04, 0.02], falloff: 1.6 });
+	const ls = make_light_system({
+		grid: g,
+		ambient: presets.warm_torch.ambient,
+		eye_radius: 6,
+	});
+
+	const player_torch = ls.add({
+		pos_cell: [0, 0],
+		color: presets.warm_torch.default_torch_color,
+		radius_cells: presets.warm_torch.default_torch_radius,
+		intensity: 0.95,
+		falloff: 1.6,
+		flicker: { kind: "torch", amount: 0.12, seed: 1 },
+	});
+
 	app.render.world.sortableChildren = true;
 	const apply_filter_area = (): void => {
 		const vp = app.render.viewport();
 		app.render.world.filterArea = new Rectangle(0, 0, vp.view.width, vp.view.height);
 	};
 	apply_filter_area();
-	app.render.world.filters = [light.filter];
-	game_plugin(app.world, app.schedule, { light });
+	app.render.world.filters = [ls.filter];
+	game_plugin(app.world, app.schedule, { light: ls, player_torch });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 		apply_filter_area();

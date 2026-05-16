@@ -1,13 +1,15 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
 import { score_r, win_overlay_r } from "./resources.ts";
 import { dungeon_gen_system } from "./systems/dungeon-gen.ts";
-import { fov_system } from "./systems/fov.ts";
 import { input_system } from "./systems/input.ts";
-import { type LightFilter, light_follow_system } from "./systems/light.ts";
+import { type LightHandle, type LightSystem, make_eye_follow_system, make_light_update_system, make_marker_light_follow_system } from "./systems/light/index.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
+import { player_c, visual_pos_c } from "./components.ts";
+import { g } from "./grid.ts";
+import { dungeon_r } from "./resources.ts";
 
 const win_overlay_system: System = (_w, ctx) => {
 	const score = ctx.res.get(score_r);
@@ -17,7 +19,8 @@ const win_overlay_system: System = (_w, ctx) => {
 };
 
 export type GamePluginOpts = {
-	light?: LightFilter;
+	light?: LightSystem;
+	player_torch?: LightHandle;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
@@ -27,7 +30,19 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", movement_system, { every: step_every, name: "dw.movement" });
 	sch.add("post", sprite_attach_system, "dw.sprites");
 	sch.add("post", tween_step_system, "dw.tween");
-	sch.add("post", fov_system, "dw.fov");
-	if (opts.light) sch.add("post", light_follow_system(opts.light), "dw.light_follow");
+	if (opts.light) {
+		sch.add("post", make_eye_follow_system(opts.light, g, visual_pos_c, player_c), "dw.eye_follow");
+	}
+	if (opts.light && opts.player_torch) {
+		sch.add("post", make_marker_light_follow_system(opts.light, g, opts.player_torch, player_c, visual_pos_c), "dw.torch_follow");
+	}
+	if (opts.light) {
+		sch.add("render", make_light_update_system(opts.light, (_w, ctx) => {
+			const r = ctx.res.get(dungeon_r);
+			if (!r.ok) return null;
+			const floors = r.value.floors;
+			return (cell: { x: number; y: number }) => !floors.has(g.key(cell.x, cell.y));
+		}), "dw.light_update");
+	}
 	sch.add("render", win_overlay_system, "dw.win");
 };
