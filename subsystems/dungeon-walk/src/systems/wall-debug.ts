@@ -36,21 +36,23 @@ export const make_wall_debug_system = (overlay: Container): System => {
 			if (is_wall(cx - 1, cy)) mask |= W;
 			const existing = state.labels.get(id);
 			if (existing) {
-				existing.text = String(mask);
+				existing.text = mask.toString(16).toUpperCase();
 				existing.position.set(x, y);
 				continue;
 			}
 			const text = new Text({
-				text: String(mask),
+				text: mask.toString(16).toUpperCase(),
 				style: {
-					fontFamily: "monospace",
-					fontSize: 8,
-					fill: 0xffff00,
+					fontFamily: "Arial",
+					fontSize: 16,
+					fontWeight: "bold",
+					fill: 0x00ff00,
 					stroke: { color: 0x000000, width: 2 },
 				},
 			});
 			text.anchor.set(0.5, 0.5);
 			text.position.set(x, y);
+			text.scale.set(0.6);
 			state.container.addChild(text);
 			state.labels.set(id, text);
 		}
