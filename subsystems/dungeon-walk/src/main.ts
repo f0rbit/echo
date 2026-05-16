@@ -73,7 +73,7 @@ const main = async (): Promise<void> => {
 	};
 	apply_filter_area();
 	app.render.world.filters = [ls.filter];
-	game_plugin(app.world, app.schedule, { light: ls, debug_overlay: app.render.world });
+	game_plugin(app.world, app.schedule, { light: ls });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 		apply_filter_area();

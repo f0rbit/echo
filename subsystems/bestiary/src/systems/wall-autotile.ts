@@ -9,22 +9,23 @@ const E = 2;
 const S = 4;
 const W = 8;
 
-const col_for = (mask: number): number => {
-	const e = (mask & E) !== 0;
-	const w = (mask & W) !== 0;
-	if (!w && !e) return 0;
-	if (!w && e) return 1;
-	if (w && e) return 2;
-	return 3;
-};
-
-const row_for = (mask: number): number => {
-	const n = (mask & N) !== 0;
-	const s = (mask & S) !== 0;
-	if (!n && s) return 0;
-	if (n && !s) return 3;
-	if (!n && !s) return 0;
-	return 1;
+const PATTERN_TO_TILE: Readonly<Record<number, { col: number; row: number }>> = {
+	0b0000: { col: 0, row: 0 },   // isolated -> vertical pillar top
+	0b0001: { col: 0, row: 2 },   // N only -> bottom-cap of vertical
+	0b0010: { col: 8, row: 0 },   // E only -> horizontal left-cap (thin wall row 0)
+	0b0011: { col: 1, row: 0 },   // N+E -> inner corner, opens SW
+	0b0100: { col: 0, row: 0 },   // S only -> top-cap of vertical
+	0b0101: { col: 0, row: 1 },   // N+S -> vertical run middle
+	0b0110: { col: 1, row: 3 },   // S+E -> inner corner, opens NW
+	0b0111: { col: 1, row: 1 },   // N+E+S -> T-opens-W (right edge of room)
+	0b1000: { col: 11, row: 0 },  // W only -> horizontal right-cap (thin wall row 0)
+	0b1001: { col: 3, row: 0 },   // N+W -> inner corner, opens SE
+	0b1010: { col: 9, row: 0 },   // E+W -> horizontal run middle (thin wall)
+	0b1011: { col: 2, row: 0 },   // N+E+W -> T-opens-S (top edge of room)
+	0b1100: { col: 3, row: 3 },   // S+W -> inner corner, opens NE
+	0b1101: { col: 3, row: 1 },   // N+S+W -> T-opens-E (left edge of room)
+	0b1110: { col: 2, row: 3 },   // E+S+W -> T-opens-N (bottom edge of room)
+	0b1111: { col: 2, row: 1 },   // all 4 -> 4-way / fully enclosed
 };
 
 export const apply_wall_autotile = (w: World): void => {
@@ -44,9 +45,8 @@ export const apply_wall_autotile = (w: World): void => {
 		if (is_wall(cx + 1, cy)) mask |= E;
 		if (is_wall(cx, cy + 1)) mask |= S;
 		if (is_wall(cx - 1, cy)) mask |= W;
-		const col = col_for(mask);
-		const row = row_for(mask);
-		const frame = `wat_${col}_${row}`;
+		const tile = PATTERN_TO_TILE[mask]!;
+		const frame = `wat_${tile.col}_${tile.row}`;
 		w.set(id, sprite_c, {
 			texture: "walls",
 			frame,
