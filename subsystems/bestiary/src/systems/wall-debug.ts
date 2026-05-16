@@ -48,9 +48,11 @@ export const make_wall_debug_system = (container: Container): System => (w: Worl
 				fill: 0xffff00,
 				stroke: { color: 0x000000, width: 1 },
 			}),
+			resolution: 4,
 		});
 		text.anchor.set(0.5);
 		text.position.set(p.x, p.y);
+		text.scale.set(0.5);
 		text.visible = visible_state;
 		text.zIndex = 1000;
 		container.addChild(text);
