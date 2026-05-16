@@ -39,6 +39,7 @@ const main = async (): Promise<void> => {
 			color: presets.moon_cavern.default_torch_color,
 			radius_cells: 6,
 			intensity: 0.95,
+			falloff: 2.5,
 			flicker: { kind: "torch", amount: 0.12, seed: 1 },
 		},
 	});

@@ -57,7 +57,7 @@ const main = async (): Promise<void> => {
 			color: presets.warm_torch.default_torch_color,
 			radius_cells: 6,
 			intensity: 1.0,
-			falloff: 1.6,
+			falloff: 2.5,
 			flicker: { kind: "torch", amount: 0.12, seed: 1 },
 		},
 	});
