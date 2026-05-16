@@ -18,13 +18,13 @@ const col_for = (mask: number): number => {
 	return 3;
 };
 
-const row_for = (mask: number, cx: number, cy: number): number => {
+const row_for = (mask: number, cy: number): number => {
 	const n = (mask & N) !== 0;
 	const s = (mask & S) !== 0;
 	if (!n && s) return 0;
 	if (n && !s) return 3;
 	if (!n && !s) return 0;
-	return 1 + ((cx * 131 + cy * 17) & 1);
+	return 1 + (cy & 1);
 };
 
 export const apply_wall_autotile = (w: World): void => {
@@ -35,15 +35,17 @@ export const apply_wall_autotile = (w: World): void => {
 		cells.add(g.key(c.x, c.y));
 		entries.push([id, { cx: c.x, cy: c.y }]);
 	}
+	const is_wall = (x: number, y: number): boolean =>
+		!g.in_bounds(x, y) || cells.has(g.key(x, y));
 	for (const [id, { cx, cy }] of entries) {
 		if (w.has(id, sprite_c)) continue;
 		let mask = 0;
-		if (cells.has(g.key(cx, cy - 1))) mask |= N;
-		if (cells.has(g.key(cx + 1, cy))) mask |= E;
-		if (cells.has(g.key(cx, cy + 1))) mask |= S;
-		if (cells.has(g.key(cx - 1, cy))) mask |= W;
+		if (is_wall(cx, cy - 1)) mask |= N;
+		if (is_wall(cx + 1, cy)) mask |= E;
+		if (is_wall(cx, cy + 1)) mask |= S;
+		if (is_wall(cx - 1, cy)) mask |= W;
 		const col = col_for(mask);
-		const row = row_for(mask, cx, cy);
+		const row = row_for(mask, cy);
 		const frame = `wat_${col}_${row}`;
 		w.set(id, sprite_c, {
 			texture: "walls",
