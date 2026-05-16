@@ -26,6 +26,7 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
+import { wall_autotile_system } from "./systems/wall-autotile.ts";
 import { wall_index_system } from "./systems/wall-index.ts";
 
 const ai_tick = 12;
@@ -40,6 +41,7 @@ export type GamePluginOpts = {
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", arena_gen_system, "bst.gen");
+	sch.add("startup", wall_autotile_system, "bst.wall_autotile");
 	sch.add("pre", restart_system, "bst.restart");
 	sch.add("pre", wall_index_system, "bst.wall_index");
 	sch.add("pre", debug_toggle_system, "bst.debug_toggle");

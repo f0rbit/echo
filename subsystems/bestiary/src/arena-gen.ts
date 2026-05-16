@@ -19,6 +19,7 @@ import {
 import { fsm } from "./fsm.ts";
 import { g } from "./grid.ts";
 import { arena_r, run_seed_r } from "./resources.ts";
+import { apply_wall_autotile } from "./systems/wall-autotile.ts";
 
 const pillar_count = 5;
 const spawn_cell: Cell = { x: 15, y: 10 };
@@ -181,4 +182,5 @@ export const regenerate_arena = (w: World, ctx: Ctx): void => {
 	const restart_count = (seed.ok ? seed.value.restart_count : 0) + 1;
 	ctx.res.set(run_seed_r, { base, restart_count });
 	build_arena(w, ctx, make_rng(base + restart_count));
+	apply_wall_autotile(w);
 };

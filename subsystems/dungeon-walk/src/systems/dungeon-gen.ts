@@ -4,6 +4,7 @@ import type { Cell } from "@f0rbit/forge/grid";
 import { dir_c, exit_c, floor_c, player_c, visual_pos_c, wall_c } from "../components.ts";
 import { g } from "../grid.ts";
 import { dungeon_r, run_seed_r, score_r } from "../resources.ts";
+import { apply_wall_autotile } from "./wall-autotile.ts";
 
 type Room = { x: number; y: number; w: number; h: number };
 
@@ -123,4 +124,5 @@ export const regenerate_dungeon = (w: World, ctx: Ctx): void => {
 	const restart_count = (seed.ok ? seed.value.restart_count : 0) + 1;
 	ctx.res.set(run_seed_r, { base, restart_count });
 	build_dungeon(w, ctx, make_rng(base + restart_count));
+	apply_wall_autotile(w);
 };
