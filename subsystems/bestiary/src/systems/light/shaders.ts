@@ -42,8 +42,9 @@ void main() {
     vec4 col = texture(uTexture, vTextureCoord);
     vec2 grid_uv = (vTextureCoord * uInputSize.xy) / uGridSize;
     vec4 g = texture(uLightGrid, grid_uv);
+    vec3 g_rgb = g.rgb * 4.0;
     vec3 unseen = uAmbient * col.rgb;
-    vec3 lit_target = col.rgb * (uAmbient + g.rgb);
+    vec3 lit_target = col.rgb * (uAmbient + g_rgb);
     float Y = max(lit_target.r, max(lit_target.g, lit_target.b));
     vec3 lit = lit_target / (1.0 + max(0.0, Y - 1.0));
     finalColor = vec4(mix(unseen, lit, g.a), col.a);
@@ -98,8 +99,9 @@ fn mainFragment(@location(0) uv: vec2<f32>, @builtin(position) position: vec4<f3
   let col = textureSample(uTexture, uSampler, uv);
   let grid_uv = (uv * gfu.uInputSize.xy) / light.uGridSize;
   let g = textureSample(uLightGrid, uLightGridSampler, grid_uv);
+  let g_rgb = g.rgb * 4.0;
   let unseen = light.uAmbient * col.rgb;
-  let lit_target = col.rgb * (light.uAmbient + g.rgb);
+  let lit_target = col.rgb * (light.uAmbient + g_rgb);
   let Y = max(lit_target.r, max(lit_target.g, lit_target.b));
   let lit = lit_target / (1.0 + max(0.0, Y - 1.0));
   return vec4<f32>(mix(unseen, lit, g.a), col.a);

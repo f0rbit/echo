@@ -72,6 +72,8 @@ type Slot = {
 
 const default_ambient: readonly [number, number, number] = [0.04, 0.04, 0.08];
 
+const LIGHT_RGB_SCALE = 4;
+
 const eval_flicker = (
 	flicker: FlickerProfile | undefined,
 	seed: number,
@@ -101,13 +103,15 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 		Math.max(0, Math.min(rows - 1, y | 0)),
 	];
 
-	const grid_buf = new Float32Array(cols * rows * 4);
+	const grid_acc = new Float32Array(cols * rows * 4);
+	const grid_buf = new Uint8ClampedArray(cols * rows * 4);
+	const rgb_scale = 1 / LIGHT_RGB_SCALE;
 
 	const tex_source = new BufferImageSource({
 		resource: grid_buf,
 		width: cols,
 		height: rows,
-		format: "rgba32float",
+		format: "rgba8unorm",
 		alphaMode: "no-premultiply-alpha",
 		scaleMode: "linear",
 		addressModeU: "clamp-to-edge",
@@ -128,7 +132,7 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 			vertex: { source: shaders.wgsl, entryPoint: "mainVertex" },
 			fragment: { source: shaders.wgsl, entryPoint: "mainFragment" },
 		}),
-		resources: { light: uniforms, uLightGrid: tex_source },
+		resources: { light: uniforms, uLightGrid: tex_source, uLightGridSampler: tex_source.style },
 	});
 
 	const slots: Slot[] = [];
@@ -237,7 +241,7 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 		ctx: { time: { tick: number; alpha: number; fixed_dt: number } },
 		is_blocking: (cell: Cell) => boolean,
 	): void => {
-		grid_buf.fill(0);
+		grid_acc.fill(0);
 		const t = (ctx.time.tick + ctx.time.alpha) * ctx.time.fixed_dt;
 		for (let i = 0; i < slots.length; i++) {
 			const s = slots[i]!;
@@ -245,7 +249,7 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 			const reached = s.cells_reached;
 			if (!reached) continue;
 			if (s.is_eye) {
-				for (const k of reached) grid_buf[k * 4 + 3] = 1.0;
+				for (const k of reached) grid_acc[k * 4 + 3] = 1.0;
 				continue;
 			}
 			const i_mul = eval_flicker(s.flicker, s.seed, t);
@@ -261,10 +265,17 @@ export const make_light_system = (config: LightSystemConfig): LightSystem => {
 				const fall = 1 - (ttp * ttp * (3 - 2 * ttp));
 				const contrib = contrib_base * fall;
 				const o = k * 4;
-				grid_buf[o] = (grid_buf[o] ?? 0) + s.color_r * contrib;
-				grid_buf[o + 1] = (grid_buf[o + 1] ?? 0) + s.color_g * contrib;
-				grid_buf[o + 2] = (grid_buf[o + 2] ?? 0) + s.color_b * contrib;
+				grid_acc[o] = (grid_acc[o] ?? 0) + s.color_r * contrib;
+				grid_acc[o + 1] = (grid_acc[o + 1] ?? 0) + s.color_g * contrib;
+				grid_acc[o + 2] = (grid_acc[o + 2] ?? 0) + s.color_b * contrib;
 			}
+		}
+		const n = cols * rows * 4;
+		for (let i = 0; i < n; i += 4) {
+			grid_buf[i] = (grid_acc[i] ?? 0) * 255 * rgb_scale;
+			grid_buf[i + 1] = (grid_acc[i + 1] ?? 0) * 255 * rgb_scale;
+			grid_buf[i + 2] = (grid_acc[i + 2] ?? 0) * 255 * rgb_scale;
+			grid_buf[i + 3] = (grid_acc[i + 3] ?? 0) * 255;
 		}
 		tex_source.update();
 	};
