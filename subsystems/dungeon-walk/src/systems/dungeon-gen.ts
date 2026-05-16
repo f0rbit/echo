@@ -99,7 +99,7 @@ export const build_dungeon = (w: World, ctx: Ctx, rng: Rng): void => {
 	}));
 	w.spawn_many([...wall_cells].map(k => {
 		const p = at(g.unkey(k));
-		return [[pos_c, p], [wall_c, true]];
+		return [[pos_c, p], [visual_pos_c, { ...p }], [wall_c, true]];
 	}));
 	const exit_pos = at(exit);
 	w.spawn([pos_c, exit_pos], [visual_pos_c, { ...exit_pos }], [exit_c, true]);

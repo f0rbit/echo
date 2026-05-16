@@ -113,7 +113,7 @@ export const build_arena = (w: World, ctx: Ctx, rng: Rng): void => {
 	}));
 	w.spawn_many([...wall_cells].map(k => {
 		const p = at(g.unkey(k));
-		return [[pos_c, p], [wall_c, true]];
+		return [[pos_c, p], [visual_pos_c, { ...p }], [wall_c, true]];
 	}));
 	const spawn_pos = at(spawn_cell);
 	w.spawn(
