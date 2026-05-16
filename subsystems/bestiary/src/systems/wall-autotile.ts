@@ -9,25 +9,22 @@ const E = 2;
 const S = 4;
 const W = 8;
 
-type TilePos = readonly [col: number, row: number];
+const col_for = (mask: number): number => {
+	const e = (mask & E) !== 0;
+	const w = (mask & W) !== 0;
+	if (!w && !e) return 0;
+	if (!w && e) return 1;
+	if (w && e) return 2;
+	return 3;
+};
 
-export const WALL_TILE_BY_PATTERN: Readonly<Record<number, TilePos>> = {
-	0: [0, 0],
-	[N]: [3, 3],
-	[E]: [0, 3],
-	[S]: [0, 0],
-	[W]: [3, 3],
-	[N | E]: [0, 3],
-	[N | S]: [0, 1],
-	[E | S]: [0, 0],
-	[N | W]: [3, 3],
-	[E | W]: [1, 3],
-	[S | W]: [3, 0],
-	[N | E | S]: [0, 1],
-	[N | E | W]: [1, 3],
-	[N | S | W]: [3, 1],
-	[E | S | W]: [1, 0],
-	[N | E | S | W]: [1, 1],
+const row_for = (mask: number, cx: number, cy: number): number => {
+	const n = (mask & N) !== 0;
+	const s = (mask & S) !== 0;
+	if (!n && s) return 0;
+	if (n && !s) return 3;
+	if (!n && !s) return 0;
+	return 1 + ((cx * 131 + cy * 17) & 1);
 };
 
 export const apply_wall_autotile = (w: World): void => {
@@ -45,8 +42,9 @@ export const apply_wall_autotile = (w: World): void => {
 		if (cells.has(g.key(cx + 1, cy))) mask |= E;
 		if (cells.has(g.key(cx, cy + 1))) mask |= S;
 		if (cells.has(g.key(cx - 1, cy))) mask |= W;
-		const tile = WALL_TILE_BY_PATTERN[mask] ?? [1, 1];
-		const frame = `wat_${tile[0]}_${tile[1]}`;
+		const col = col_for(mask);
+		const row = row_for(mask, cx, cy);
+		const frame = `wat_${col}_${row}`;
 		w.set(id, sprite_c, {
 			texture: "walls",
 			frame,
