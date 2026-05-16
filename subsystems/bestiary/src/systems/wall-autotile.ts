@@ -18,13 +18,13 @@ const col_for = (mask: number): number => {
 	return 3;
 };
 
-const row_for = (mask: number, cy: number): number => {
+const row_for = (mask: number): number => {
 	const n = (mask & N) !== 0;
 	const s = (mask & S) !== 0;
 	if (!n && s) return 0;
 	if (n && !s) return 3;
 	if (!n && !s) return 0;
-	return 1 + (cy & 1);
+	return 1;
 };
 
 export const apply_wall_autotile = (w: World): void => {
@@ -45,7 +45,7 @@ export const apply_wall_autotile = (w: World): void => {
 		if (is_wall(cx, cy + 1)) mask |= S;
 		if (is_wall(cx - 1, cy)) mask |= W;
 		const col = col_for(mask);
-		const row = row_for(mask, cy);
+		const row = row_for(mask);
 		const frame = `wat_${col}_${row}`;
 		w.set(id, sprite_c, {
 			texture: "walls",
