@@ -9,23 +9,25 @@ const E = 2;
 const S = 4;
 const W = 8;
 
-export const WALL_FRAME_BY_PATTERN: Readonly<Record<number, string>> = {
-	0: "column_wall",
-	1: "wall_outer_front_left",
-	2: "wall_left",
-	3: "wall_edge_bottom_left",
-	4: "wall_top_mid",
-	5: "wall_edge_mid_left",
-	6: "wall_top_left",
-	7: "wall_edge_tshape_left",
-	8: "wall_right",
-	9: "wall_edge_bottom_right",
-	10: "wall_mid",
-	11: "wall_edge_tshape_bottom_left",
-	12: "wall_top_right",
-	13: "wall_edge_tshape_right",
-	14: "wall_edge_tshape_bottom_right",
-	15: "wall_mid",
+type TilePos = readonly [col: number, row: number];
+
+export const WALL_TILE_BY_PATTERN: Readonly<Record<number, TilePos>> = {
+	0: [0, 0],
+	[N]: [3, 3],
+	[E]: [0, 3],
+	[S]: [0, 0],
+	[W]: [3, 3],
+	[N | E]: [0, 3],
+	[N | S]: [0, 1],
+	[E | S]: [0, 0],
+	[N | W]: [3, 3],
+	[E | W]: [1, 3],
+	[S | W]: [3, 0],
+	[N | E | S]: [0, 1],
+	[N | E | W]: [1, 3],
+	[N | S | W]: [3, 1],
+	[E | S | W]: [1, 0],
+	[N | E | S | W]: [1, 1],
 };
 
 export const apply_wall_autotile = (w: World): void => {
@@ -43,9 +45,10 @@ export const apply_wall_autotile = (w: World): void => {
 		if (cells.has(g.key(cx + 1, cy))) mask |= E;
 		if (cells.has(g.key(cx, cy + 1))) mask |= S;
 		if (cells.has(g.key(cx - 1, cy))) mask |= W;
-		const frame = WALL_FRAME_BY_PATTERN[mask] ?? "wall_mid";
+		const tile = WALL_TILE_BY_PATTERN[mask] ?? [1, 1];
+		const frame = `wat_${tile[0]}_${tile[1]}`;
 		w.set(id, sprite_c, {
-			texture: "dungeon",
+			texture: "walls",
 			frame,
 			anchor: { x: 0.5, y: 0.5 },
 			visible: true,
