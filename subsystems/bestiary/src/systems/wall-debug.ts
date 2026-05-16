@@ -1,6 +1,6 @@
 import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
-import type { Container, FederatedPointerEvent } from "pixi.js";
+import type { Container } from "pixi.js";
 import { sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
@@ -59,6 +59,7 @@ const wall_click_index = new Map<Id, number>();
 const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
 let active_container: Container | null = null;
+let active_canvas: HTMLCanvasElement | null = null;
 let visible_state = false;
 let click_state = false;
 
@@ -102,10 +103,14 @@ const handle_click = (id: Id): void => {
 	);
 };
 
-const on_pointer_down = (event: FederatedPointerEvent): void => {
-	if (!click_state || !active_world || !active_container) return;
-	const local = event.getLocalPosition(active_container);
-	const cell = g.world_to_cell(local.x, local.y);
+const on_dom_click = (e: PointerEvent): void => {
+	if (!click_state || !active_world || !active_canvas || !active_container) return;
+	const rect = active_canvas.getBoundingClientRect();
+	const cx_px = e.clientX - rect.left;
+	const cy_px = e.clientY - rect.top;
+	const wx = (cx_px - active_container.x) / active_container.scale.x;
+	const wy = (cy_px - active_container.y) / active_container.scale.y;
+	const cell = g.world_to_cell(wx, wy);
 	if (!g.in_bounds(cell.x, cell.y)) return;
 	const id = cell_to_id.get(g.key(cell.x, cell.y));
 	if (id === undefined) return;
@@ -113,21 +118,17 @@ const on_pointer_down = (event: FederatedPointerEvent): void => {
 };
 
 const apply_interactivity = (on: boolean): void => {
-	if (!active_container) return;
+	if (!active_canvas) return;
+	active_canvas.removeEventListener("pointerdown", on_dom_click);
 	if (on) {
-		active_container.eventMode = "static";
-		active_container.cursor = "default";
-		active_container.off("pointerdown", on_pointer_down);
-		active_container.on("pointerdown", on_pointer_down);
-	} else {
-		active_container.off("pointerdown", on_pointer_down);
-		active_container.eventMode = "none";
+		active_canvas.addEventListener("pointerdown", on_dom_click);
 	}
 };
 
 export const make_wall_debug_system = (container: Container): System => (w: World) => {
 	active_world = w;
 	active_container = container;
+	active_canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {
 		const c = g.world_to_cell(p.x, p.y);
