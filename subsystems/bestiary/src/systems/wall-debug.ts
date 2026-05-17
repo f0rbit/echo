@@ -61,6 +61,7 @@ const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
 let active_canvas: HTMLCanvasElement | null = null;
 let active_container: Container | null = null;
+let active_debug_container: Container | null = null;
 let visible_state = false;
 let click_state = false;
 let logged_diag = false;
@@ -88,17 +89,18 @@ const apply_tints = (on: boolean): void => {
 };
 
 const draw_click_marker = (wx: number, wy: number): void => {
-	if (!active_container) return;
+	if (!active_container || !active_debug_container) return;
+	const canvas_point = active_container.toGlobal({ x: wx, y: wy });
 	const dot = new Graphics();
-	dot.circle(0, 0, 3).fill({ color: 0xff00ff });
-	dot.circle(0, 0, 6).stroke({ color: 0xffff00, width: 1 });
-	dot.position.set(wx, wy);
+	dot.circle(0, 0, 4).fill({ color: 0xff00ff });
+	dot.circle(0, 0, 8).stroke({ color: 0xffff00, width: 2 });
+	dot.position.set(canvas_point.x, canvas_point.y);
 	dot.zIndex = 9999;
-	active_container.addChild(dot);
+	active_debug_container.addChild(dot);
 	setTimeout(() => {
 		dot.removeFromParent();
 		dot.destroy();
-	}, 1500);
+	}, 2000);
 };
 
 const handle_click = (id: Id): void => {
@@ -167,14 +169,17 @@ const on_dom_click = (e: PointerEvent): void => {
 			console.log(`${label}: world(${pwx},${pwy}) → canvas(${global.x.toFixed(2)}, ${global.y.toFixed(2)})`);
 		}
 
-		const probe_colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
-		for (let i = 0; i < probes.length; i++) {
-			const p = probes[i]!;
-			const dot = new Graphics();
-			dot.circle(0, 0, 8).fill({ color: probe_colors[i] });
-			dot.position.set(p.wx, p.wy);
-			dot.zIndex = 9999;
-			active_container.addChild(dot);
+		if (active_debug_container) {
+			const probe_colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
+			for (let i = 0; i < probes.length; i++) {
+				const p = probes[i]!;
+				const cv = active_container.toGlobal({ x: p.wx, y: p.wy });
+				const dot = new Graphics();
+				dot.circle(0, 0, 8).fill({ color: probe_colors[i] });
+				dot.position.set(cv.x, cv.y);
+				dot.zIndex = 9999;
+				active_debug_container.addChild(dot);
+			}
 		}
 	}
 
@@ -205,9 +210,13 @@ const apply_interactivity = (on: boolean): void => {
 	}
 };
 
-export const make_wall_debug_system = (container: Container): System => (w: World) => {
+export const make_wall_debug_system = (
+	world_container: Container,
+	debug_container: Container,
+): System => (w: World) => {
 	active_world = w;
-	active_container = container;
+	active_container = world_container;
+	active_debug_container = debug_container;
 	active_canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {

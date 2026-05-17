@@ -1,5 +1,5 @@
 import { boot } from "@f0rbit/forge/pixi";
-import { Rectangle, Text } from "pixi.js";
+import { Container, Rectangle, Text } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
 import { player_c, visual_pos_c } from "./components.ts";
 import { game_plugin } from "./plugin.ts";
@@ -47,6 +47,9 @@ const main = async (): Promise<void> => {
 		return;
 	}
 	const app = r.value;
+	const debug_container = new Container();
+	debug_container.label = "debug_overlay";
+	app.app.stage.addChild(debug_container);
 	const overlay = make_overlay(globalThis.innerWidth, globalThis.innerHeight);
 	app.app.stage.addChild(overlay);
 	app.res.set(win_overlay_r, {
@@ -73,7 +76,7 @@ const main = async (): Promise<void> => {
 	};
 	apply_filter_area();
 	app.render.world.filters = [ls.filter];
-	game_plugin(app.world, app.schedule, { light: ls, world_container: app.render.world });
+	game_plugin(app.world, app.schedule, { light: ls, world_container: app.render.world, debug_container });
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
 		apply_filter_area();

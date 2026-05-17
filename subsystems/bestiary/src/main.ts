@@ -1,5 +1,5 @@
 import { boot } from "@f0rbit/forge/pixi";
-import { Rectangle } from "pixi.js";
+import { Container, Rectangle } from "pixi.js";
 import { brazier_cells } from "./arena-gen.ts";
 import { game_bindings } from "./bindings.ts";
 import { visual_pos_c } from "./components.ts";
@@ -33,6 +33,9 @@ const main = async (): Promise<void> => {
 		return;
 	}
 	const app = r.value;
+	const debug_container = new Container();
+	debug_container.label = "debug_overlay";
+	app.app.stage.addChild(debug_container);
 	const telegraph_render = make_telegraph_render(app.render.world, g);
 	const debug_overlay = make_debug_overlay(app.render.world, g);
 
@@ -80,6 +83,7 @@ const main = async (): Promise<void> => {
 		light: ls,
 		summoner_glow,
 		world_container: app.render.world,
+		debug_container,
 	});
 
 	globalThis.addEventListener("resize", () => {

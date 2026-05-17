@@ -25,13 +25,14 @@ const win_overlay_system: System = (_w, ctx) => {
 export type GamePluginOpts = {
 	light?: LightSystem;
 	world_container?: Container;
+	debug_container?: Container;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
 	sch.add("startup", wall_autotile_system, "dw.wall_autotile");
-	if (opts.world_container) {
-		sch.add("startup", make_wall_debug_system(opts.world_container), "dw.wall_debug");
+	if (opts.world_container && opts.debug_container) {
+		sch.add("startup", make_wall_debug_system(opts.world_container, opts.debug_container), "dw.wall_debug");
 	}
 	sch.add("pre", restart_system, "dw.restart");
 	sch.add("pre", wall_index_system, "dw.wall_index");
