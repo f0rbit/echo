@@ -6,6 +6,7 @@ import { game_bindings } from "./bindings.ts";
 import { debug_plugin } from "./debug-plugin.ts";
 import { g } from "./grid.ts";
 import { make_camera_shake_apply_system } from "./systems/camera-shake.ts";
+import { make_entity_render_system } from "./systems/entity-render.ts";
 
 const design = { width: g.cols * g.tile, height: g.rows * g.tile };
 
@@ -47,6 +48,11 @@ const main = async (): Promise<void> => {
 	apply_filter_area();
 	app.render.world.filters = [light.filter];
 
+	const entity_graphics = new Graphics();
+	entity_graphics.label = "ar.entity_graphics";
+	entity_graphics.zIndex = 50;
+	app.render.world.addChild(entity_graphics);
+
 	const particles_overlay = new Graphics();
 	particles_overlay.label = "ar.particles_overlay";
 	particles_overlay.zIndex = 100;
@@ -58,6 +64,11 @@ const main = async (): Promise<void> => {
 		light,
 		particles_overlay,
 		debug_container,
+	});
+
+	app.schedule.add("render", make_entity_render_system(entity_graphics), {
+		phase: 10,
+		name: "ar.entity_render",
 	});
 
 	app.schedule.add("render", make_camera_shake_apply_system(app.render), {
