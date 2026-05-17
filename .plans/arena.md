@@ -58,22 +58,20 @@ PLAN.md §4.3 implies sub-cell positions ("4-tile speed" projectile, "90° melee
 
 ### Q2. Hitstop replay-determinism
 
-`time.scale = 0` for 4 ticks. PLAN.md spec is clear; the question is *does it preserve replay determinism?*
+`time.scale = 0` is unworkable as a hitstop mechanism. See the §2 Q2 alternative analysis (option (d), originally in §6) for the corrected approach.
 
 **Confirmed forge behaviour** (`forge/src/time.ts` + `forge/src/pixi/index.ts`):
 - `time.advance(real_dt, each)` increments `state.accumulator += real_dt * scale`. With `scale = 0`, accumulator stays put.
-- The `each` callback (wired in `boot()` to `sch.tick(w, ctx_obj)`) fires once per consumed simulation tick. With `scale = 0`, no consumption, **`sch.tick` does not run at all** — including the `render` stage.
+- The `each` callback (wired in `boot()` to `sch.tick(w, ctx_obj)`) fires once per consumed simulation tick. With `scale = 0`, no consumption, **`sch.tick` does not run at all** — including the `pre`-stage release system. **Result: permanent deadlock**, because the system that's supposed to restore `scale = 1` itself depends on a tick that will never come.
 - `state.tick` does not advance. Periodic systems (`{ every, phase }`) gate on `ctx.time.tick % every`, so they also pause. Replay's `tick`-keyed action events do not fire while frozen.
 
-**Decision: hitstop is implemented as `time.scale = 0` for exactly `hitstop_r.remaining_ticks` simulation ticks.** When the simulation re-ticks, a `pre`-stage `hitstop_release_system` decrements `remaining_ticks` and sets `scale = 1` when it hits zero.
+**Decision: hitstop is a per-system game-state gate, not a `time.scale` change.** `hitstop_r.remaining` is set to `HITSTOP_TICKS` on a hit; a `pre`-stage `hitstop_release_system` decrements it each tick. Every gameplay system (`input`, `movement`, `combat-melee`, `combat-ranged`, `enemy-ai`, `waves`, `particles` emit + advance) early-returns when `remaining > 0`. The release system itself is NOT gated — it's the countdown. `ctx.time.scale` is never mutated by arena code.
 
-**Replay determinism — preserved.** Two key properties:
-1. **Action stream is tick-keyed, not wall-clock-keyed.** The replay records "at tick T, action X". When `scale = 0`, ticks pause. When `scale = 1` resumes, the next recorded tick fires in lockstep. The replay player reads `time.tick`, not `time.elapsed`.
-2. **Hitstop trigger is deterministic.** Hitstop fires from `combat.ts` when a hit lands — same combat tick across runs, same `hitstop_r.remaining_ticks` value, same scale-zero duration.
+Render-adjacent systems (`flash`, `camera-shake` push/apply, `light-fx`) intentionally keep ticking — they read render state, not simulation state, and the visual cost of letting shake/lights decay through 4 ticks of hitstop is imperceptible. Their decay arithmetic continues; sprite positions stay frozen because `pos_c` doesn't change. That's the visual freeze.
 
-**Visible consequence.** The render system literally pauses during hitstop. The canvas displays the last rendered frame for 4 ticks (~67 ms). That's exactly what hitstop *should* look like — a momentary freeze. **Camera shake during hitstop is unnecessary** and would be invisible anyway: any `surface_sprite.position` mutation we did wouldn't get drawn because `render_system` is gated by `sch.tick` too. The juicy-game pattern is "shake starts the tick hit lands; hitstop suspends visible state for 4 ticks; shake resumes when ticks resume". Decay arithmetic on `camera_shake_r.magnitude` runs on game ticks, so the shake decay is also paused during freeze — perceptually correct.
+**Replay determinism — preserved unconditionally.** `time.tick` advances normally; replay-recorded actions still fire on their tick; world hash is identical across runs (since the gated systems write nothing to the world during hitstop).
 
-**No `time.scale_for(ticks, scale)` helper needed.** A 5-LOC game-side `hitstop_release_system` does the job. We may promote it to forge in a later phase if `boss` and `progress` both want pause-for-N-ticks semantics (PLAN.md §4.5 hints `progress` uses `time.scale = 0` for level-up pause — that's the second consumer for the threshold).
+**No `time.scale_for(ticks, scale)` helper needed.** A handful of `if (hs.ok && hs.value.remaining > 0) return;` early-returns + one pre-stage decrement does the job game-side. If `boss` or `progress` reuse the pattern, lift it (a gate-helper function) game-side first, promote to forge only after the 2-consumer threshold.
 
 ### Q3. Camera shake — where does the offset live?
 

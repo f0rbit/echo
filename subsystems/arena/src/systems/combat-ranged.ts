@@ -7,7 +7,7 @@ import {
 	chaser_c,
 	health_c,
 } from "../components.ts";
-import { arena_r, hit_events_r } from "../resources.ts";
+import { arena_r, hit_events_r, hitstop_r } from "../resources.ts";
 
 const PROJECTILE_SPEED = 64;
 const PROJECTILE_RADIUS = 2;
@@ -29,6 +29,9 @@ export const spawn_projectile = (
 
 export const make_combat_ranged_system = (): System => {
 	return (w: World, ctx: Ctx) => {
+		const hs = ctx.res.get(hitstop_r);
+		if (hs.ok && hs.value.remaining > 0) return;
+
 		const arena = ctx.res.get(arena_r);
 		if (!arena.ok) return;
 

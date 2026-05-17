@@ -1,7 +1,7 @@
 import type { System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { player_c, vel_c, weapon_c, lifetime_c, swing_c, projectile_c } from "../components.ts";
-import { arena_r } from "../resources.ts";
+import { arena_r, hitstop_r } from "../resources.ts";
 
 /**
  * Continuous-motion integration over any `[pos_c, vel_c]` entity.
@@ -15,6 +15,9 @@ import { arena_r } from "../resources.ts";
  */
 
 export const make_movement_system = (): System => (w, ctx) => {
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
+
 	const arena = ctx.res.get(arena_r);
 	if (!arena.ok) return;
 

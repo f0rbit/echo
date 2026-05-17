@@ -1,6 +1,6 @@
 import { type System, type World, type Ctx, pos_c } from "@f0rbit/forge";
 import { chaser_c, dummy_c, swing_c, lifetime_c, hitbox_c, health_c } from "../components.ts";
-import { hit_events_r } from "../resources.ts";
+import { hit_events_r, hitstop_r } from "../resources.ts";
 
 /**
  * Melee combat system for arena.
@@ -18,6 +18,9 @@ const wrap_pi = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
 export const make_combat_melee_system = (): System =>
 	(w: World, ctx: Ctx) => {
+		const hs = ctx.res.get(hitstop_r);
+		if (hs.ok && hs.value.remaining > 0) return;
+
 		const hit_events = ctx.res.get(hit_events_r);
 		if (!hit_events.ok) return;
 

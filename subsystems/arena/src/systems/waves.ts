@@ -1,6 +1,6 @@
 import type { Ctx, System, World } from "@f0rbit/forge";
 import { chaser_c, health_c } from "../components.ts";
-import { wave_r } from "../resources.ts";
+import { hitstop_r, wave_r } from "../resources.ts";
 import { spawn_wave } from "../arena-gen.ts";
 
 const WAVE_SIZE = 5;
@@ -44,6 +44,9 @@ const advance_wave = (w: World, ctx: Ctx): void => {
 };
 
 export const make_waves_system = (): System => (w, ctx) => {
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
+
 	reap_dead_chasers(w, ctx);
 	advance_wave(w, ctx);
 };
