@@ -135,7 +135,7 @@ const on_dom_click = (e: PointerEvent): void => {
 
 	// Empirical offset that aligned cell lookup last time it worked
 	const wx = (canvas_x - offset_x) / fit_scale + g.tile / 2;
-	const wy = (canvas_y - offset_y) / fit_scale + g.tile;
+	const wy = (canvas_y - offset_y) / fit_scale + g.tile / 2;
 
 	const cell = g.world_to_cell(wx, wy);
 
