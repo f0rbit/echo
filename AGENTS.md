@@ -8,6 +8,10 @@
 
 Empirical: arena landed at 2.6× of an 810 budget; loot at 3.17× of an 890 budget (2.25× excluding tests + debug fixture). PLAN.md §7 doesn't size tests + debug fixtures as separate columns, and collapses "X system" rows that ship as 2–3 separate testable systems. From phase-5 (`progress`) onwards, apply a 2.5–3× multiplier when reading the budgets, or break each phase into "core code / tests / debug fixture" columns before planning. This is a planning failure mode, not noise. See `subsystems/arena/PLAN.md` §5 and `subsystems/loot/PLAN.md` §5 phase totals.
 
+## Pre-scaffold checklist — enumerate stat-modifier fields before `components.ts`
+
+Before writing `components.ts` for a new subsystem, read every system file in §5 of the plan and enumerate every stat / state-modifier field referenced. Progress's `xp_gain_mul` perk needs `stats_c.xp_gain_mul`; the Phase 5.0 scaffold missed it and Phase 5.2 had to amend `components.ts` mid-system-implementation. Trivially preventable with a pre-read pass. See progress FRICTION.md §3.
+
 ## Repo layout
 
 ```
@@ -35,6 +39,16 @@ Mirror `~/dev/coin-collector/` exactly: `bun build src/main.ts --outdir dist --t
 ## No `@echo/shared`
 
 Subsystems never import from each other or from a shared sibling package. Duplication is the signal that something belongs in forge — not in a sidecar package. See `PLAN.md` §5 for the forge promotion criteria (2+ subsystems duplicating a helper → propose forge promotion).
+
+### Convention for duplicating bestiary's chaser AI
+
+When copying bestiary's cell-step chaser AI to a new subsystem:
+
+- **Add the `<sub>_r.paused` early-return gate** at the top of each copied system. Bestiary doesn't pause; downstream subsystems do. Forget the gate and chasers chase through the level-up pause.
+- **Annotate every copied file with a `// FORGE-PROMOTION-CANDIDATE` header** listing all known consumers and the planned promotion phase (currently Phase 8 `main`). Promotion-candidate density on a file is the signal future agents look for.
+- **Component-shape divergences** (e.g. `state_c { kind, aggro_radius }` in bestiary vs. `state_c { kind }` in progress) resolve via **module constants** in the consumer — not by widening the shared shape. Only the third consumer forces a generalised shape; until then, copies diverge locally.
+
+Three copies exist as of progress (bestiary, progress; boss-to-come is the fourth). See progress FRICTION.md §1.
 
 ## `main` not yet a workspace
 
@@ -119,6 +133,15 @@ Cell-step subsystems (`bestiary`, `dungeon-walk`) integrate via `g.move_tile` an
 
 Do not mix the two models in one subsystem. Pick one at scaffold time. See `subsystems/arena/src/systems/movement.ts` and arena FRICTION.md §8.
 
+#### `dir_c` write convention diverges by ability shape
+
+Within cell-step subsystems there are two `dir_c` patterns — pick at scaffold time based on whether the subsystem ships a directional ability:
+
+- **Loot pattern** (no melee): write `{dx, dy}` every tick — `{0, 0}` when no input. `dir_c` is just last-input.
+- **Progress pattern** (cell-step + melee): write `dir_c` **only on nonzero input**. A stationary player retains their last heading so the `Z` swing has a direction. **Critical for melee subsystems** — without persistence, the swing fires in `{0, 0}` direction and hits nothing.
+
+Document the choice in the subsystem's local notes. See progress FRICTION.md §4.
+
 ### Debug fixture pattern
 
 For any visual system that's non-trivial (autotiling, lighting, particles, post-processing), ship a `subsystems/<sub>/debug/` companion page alongside the playable one. Pattern (see `dungeon-walk/src/main-debug.ts` + `dungeon-walk/src/debug-plugin.ts` + `dungeon-walk/src/systems/debug-arena-gen.ts`):
@@ -147,6 +170,21 @@ Four traps that bit three separate parallel coders during arena Phase 3.2 — in
 ### `world.despawn(id)`, not `world.delete(id)`
 
 Removal is `despawn`. There is no `delete` method on `World`.
+
+### `world.despawn` returns `Result<void, EngineError>`
+
+`world.despawn(id)` returns `Result<void, EngineError>`, not `void`. Most call sites can ignore it (a just-queried `Id` cannot error on despawn), but strict-result-handling consumers (corpus pipe chains, lint-enforced `.ok` checks) must handle it explicitly. Pattern:
+
+```ts
+// safe-to-ignore call site (e.g. /kill-all palette command):
+for (const [id] of world.query([chaser_c]).collect()) void world.despawn(id);
+
+// strict-handling site (rare):
+const r = world.despawn(id);
+if (!r.ok) return err(r.error);
+```
+
+See progress FRICTION.md §11.
 
 ### Resources live on `ctx.res`, not `world.res`
 
@@ -190,6 +228,23 @@ Resources containing static lookup data (item registries, behaviour tables, spri
 
 This composes with the destructive-restore note above: the restore target's boot tick rehydrates the static config; restore re-populates the dynamic state on top. Loot's `item_registry_r` is the canonical example. See loot FRICTION.md §3.
 
+### Closure-held `ctx.rng.fork()` streams are NOT in the snapshot
+
+`Snapshotter` captures `ctx.rng` state only. Streams produced by `ctx.rng.fork()` and held in factory closures (e.g. `enemy-spawn.ts`'s spawn-RNG, `xp.ts`'s perk-shuffle RNG) **do not survive restore.** Post-restore, a re-fork from the restored `ctx.rng` state starts from the same draw count, but the original closure has advanced past that fork by N draws — so the new fork's stream is offset.
+
+Two fixes:
+
+- **(a) Re-fork every tick** (recommended). `const r = ctx.rng.fork()` inside the system body, not closure-captured. Cheap (single-step splittable hash), deterministic, immune to snapshot drift.
+- **(b) Snapshot the forked stream state explicitly** by carrying it on a resource that IS in the snapshot surface. Larger surface area; only if `(a)` is too expensive (rare).
+
+**Symptom if you ignore this:** mid-replay snap-and-restore appears byte-stable for one tick, then diverges several ticks later as the next fork-draw happens at different counts in source vs. restored sim. See progress FRICTION.md §5.
+
+### Disk-save key shared between production and debug fixture is intentional
+
+Progress's debug fixture writes to `echo:progress:save:slot-1` — the same key as the production page. Intentional: running the debug fixture then reloading the production page surfaces the restored state visually, with zero manual input needed.
+
+Consequence: debug fixture is destructive to any prior production save in the same browser profile. **Surface this in the subsystem's FRICTION.md** so a user who plays a real run then runs the debug fixture knows their save was overwritten. See progress FRICTION.md §13.
+
 ## Input
 
 ### Synthetic action bindings for replay-recordable UI clicks
@@ -197,3 +252,33 @@ This composes with the destructive-restore note above: the restore target's boot
 DOM `pointerdown` does NOT flow through forge's bindings layer, so it is not in the replay stream. To make UI clicks replay-deterministic, wire each UI action as a digital action binding on a reserved key (e.g. `slot_click_0..11` bound to `F1..F12`). Real users never press these. The recorder emits them when the DOM handler fires; the replay-player consumes them via a tiny bridge system that calls the same imperative setter (e.g. `queue_click`) as the real DOM handler.
 
 This avoids extending the replay schema. Leave a comment in `bindings.ts` explaining why `F1..F12` exist. See `subsystems/loot/src/bindings.ts` + `subsystems/loot/src/systems/synthetic-slot-click.ts` and loot FRICTION.md §7.
+
+## Forge promotion candidates (deferred)
+
+Tracker for helpers / systems duplicated across subsystems that meet the `PLAN.md` §5 promotion gate (2+ consumers). Boss / hub / main planning should consult this list before scaffolding.
+
+| Candidate | Current consumers | Imminent consumer | Recommended promotion phase | Target path |
+|-----------|-------------------|--------------------|-----------------------------|-------------|
+| `localstorage_store()` (browser persistence backend mirroring corpus `create_file_backend`) | progress | hub (Phase 7 — settings, run-list, recent-saves) | end of Phase 7, forge v0.4.x patch | `forge/src/storage/` |
+| `compose_modifiers()` (additive + multiplicative stat composition over a sources list) | loot, progress | main (Phase 8 composes equipment + perks against the same `Stats` shape) | Phase 8 `main` | `forge/src/composition/modifiers.ts` |
+| A* + chaser AI bundle (`astar.ts` + `ai-chaser.ts` + `path-step.ts` + `creature-occupancy.ts`) | bestiary, progress | boss (Phase 6) → three copies by end of Phase 6 | end of Phase 8 `main` (after composition stabilises the shape) | `forge/src/ai/` |
+
+**`compose_modifiers()` signature sketch:**
+
+```ts
+compose_modifiers<S, Src>(
+  base: S,
+  sources: ReadonlyArray<Src>,
+  resolve: (s: Src) => StatModifier | undefined,
+  rules: { additive: ReadonlyArray<keyof S>; multiplicative: ReadonlyArray<keyof S> },
+): S;
+```
+
+**A* + chaser surface area:**
+
+- `astar(grid, start, goal, opts): Result<Path, AStarError>` — already pure, no ECS coupling.
+- `make_ai_chaser_system({ paused_r, aggro_radius }): System` — factory with paused-resource injection so each subsystem picks its own gate.
+- `make_path_step_system({ paused_r, tile_dt }): System` — same shape.
+- `creature_occupancy_r` + `make_creature_occupancy_system(): System` — pre-stage occupancy index.
+
+Until promotion, see the "Convention for duplicating bestiary's chaser AI" section above for how copies should diverge locally.
