@@ -1,5 +1,6 @@
 import type { Container } from "pixi.js";
 import type { Schedule, System, World } from "@f0rbit/forge";
+import type { Camera } from "@f0rbit/forge/pixi";
 import { arena_gen_system } from "./arena-gen.ts";
 import { player_c, summoner_c, visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
@@ -41,13 +42,14 @@ export type GamePluginOpts = {
 	summoner_glow?: LightHandle;
 	world_container?: Container;
 	debug_container?: Container;
+	camera?: Camera;
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", arena_gen_system, "bst.gen");
 	sch.add("startup", wall_autotile_system, "bst.wall_autotile");
-	if (opts.world_container && opts.debug_container) {
-		sch.add("startup", make_wall_debug_system(opts.world_container, opts.debug_container), "bst.wall_debug");
+	if (opts.world_container && opts.debug_container && opts.camera) {
+		sch.add("startup", make_wall_debug_system(opts.world_container, opts.debug_container, opts.camera), "bst.wall_debug");
 	}
 	sch.add("pre", restart_system, "bst.restart");
 	sch.add("pre", wall_index_system, "bst.wall_index");

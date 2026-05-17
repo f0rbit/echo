@@ -2,7 +2,8 @@ import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import type { Container } from "pixi.js";
 import { Graphics } from "pixi.js";
-import { sprite_c } from "@f0rbit/forge/pixi";
+import type { Camera } from "@f0rbit/forge/pixi";
+import { event_to_world, sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
 import { PATTERN_TO_TILE } from "./wall-autotile.ts";
@@ -61,6 +62,7 @@ const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
 let active_canvas: HTMLCanvasElement | null = null;
 let active_debug_container: Container | null = null;
+let active_camera: Camera | null = null;
 let visible_state = false;
 let click_state = false;
 
@@ -119,37 +121,21 @@ const handle_click = (id: Id): void => {
 };
 
 const on_dom_click = (e: PointerEvent): void => {
-	if (!click_state || !active_world || !active_canvas || !active_debug_container) return;
+	if (!click_state || !active_world || !active_canvas || !active_debug_container || !active_camera) return;
+	const world = event_to_world(e, active_canvas, active_camera);
+	const cell = g.world_to_cell(world.x, world.y);
 	const rect = active_canvas.getBoundingClientRect();
-	const css_x = e.clientX - rect.left;
-	const css_y = e.clientY - rect.top;
-	const canvas_x = css_x * (active_canvas.width / rect.width);
-	const canvas_y = css_y * (active_canvas.height / rect.height);
-
-	// Manual fit_scale inverse — fit world into canvas with centered letterbox
-	const world_px_w = g.cols * g.tile;
-	const world_px_h = g.rows * g.tile;
-	const fit_scale = Math.min(active_canvas.width / world_px_w, active_canvas.height / world_px_h);
-	const offset_x = (active_canvas.width - world_px_w * fit_scale) / 2;
-	const offset_y = (active_canvas.height - world_px_h * fit_scale) / 2;
-
-	// Empirical offset that aligned cell lookup last time it worked
-	const wx = (canvas_x - offset_x) / fit_scale + g.tile / 2;
-	const wy = (canvas_y - offset_y) / fit_scale + g.tile / 2;
-
-	const cell = g.world_to_cell(wx, wy);
-
-	// Draw dot at LITERAL CLICK POSITION (canvas coords) — always at user's click
-	draw_click_marker_at_canvas(canvas_x, canvas_y);
-
-	console.log(`click: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
-
-	if (!g.in_bounds(cell.x, cell.y)) return;
-	const id = cell_to_id.get(g.key(cell.x, cell.y));
-	if (id === undefined) {
-		console.log(`  → no wall at cell(${cell.x},${cell.y})`);
+	draw_click_marker_at_canvas(e.clientX - rect.left, e.clientY - rect.top);
+	if (!g.in_bounds(cell.x, cell.y)) {
+		console.log(`click oob: world(${world.x.toFixed(1)},${world.y.toFixed(1)}) → cell(${cell.x},${cell.y})`);
 		return;
 	}
+	const id = cell_to_id.get(g.key(cell.x, cell.y));
+	if (id === undefined) {
+		console.log(`click: world(${world.x.toFixed(1)},${world.y.toFixed(1)}) → cell(${cell.x},${cell.y}) — no wall`);
+		return;
+	}
+	console.log(`click: world(${world.x.toFixed(1)},${world.y.toFixed(1)}) → cell(${cell.x},${cell.y})`);
 	handle_click(id);
 };
 
@@ -162,11 +148,13 @@ const apply_interactivity = (on: boolean): void => {
 };
 
 export const make_wall_debug_system = (
-	world_container: Container,
+	_world_container: Container,
 	debug_container: Container,
+	cam: Camera,
 ): System => (w: World) => {
 	active_world = w;
 	active_debug_container = debug_container;
+	active_camera = cam;
 	active_canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {

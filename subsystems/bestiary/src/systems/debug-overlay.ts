@@ -62,8 +62,6 @@ export const make_debug_overlay = (parent: Container, gr: Grid): System => {
 		t.visible = true;
 	};
 
-	const half = gr.tile / 2;
-
 	return (w, ctx) => {
 		const dv = ctx.res.get(debug_visible_r);
 		const on = dv.ok ? dv.value.on : false;
@@ -75,21 +73,21 @@ export const make_debug_overlay = (parent: Container, gr: Grid): System => {
 		const player_pos = players[0]?.[1];
 		if (player_pos) {
 			const r = fov_radius * gr.tile;
-			gfx.circle(player_pos.x + half, player_pos.y + half, r);
+			gfx.circle(player_pos.x, player_pos.y, r);
 			gfx.stroke({ width: 1, color: 0x4488ff, alpha: 0.8 });
 		}
 
 		for (const [, p, st] of w.query([pos_c, state_c, chaser_c] as const).collect()) {
-			set_label(p.x + half, p.y, st.kind);
+			set_label(p.x, p.y, st.kind);
 			if (player_pos && st.kind === "chasing") {
-				gfx.moveTo(p.x + half, p.y + half);
-				gfx.lineTo(player_pos.x + half, player_pos.y + half);
+				gfx.moveTo(p.x, p.y);
+				gfx.lineTo(player_pos.x, player_pos.y);
 				gfx.stroke({ width: 1, color: 0xff4444, alpha: 0.9 });
 			}
 		}
 
 		for (const [, p, pat] of w.query([pos_c, patrol_c, patroller_c] as const).collect()) {
-			set_label(p.x + half, p.y, pat.fsm.state);
+			set_label(p.x, p.y, pat.fsm.state);
 			const wps = pat.waypoints;
 			for (let i = 0; i < wps.length; i++) {
 				const a = wps[i]!;
@@ -99,16 +97,16 @@ export const make_debug_overlay = (parent: Container, gr: Grid): System => {
 		}
 
 		for (const [, p] of w.query([pos_c, ranged_c] as const).collect()) {
-			set_label(p.x + half, p.y, "ranged");
-			gfx.circle(p.x + half, p.y + half, ranged_close * gr.tile);
+			set_label(p.x, p.y, "ranged");
+			gfx.circle(p.x, p.y, ranged_close * gr.tile);
 			gfx.stroke({ width: 1, color: 0xff8888, alpha: 0.7 });
-			gfx.circle(p.x + half, p.y + half, ranged_far * gr.tile);
+			gfx.circle(p.x, p.y, ranged_far * gr.tile);
 			gfx.stroke({ width: 1, color: 0xff8888, alpha: 0.4 });
 		}
 
 		const minions_total = w.query([minion_c] as const).collect().length;
 		for (const [, p, ss] of w.query([pos_c, summoner_state_c, summoner_c] as const).collect()) {
-			set_label(p.x + half, p.y, `${minions_total}/${ss.max_minions}`);
+			set_label(p.x, p.y, `${minions_total}/${ss.max_minions}`);
 		}
 
 		for (const [, , pth] of w.query([pos_c, path_c] as const).collect()) {
@@ -117,8 +115,8 @@ export const make_debug_overlay = (parent: Container, gr: Grid): System => {
 				const b = pth.cells[i + 1]!;
 				const aw = gr.cell_to_world(a.x, a.y);
 				const bw = gr.cell_to_world(b.x, b.y);
-				gfx.moveTo(aw.x + half, aw.y + half);
-				gfx.lineTo(bw.x + half, bw.y + half);
+				gfx.moveTo(aw.x, aw.y);
+				gfx.lineTo(bw.x, bw.y);
 				gfx.stroke({ width: 1, color: 0xffff44, alpha: 0.7 });
 			}
 		}
@@ -128,11 +126,10 @@ export const make_debug_overlay = (parent: Container, gr: Grid): System => {
 const draw_dotted = (gfx: Graphics, gr: Grid, a: Cell, b: Cell): void => {
 	const aw = gr.cell_to_world(a.x, a.y);
 	const bw = gr.cell_to_world(b.x, b.y);
-	const half = gr.tile / 2;
-	const ax = aw.x + half;
-	const ay = aw.y + half;
-	const bx = bw.x + half;
-	const by = bw.y + half;
+	const ax = aw.x;
+	const ay = aw.y;
+	const bx = bw.x;
+	const by = bw.y;
 	const dx = bx - ax;
 	const dy = by - ay;
 	const dist = Math.hypot(dx, dy);

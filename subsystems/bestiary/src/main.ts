@@ -83,7 +83,8 @@ const main = async (): Promise<void> => {
 		light: ls,
 		summoner_glow,
 		world_container: app.render.world,
-		debug_container,
+		debug_container: app.render.debug_overlay ?? app.app.stage,
+		camera: app.camera,
 	});
 
 	globalThis.addEventListener("resize", () => {
