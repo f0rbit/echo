@@ -1,0 +1,64 @@
+import type { System } from "@f0rbit/forge";
+import { rng as make_rng } from "@f0rbit/forge";
+import type { RenderState } from "@f0rbit/forge/pixi";
+import { camera_shake_r, hit_events_r } from "../resources.ts";
+
+const HIT_MAGNITUDE_PUSH = 3;
+const MAX_MAGNITUDE = 6;
+const DECAY = 0.85;
+const STOP_THRESHOLD = 0.01;
+
+/**
+ * Camera shake — render-stage system; runs AFTER `forge.render`.
+ *
+ * On any hit event this tick, push HIT_MAGNITUDE_PUSH into
+ * `camera_shake_r.magnitude` (clamped to MAX_MAGNITUDE). Each render tick:
+ * sample seeded jitter `(rng.next()*2 - 1) * magnitude` for dx/dy, call
+ * `render.set_screen_offset(dx, dy)`, then decay `magnitude *= DECAY`.
+ * Below STOP_THRESHOLD: zero the offset and skip.
+ *
+ * Replay determinism: this is render-only mutation of `surface_sprite.position`
+ * (via forge v0.4.3's `set_screen_offset`). The world hash never observes the
+ * offset. RNG is forked from `ctx.time.tick` so the jitter is deterministic.
+ */
+
+/**
+ * Hit→magnitude push. Runs in the `update` stage after combat systems so any
+ * hit events for this tick contribute before the render-stage `apply` step.
+ */
+export const make_camera_shake_push_system = (): System => (_w, ctx) => {
+	const shake = ctx.res.get(camera_shake_r);
+	if (!shake.ok) return;
+	const events = ctx.res.get(hit_events_r);
+	if (!events.ok || events.value.events.length === 0) return;
+
+	const next_mag = shake.value.magnitude + HIT_MAGNITUDE_PUSH * events.value.events.length;
+	shake.value.magnitude = Math.min(MAX_MAGNITUDE, next_mag);
+	shake.value.decay = DECAY;
+};
+
+/**
+ * Render-stage apply step. Mutates `surface_sprite.position` via
+ * `render.set_screen_offset` and decays. main.ts wires this with the boot's
+ * `app.render` reference and registers it on `"render"` stage AFTER
+ * `forge.render`.
+ */
+export const make_camera_shake_apply_system = (render: RenderState): System =>
+	(_w, ctx) => {
+		const shake = ctx.res.get(camera_shake_r);
+		if (!shake.ok) return;
+
+		if (shake.value.magnitude < STOP_THRESHOLD) {
+			shake.value.magnitude = 0;
+			render.set_screen_offset(0, 0);
+			return;
+		}
+
+		const r = make_rng(ctx.time.tick);
+		const dx = (r.next() * 2 - 1) * shake.value.magnitude;
+		const dy = (r.next() * 2 - 1) * shake.value.magnitude;
+		render.set_screen_offset(dx, dy);
+
+		const decay = shake.value.decay || DECAY;
+		shake.value.magnitude *= decay;
+	};
