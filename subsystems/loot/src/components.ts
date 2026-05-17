@@ -15,6 +15,7 @@ export type Stats = {
 	spd: number;
 	hp: number;
 };
+export type Dir = { dx: -1 | 0 | 1; dy: -1 | 0 | 1 };
 
 export const player_c: Component<true> = component<true>("loot.player");
 export const pickup_c: Component<Pickup> = component<Pickup>("loot.pickup");
@@ -22,3 +23,4 @@ export const inventory_c: Component<Inventory> = component<Inventory>("loot.inve
 export const equipment_c: Component<Equipment> = component<Equipment>("loot.equipment");
 export const stats_c: Component<Stats> = component<Stats>("loot.stats");
 export const visual_pos_c: Component<Vec2> = component<Vec2>("loot.visual_pos");
+export const dir_c: Component<Dir> = component<Dir>("loot.dir");

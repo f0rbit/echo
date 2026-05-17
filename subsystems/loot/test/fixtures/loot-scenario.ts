@@ -3,7 +3,18 @@ import { game_bindings } from "../../src/bindings.ts";
 import { arena_r, inventory_ui_r, item_registry_r, run_seed_r } from "../../src/resources.ts";
 import { g } from "../../src/grid.ts";
 import { ITEMS, make_item_registry, type ItemRegistry } from "../../src/data/items.ts";
-import { equipment_c, inventory_c, player_c, stats_c, type Equipment } from "../../src/components.ts";
+import {
+	dir_c,
+	equipment_c,
+	inventory_c,
+	pickup_c,
+	player_c,
+	stats_c,
+	visual_pos_c,
+	type Equipment,
+} from "../../src/components.ts";
+
+export type PickupSpec = { cell: { x: number; y: number }; item_id: string };
 
 export type LootScenarioOpts = {
 	seed?: number;
@@ -11,6 +22,7 @@ export type LootScenarioOpts = {
 	player_cell?: { x: number; y: number };
 	inventory_slots?: (string | null)[];
 	equipment?: Partial<Equipment>;
+	with_pickups?: readonly PickupSpec[];
 };
 
 export type LootScenario = {
@@ -57,10 +69,23 @@ export const make_loot_scenario = (opts: LootScenarioOpts = {}): LootScenario =>
 		player_id = h.world.spawn(
 			[player_c, true],
 			[pos_c, world_pos],
+			[visual_pos_c, { ...world_pos }],
+			[dir_c, { dx: 0, dy: 0 }],
 			[inventory_c, { slots: fill_slots(opts.inventory_slots) }],
 			[equipment_c, equipment],
 			[stats_c, { atk: 5, def: 2, spd: 1.0, hp: 10 }],
 		);
+	}
+
+	if (opts.with_pickups) {
+		for (const p of opts.with_pickups) {
+			const wp = g.cell_to_world(p.cell.x, p.cell.y);
+			h.world.spawn(
+				[pos_c, wp],
+				[visual_pos_c, { ...wp }],
+				[pickup_c, { item_id: p.item_id }],
+			);
+		}
 	}
 
 	return { h, tick: h.tick, player_id };
