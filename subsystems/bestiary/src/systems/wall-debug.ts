@@ -60,11 +60,9 @@ const wall_click_index = new Map<Id, number>();
 const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
 let active_canvas: HTMLCanvasElement | null = null;
-let active_container: Container | null = null;
 let active_debug_container: Container | null = null;
 let visible_state = false;
 let click_state = false;
-let logged_diag = false;
 
 const compute_pattern = (cx: number, cy: number, cells: Set<number>): number => {
 	const is_wall = (x: number, y: number): boolean =>
@@ -88,13 +86,12 @@ const apply_tints = (on: boolean): void => {
 	}
 };
 
-const draw_click_marker = (wx: number, wy: number): void => {
-	if (!active_container || !active_debug_container) return;
-	const canvas_point = active_container.toGlobal({ x: wx, y: wy });
+const draw_click_marker_at_canvas = (cx: number, cy: number): void => {
+	if (!active_debug_container) return;
 	const dot = new Graphics();
 	dot.circle(0, 0, 4).fill({ color: 0xff00ff });
 	dot.circle(0, 0, 8).stroke({ color: 0xffff00, width: 2 });
-	dot.position.set(canvas_point.x, canvas_point.y);
+	dot.position.set(cx, cy);
 	dot.zIndex = 9999;
 	active_debug_container.addChild(dot);
 	setTimeout(() => {
@@ -122,83 +119,37 @@ const handle_click = (id: Id): void => {
 };
 
 const on_dom_click = (e: PointerEvent): void => {
-	if (!click_state || !active_world || !active_canvas || !active_container) return;
+	if (!click_state || !active_world || !active_canvas || !active_debug_container) return;
 	const rect = active_canvas.getBoundingClientRect();
 	const css_x = e.clientX - rect.left;
 	const css_y = e.clientY - rect.top;
 	const canvas_x = css_x * (active_canvas.width / rect.width);
 	const canvas_y = css_y * (active_canvas.height / rect.height);
 
-	// Use Pixi's own machinery
-	let node: Container | null = active_container;
-	while (node) {
-		node.updateLocalTransform?.();
-		node = node.parent;
-	}
+	// Manual fit_scale inverse — fit world into canvas with centered letterbox
+	const world_px_w = g.cols * g.tile;
+	const world_px_h = g.rows * g.tile;
+	const fit_scale = Math.min(active_canvas.width / world_px_w, active_canvas.height / world_px_h);
+	const offset_x = (active_canvas.width - world_px_w * fit_scale) / 2;
+	const offset_y = (active_canvas.height - world_px_h * fit_scale) / 2;
 
-	const local = active_container.toLocal({ x: canvas_x, y: canvas_y });
-	const wx = local.x;
-	const wy = local.y;
+	// Empirical offset that aligned cell lookup last time it worked
+	const wx = (canvas_x - offset_x) / fit_scale + g.tile / 2;
+	const wy = (canvas_y - offset_y) / fit_scale + g.tile;
 
 	const cell = g.world_to_cell(wx, wy);
-	draw_click_marker(wx, wy);
 
-	// Diagnostic logs on first click
-	if (!logged_diag) {
-		logged_diag = true;
-		let depth_node: Container | null = active_container;
-		let depth = 0;
-		while (depth_node) {
-			const lbl = depth_node.label ?? depth_node.constructor.name ?? "?";
-			const wt = depth_node.worldTransform;
-			console.log(
-				`[chain depth ${depth}] ${lbl}: local x=${depth_node.x} y=${depth_node.y} scale=(${depth_node.scale.x.toFixed(3)},${depth_node.scale.y.toFixed(3)}) | worldTransform tx=${wt.tx.toFixed(2)} ty=${wt.ty.toFixed(2)} a=${wt.a.toFixed(3)} d=${wt.d.toFixed(3)}`
-			);
-			depth_node = depth_node.parent;
-			depth++;
-		}
+	// Draw dot at LITERAL CLICK POSITION (canvas coords) — always at user's click
+	draw_click_marker_at_canvas(canvas_x, canvas_y);
 
-		const probes = [
-			{ wx: 0, wy: 0, label: "world origin" },
-			{ wx: 100, wy: 0, label: "world (100,0)" },
-			{ wx: 0, wy: 100, label: "world (0,100)" },
-			{ wx: g.cols * g.tile, wy: g.rows * g.tile, label: "world bottom-right" },
-		];
-		for (const { wx: pwx, wy: pwy, label } of probes) {
-			const global = active_container.toGlobal({ x: pwx, y: pwy });
-			console.log(`${label}: world(${pwx},${pwy}) → canvas(${global.x.toFixed(2)}, ${global.y.toFixed(2)})`);
-		}
+	console.log(`click: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
 
-		if (active_debug_container) {
-			const probe_colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
-			for (let i = 0; i < probes.length; i++) {
-				const p = probes[i]!;
-				const cv = active_container.toGlobal({ x: p.wx, y: p.wy });
-				const dot = new Graphics();
-				dot.circle(0, 0, 8).fill({ color: probe_colors[i] });
-				dot.position.set(cv.x, cv.y);
-				dot.zIndex = 9999;
-				active_debug_container.addChild(dot);
-			}
-		}
-	}
-
-	if (!g.in_bounds(cell.x, cell.y)) {
-		console.log(
-			`click: canvas(${canvas_x.toFixed(1)},${canvas_y.toFixed(1)}) | toLocal world(${wx.toFixed(1)},${wy.toFixed(1)}) cell(${cell.x},${cell.y})`
-		);
-		return;
-	}
+	if (!g.in_bounds(cell.x, cell.y)) return;
 	const id = cell_to_id.get(g.key(cell.x, cell.y));
 	if (id === undefined) {
-		console.log(
-			`click: canvas(${canvas_x.toFixed(1)},${canvas_y.toFixed(1)}) | toLocal world(${wx.toFixed(1)},${wy.toFixed(1)}) cell(${cell.x},${cell.y}) — no wall`
-		);
+		console.log(`  → no wall at cell(${cell.x},${cell.y})`);
 		return;
 	}
-	console.log(
-		`click: canvas(${canvas_x.toFixed(1)},${canvas_y.toFixed(1)}) | toLocal world(${wx.toFixed(1)},${wy.toFixed(1)}) cell(${cell.x},${cell.y})`
-	);
 	handle_click(id);
 };
 
@@ -215,7 +166,6 @@ export const make_wall_debug_system = (
 	debug_container: Container,
 ): System => (w: World) => {
 	active_world = w;
-	active_container = world_container;
 	active_debug_container = debug_container;
 	active_canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 	const cells = new Set<number>();
