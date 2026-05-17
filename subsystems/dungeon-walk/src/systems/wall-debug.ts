@@ -1,6 +1,7 @@
 import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import type { Container } from "pixi.js";
+import { Graphics } from "pixi.js";
 import { sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
@@ -59,6 +60,7 @@ const wall_click_index = new Map<Id, number>();
 const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
 let active_canvas: HTMLCanvasElement | null = null;
+let active_container: Container | null = null;
 let visible_state = false;
 let click_state = false;
 
@@ -84,6 +86,20 @@ const apply_tints = (on: boolean): void => {
 	}
 };
 
+const draw_click_marker = (wx: number, wy: number): void => {
+	if (!active_container) return;
+	const dot = new Graphics();
+	dot.circle(0, 0, 3).fill({ color: 0xff00ff });
+	dot.circle(0, 0, 6).stroke({ color: 0xffff00, width: 1 });
+	dot.position.set(wx, wy);
+	dot.zIndex = 9999;
+	active_container.addChild(dot);
+	setTimeout(() => {
+		dot.removeFromParent();
+		dot.destroy();
+	}, 1500);
+};
+
 const handle_click = (id: Id): void => {
 	if (!active_world) return;
 	const pattern = wall_pattern.get(id);
@@ -105,8 +121,13 @@ const handle_click = (id: Id): void => {
 const on_dom_click = (e: PointerEvent): void => {
 	if (!click_state || !active_world || !active_canvas) return;
 	const rect = active_canvas.getBoundingClientRect();
-	const canvas_x = e.clientX - rect.left;
-	const canvas_y = e.clientY - rect.top;
+	const css_x = e.clientX - rect.left;
+	const css_y = e.clientY - rect.top;
+	// Scale from CSS pixels to buffer pixels (canvas drawing-buffer pixels)
+	const buf_scale_x = active_canvas.width / rect.width;
+	const buf_scale_y = active_canvas.height / rect.height;
+	const canvas_x = css_x * buf_scale_x;
+	const canvas_y = css_y * buf_scale_y;
 	// Manual inverse of fit-to-viewport transform (renderer-level, not container-level)
 	// Forge's renderer applies fit-scale at renderer level, not container level,
 	// so toLocal() can't invert it; we compute the inverse using canvas vs world dimensions.
@@ -120,16 +141,17 @@ const on_dom_click = (e: PointerEvent): void => {
 	const wx = (canvas_x - offset_x) / fit_scale;
 	const wy = (canvas_y - offset_y) / fit_scale;
 	const cell = g.world_to_cell(wx, wy);
+	draw_click_marker(wx, wy);
 	if (!g.in_bounds(cell.x, cell.y)) {
-		console.log(`click oob: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
+		console.log(`click: css(${css_x.toFixed(0)},${css_y.toFixed(0)}) [rect ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}, canvas ${active_canvas.width}x${active_canvas.height}, dpr ${(canvas_w/rect.width).toFixed(2)}] → buf(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
 		return;
 	}
 	const id = cell_to_id.get(g.key(cell.x, cell.y));
 	if (id === undefined) {
-		console.log(`click hit empty cell: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) — no wall`);
+		console.log(`click: css(${css_x.toFixed(0)},${css_y.toFixed(0)}) [rect ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}, canvas ${active_canvas.width}x${active_canvas.height}, dpr ${(canvas_w/rect.width).toFixed(2)}] → buf(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) — no wall`);
 		return;
 	}
-	console.log(`click: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}]`);
+	console.log(`click: css(${css_x.toFixed(0)},${css_y.toFixed(0)}) [rect ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}, canvas ${active_canvas.width}x${active_canvas.height}, dpr ${(canvas_w/rect.width).toFixed(2)}] → buf(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
 	handle_click(id);
 };
 
@@ -143,6 +165,7 @@ const apply_interactivity = (on: boolean): void => {
 
 export const make_wall_debug_system = (container: Container): System => (w: World) => {
 	active_world = w;
+	active_container = container;
 	active_canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {
