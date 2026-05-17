@@ -5,6 +5,7 @@ import { spawn_projectile } from "./combat-ranged.ts";
 
 const MELEE_ARC_RADIANS = Math.PI / 2; // 90°
 const MELEE_RADIUS = 12;
+const PLAYER_SPEED = 80; // pixels per second
 
 /**
  * Input system for arena.
@@ -30,7 +31,7 @@ export const make_input_system = (): System => (w, ctx) => {
 	const ny = has_input ? ay / mag : 0;
 
 	for (const [id] of w.query([player_c, vel_c] as const).collect()) {
-		w.set(id, vel_c, { x: nx, y: ny });
+		w.set(id, vel_c, { x: nx * PLAYER_SPEED, y: ny * PLAYER_SPEED });
 	}
 
 	if (has_input) {
