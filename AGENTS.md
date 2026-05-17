@@ -87,3 +87,23 @@ For any visual system that's non-trivial (autotiling, lighting, particles, post-
 - Deployed at `/echo/<sub>/debug/`
 
 Visual fixtures unlock fast iteration (and let agents verify autonomously via Chrome DevTools screenshots) without procedural-dungeon noise + lighting interference.
+
+## Forge API gotchas
+
+Four traps that bit three separate parallel coders during arena Phase 3.2 — internalise them before touching forge ECS code:
+
+### Marker components are elided from query tuples
+
+`query([pos_c, hitbox_c, chaser_c]).collect()` yields `[Id, Pos, Hitbox]` tuples — three slots, NOT four. `chaser_c: Component<true>` is a marker (no payload), so forge drops it from the result shape. Same for any `Component<true>`. Destructure to the data-carrying components only.
+
+### `world.despawn(id)`, not `world.delete(id)`
+
+Removal is `despawn`. There is no `delete` method on `World`.
+
+### Resources live on `ctx.res`, not `world.res`
+
+Startup systems that read or initialise resources need the `ctx` parameter — `world` on its own has no `res` accessor. Signature: `(world, ctx) => { ctx.res.get(foo_r) }`.
+
+### `world.spawn(...)` is variadic over `[Component, value]` tuples
+
+Spawn as `world.spawn([pos_c, p], [vel_c, v])` — pass each component-value pair as a separate argument. Do NOT wrap the pairs in an outer array (`world.spawn([[pos_c, p], [vel_c, v]])` is wrong and will silently spawn an empty entity).
