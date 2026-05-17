@@ -40,7 +40,7 @@ const subsystems = [
 							title={s.title}
 							description={s.description}
 							slug={s.slug}
-							status={s.slug === "dungeon-walk" || s.slug === "bestiary" ? "live" : "planned"}
+							status={["dungeon-walk", "bestiary", "arena", "loot", "progress"].includes(s.slug) ? "live" : "planned"}
 						/>
 					))}
 				</div>
