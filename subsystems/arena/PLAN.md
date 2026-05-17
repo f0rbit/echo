@@ -1,6 +1,6 @@
 # arena — subsystem plan
 
-> Status: scoping. No code in `subsystems/arena/` yet. The user reviews + approves this doc before any scaffolding.
+> Status: **shipped (2026-05-17)**. All 7 phases landed on `main`. See "Deviations from plan" at the bottom for corrections made during implementation. FRICTION.md is the working-notes companion.
 >
 > Audience: future Claude sessions, future agents, the user. Single source of truth for the `arena` subsystem.
 >
@@ -308,7 +308,7 @@ Arena's `package.json` bumps from `@f0rbit/forge@^0.4.2` to `^0.4.3` once the pa
 
 Each phase ends with verification (typecheck + test + lint, no build/deploy verification per AGENTS.md skill) and an atomic commit. Within a phase, parallel tasks run in git worktrees via `coder-fast` agents; the verification coder merges and commits.
 
-### Phase 3.0 — Forge patch (sequential, single coder)
+### Phase 3.0 — Forge patch (sequential, single coder) — **SHIPPED** in `@f0rbit/forge@0.4.3` (forge repo)
 
 **Worktree:** none. This work is in `~/dev/forge/`, not echo. Single `coder` agent (not `coder-fast`) because it touches a published API surface and needs review judgement.
 
@@ -330,7 +330,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.1 — Subsystem scaffold (sequential, single coder)
+### Phase 3.1 — Subsystem scaffold (sequential, single coder) — **SHIPPED** `0643152`
 
 **Worktree:** none. Single `coder` because scaffold is load-bearing and short.
 
@@ -352,7 +352,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.2 — Core combat + movement (parallel, 3 worktrees)
+### Phase 3.2 — Core combat + movement (parallel, 3 worktrees) — **SHIPPED** `e224d7d`
 
 **Worktree A — movement + input.** Owns: `input.ts`, `movement.ts`. Continuous-motion player, vector dir from analog axes + Z/X edge-triggered fires.
 
@@ -380,7 +380,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.3 — Enemies + waves (parallel, 2 worktrees)
+### Phase 3.3 — Enemies + waves (parallel, 2 worktrees → ran sequential) — **SHIPPED** `a91a920`
 
 **Worktree A — enemy AI.** Owns: `enemy-ai.ts`, `test/enemy-ai.test.ts`. Continuous-motion chasers; gradient toward player; contact damage on overlap.
 
@@ -401,7 +401,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.4 — Hit feedback (parallel, 4 worktrees) — THE CORE OF THIS SUBSYSTEM
+### Phase 3.4 — Hit feedback (parallel, 4 worktrees → ran sequential) — THE CORE OF THIS SUBSYSTEM — **SHIPPED** `993f0d8` + hitstop correction `52ba5b6`
 
 **Worktree A — hitstop.** Owns: `hitstop.ts`, `test/hitstop.test.ts`. Reads `hit_events_r`; sets `time.scale = 0` + `hitstop_r.remaining_ticks = 4`; pre-stage system decrements + restores. Verify periodic systems pause correctly.
 
@@ -431,7 +431,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.5 — Replay fixture + replay-as-test (sequential, single coder)
+### Phase 3.5 — Replay fixture + replay-as-test (sequential, single coder) — **SHIPPED** `c984dd9`
 
 **Worktree:** none. `coder` (not `coder-fast`) because replay determinism is the load-bearing assertion and recording requires understanding the input timing.
 
@@ -450,7 +450,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.6 — Debug fixture + visual verification (parallel, 2 worktrees)
+### Phase 3.6 — Debug fixture + visual verification (parallel, 2 worktrees → ran sequential) — **SHIPPED** `5af24be`
 
 **Worktree A — debug plugin + boot.** Owns: `main-debug.ts`, `debug-plugin.ts`. Stripped plugin: no waves, no enemy AI. A fixed punching bag, three pre-positioned target circles. Auto-fire melee every 60 ticks, ranged every 90 ticks. Maximum hitstop + shake + flash + particle density on a deterministic schedule.
 
@@ -470,7 +470,7 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ---
 
-### Phase 3.7 — Polish + AGENTS.md update (sequential, single coder)
+### Phase 3.7 — Polish + AGENTS.md update (sequential, single coder) — **SHIPPED** (this commit)
 
 | Task | LOC | Files |
 |---|---|---|
@@ -486,17 +486,17 @@ Each phase ends with verification (typecheck + test + lint, no build/deploy veri
 
 ### Phase totals
 
-| Phase | Echo LOC | Forge LOC | Parallel worktrees |
-|---|---|---|---|
-| 3.0 forge patch | — | ~65 | — (single coder) |
-| 3.1 scaffold | ~300 | — | — |
-| 3.2 combat | ~470 | — | 3 (A/B/C) |
-| 3.3 enemies + waves | ~310 | — | 2 (A/B) |
-| 3.4 hit feedback | ~450 | — | 4 (A/B/C/D) |
-| 3.5 replay-as-test | ~250 | — | — |
-| 3.6 debug fixture | ~270 | — | 2 (A/B) |
-| 3.7 polish | ~85 | — | — |
-| **Total** | **~2135** | **~65** | |
+| Phase | Echo LOC | Forge LOC | Parallel worktrees | Status | Commit |
+|---|---|---|---|---|---|
+| 3.0 forge patch | — | ~65 | — (single coder) | shipped | `@f0rbit/forge@0.4.3` |
+| 3.1 scaffold | ~300 | — | — | shipped | `0643152` |
+| 3.2 combat | ~470 | — | 3 (A/B/C) | shipped | `e224d7d` |
+| 3.3 enemies + waves | ~310 | — | 2 → sequential | shipped | `a91a920` |
+| 3.4 hit feedback | ~450 | — | 4 → sequential | shipped | `993f0d8` + `52ba5b6` |
+| 3.5 replay-as-test | ~250 | — | — | shipped | `c984dd9` |
+| 3.6 debug fixture | ~270 | — | 2 → sequential | shipped | `5af24be` |
+| 3.7 polish | ~85 | — | — | shipped | (this commit) |
+| **Total** | **~2135** | **~65** | | | |
 
 PLAN.md §7 Phase 3 budgeted ~810 echo-side LOC. We're at ~2.6× that. The overshoot is mostly tests + debug fixture (which PLAN.md didn't size) and the splitting of one combat task into melee + ranged + enemy-AI (which PLAN.md grouped). The "feel-good" core combat + feedback is still on budget. Flag for risk review (see §8).
 
@@ -690,6 +690,19 @@ Without tests + debug fixture, echo-side is ~1345 LOC, still over 810 budget by 
 ### OQ-A10. Should the verifier coder also push the forge change to npm?
 
 **Resolved: no.** Forge publishing is `OIDC` via `publish.yml` triggered by tag push. The Phase 3.0 verification coder prepares the PR + changeset; the user merges + tags + releases. Arena work waits on the tag.
+
+---
+
+## 8.5. Deviations from plan
+
+Corrections made during implementation. The body of this plan above has been edited in place to reflect the corrected design; this section is the change log so future readers can see what shifted.
+
+- **§2 Q2 (hitstop) — rewritten as a game-state gate.** Originally specified `time.scale = 0` for 4 ticks. That deadlocks `sch.tick` (no accumulator fill → release system never runs → permanent freeze). Replaced with `hitstop_r.remaining > 0` early-return in every gameplay system; `pre`-stage release decrements `remaining`; `time.scale` is never mutated. Shipped in `52ba5b6`; FRICTION.md §1 records the trap.
+- **§6 (replay assertions) — `wave_r.current === 4` corrected to `current === 3 && chasers_alive === 0`.** `waves.ts` only increments `current` when spawning the **next** wave; on the final wave-clear there is no next spawn, so `current` plateaus at `total`. Corrected in `c984dd9`.
+- **§6 (replay assertions) — `health_r` does not exist.** Health is `health_c` on the player entity, not a resource. Plan and tests corrected.
+- **§3 + §6 — `wave_r.total_kills` added to the scaffold mid-flight (Phase 3.5).** Plan §6 referenced `wave_r.total_kills === 15`; the Phase 3.1 scaffold's `Wave` shape was `{ current, total, chasers_alive }` without `total_kills`. Added when writing the replay-as-test; `waves.ts` reaper increments on `health <= 0` death.
+- **§5 Phase 3.3 / 3.4 / 3.6 — ran sequential instead of parallel worktrees.** Phase 3.2's Worktree C was based on a pre-scaffold commit despite `worktree.baseRef = head`; reconciliation was non-trivial. Subsequent phases small enough that single-coder sequential was faster than parallel + merge. FRICTION.md §6.
+- **Particles emit removed from hitstop gate (Phase 3.5).** `hit_events_r` is cleared in the `pre` of the next tick; if `particles_emit` (update phase 9) gates on hitstop set by `hitstop_trigger` (update phase 7) on the same tick, the trigger-tick events are lost. Only `particles_advance` gates on hitstop. FRICTION.md §2.
 
 ---
 
