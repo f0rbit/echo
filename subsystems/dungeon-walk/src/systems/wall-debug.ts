@@ -63,6 +63,7 @@ let active_canvas: HTMLCanvasElement | null = null;
 let active_container: Container | null = null;
 let visible_state = false;
 let click_state = false;
+let logged_diag = false;
 
 const compute_pattern = (cx: number, cy: number, cells: Set<number>): number => {
 	const is_wall = (x: number, y: number): boolean =>
@@ -138,10 +139,27 @@ const on_dom_click = (e: PointerEvent): void => {
 	const fit_scale = Math.min(canvas_w / world_px_w, canvas_h / world_px_h);
 	const offset_x = (canvas_w - world_px_w * fit_scale) / 2;
 	const offset_y = (canvas_h - world_px_h * fit_scale) / 2;
-	const wx = (canvas_x - offset_x) / fit_scale;
-	const wy = (canvas_y - offset_y) / fit_scale;
-	const cell = g.world_to_cell(wx, wy);
-	draw_click_marker(wx, wy);
+	let wx = (canvas_x - offset_x) / fit_scale;
+	let wy = (canvas_y - offset_y) / fit_scale;
+	// Empirical correction for container transform offset
+	const wx_corrected = wx + g.tile / 2;
+	const wy_corrected = wy + g.tile;
+	const cell = g.world_to_cell(wx_corrected, wy_corrected);
+	draw_click_marker(wx_corrected, wy_corrected);
+	// Diagnostic logs on first click
+	if (!logged_diag) {
+		logged_diag = true;
+		const wt = active_container.worldTransform;
+		console.log(`container transform: tx=${wt.tx.toFixed(2)} ty=${wt.ty.toFixed(2)} a=${wt.a.toFixed(3)} d=${wt.d.toFixed(3)}`);
+		console.log(`container local: x=${active_container.x} y=${active_container.y} scale=(${active_container.scale.x},${active_container.scale.y})`);
+		const parent = active_container.parent;
+		if (parent) {
+			console.log(`parent transform: tx=${parent.worldTransform.tx.toFixed(2)} ty=${parent.worldTransform.ty.toFixed(2)} a=${parent.worldTransform.a.toFixed(3)} d=${parent.worldTransform.d.toFixed(3)}`);
+			console.log(`parent local: x=${parent.x} y=${parent.y} scale=(${parent.scale.x},${parent.scale.y})`);
+		}
+		const probe = active_container.toGlobal({ x: 0, y: 0 });
+		console.log(`world(0,0) renders at canvas: (${probe.x.toFixed(1)}, ${probe.y.toFixed(1)})`);
+	}
 	if (!g.in_bounds(cell.x, cell.y)) {
 		console.log(`click: css(${css_x.toFixed(0)},${css_y.toFixed(0)}) [rect ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}, canvas ${active_canvas.width}x${active_canvas.height}, dpr ${(canvas_w/rect.width).toFixed(2)}] → buf(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
 		return;
