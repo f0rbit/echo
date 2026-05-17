@@ -20,6 +20,10 @@ import { level_up_pending_r, perk_registry_r, progress_r } from "./resources.ts"
 import type { PerkRegistry } from "./data/perks.ts";
 import { make_hud } from "./systems/hud.ts";
 import { make_perk_choice_ui } from "./systems/perk-choice-ui.ts";
+import { disk_load } from "./disk-save.ts";
+import { make_palette_cmds } from "./palette-cmds.ts";
+import { make_progress_snapshotter } from "./snapshot.ts";
+import { make_auto_save_system } from "./systems/auto-save.ts";
 
 // main.ts — Phase 5.4 boot. Adds perk-choice modal overlay + XP/level HUD on
 // top of Phase 5.3's entity-render wiring. Mirrors loot/src/main.ts's
@@ -57,7 +61,15 @@ const main = async (): Promise<void> => {
 	entity_graphics.zIndex = 50;
 	app.render.world.addChild(entity_graphics);
 
-	const { perks_sys } = game_plugin(app.world, app.schedule, { entity_graphics });
+	const { perks_sys, xp_sys } = game_plugin(app.world, app.schedule, { entity_graphics });
+
+	// Phase 5.5 — disk save/load wiring. The snapshotter is the single
+	// source of truth for what's serialised (see snapshot.ts). Auto-save
+	// runs in `post` so any same-tick state changes (kills, level-ups) are
+	// already committed before the diff-check fires.
+	const snapper = make_progress_snapshotter();
+	app.schedule.add("post", make_auto_save_system({ snapper }), { phase: 80, name: "pr.auto_save" });
+	make_palette_cmds({ palette: app.palette, snapper, world: app.world, xp_sys });
 
 	// Player-state accessors — walk the player_c query on each call. Trivial
 	// cost (single entity); avoids stale-id traps after restart (mirrors
@@ -148,6 +160,27 @@ const main = async (): Promise<void> => {
 	globalThis.addEventListener("beforeunload", () => {
 		detach_pointer?.();
 	});
+
+	// Boot tick: fire startup stage (arena-gen seeds resources + spawns
+	// player) BEFORE attempting restore. Matches loot's make_restore_target
+	// pattern (echo AGENTS.md "Snapshotter.restore() is destructive — boot
+	// the target first"). After this, snapper.restore replaces the
+	// default-state world with the persisted snapshot if one exists.
+	app.tick(1 / 60);
+	const loaded = disk_load();
+	if (loaded.ok) {
+		const restored = snapper.restore(app.world, loaded.value, {
+			time: app.time,
+			rng: app.rng,
+			res: app.res,
+		});
+		if (!restored.ok) {
+			console.warn("[progress] disk restore failed; proceeding with fresh state", restored.error); // non-deterministic-ok: dev diagnostic
+		}
+	} else if (loaded.error.kind !== "no_save") {
+		console.warn("[progress] disk_load:", loaded.error); // non-deterministic-ok: dev diagnostic
+	}
+
 	app.start();
 };
 
