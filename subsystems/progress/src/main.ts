@@ -5,12 +5,12 @@ import { visual_pos_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { game_plugin } from "./plugin.ts";
 
-// main.ts — Phase 5.0 minimal boot. Mirrors loot's main.ts shape minus the
-// inventory UI / stat HUD wiring (Phase 5.4). NO lighting filter — progress
-// doesn't need it (per .plans/progress.md §2 Q13).
+// main.ts — Phase 5.3 boot. Wires the entity-render Graphics + plugin.
+// NO inventory UI / stat HUD yet — Phase 5.4 adds those + Phase 5.5
+// adds disk save/load.
 //
-// Camera follows `visual_pos_c` so cell-step motion (Phase 5.2) looks
-// continuous through `tween_step_system` smoothing.
+// Camera follows `visual_pos_c` so cell-step motion looks continuous
+// through `tween_step_system` smoothing.
 
 const design = { width: g.cols * g.tile, height: g.rows * g.tile };
 
@@ -40,7 +40,9 @@ const main = async (): Promise<void> => {
 	entity_graphics.zIndex = 50;
 	app.render.world.addChild(entity_graphics);
 
-	game_plugin(app.world, app.schedule, {});
+	// Returned handles (`xp_sys`, `perks_sys`) are consumed by Phase 5.4 UI
+	// wiring (DOM pointerdown → perks_sys.queue_perk_pick). Discarded here.
+	game_plugin(app.world, app.schedule, { entity_graphics });
 
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
