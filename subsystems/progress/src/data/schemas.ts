@@ -54,6 +54,7 @@ export const stats_c_value_schema = z.object({
 	def: z.number(),
 	spd: z.number(),
 	max_hp: z.number(),
+	xp_gain_mul: z.number(),
 });
 
 export const state_c_value_schema = z.object({

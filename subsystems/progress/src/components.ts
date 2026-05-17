@@ -12,6 +12,7 @@ export type Stats = {
 	def: number;
 	spd: number;
 	max_hp: number;
+	xp_gain_mul: number;
 };
 
 // Chaser AI states (mirrors bestiary's AiState kinds; "swinging"/"dying" reserved

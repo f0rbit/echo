@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { make_perk_registry, PERKS, xp_threshold, type PerkId } from "../src/data/perks.ts";
 import { perk_def_schema } from "../src/data/schemas.ts";
+import { make_progress_scenario } from "./fixtures/progress-scenario.ts";
+import { make_perks_system } from "../src/systems/perks.ts";
+import { hp_c, perks_c } from "../src/components.ts";
+import { level_up_pending_r, progress_r } from "../src/resources.ts";
 
 describe("progress perks registry", () => {
 	test("every PerkDef validates against perk_def_schema", () => {
@@ -63,5 +67,89 @@ describe("progress PerkId branding", () => {
 		const reg = make_perk_registry();
 		const some_id: PerkId = PERKS[0]!.id;
 		expect(reg.perks.get(some_id)?.id).toBe(some_id);
+	});
+});
+
+const seed_pending = (
+	h: ReturnType<typeof make_progress_scenario>["h"],
+	choices: readonly string[],
+): void => {
+	const prog = h.res.get(progress_r);
+	if (!prog.ok) return;
+	h.res.set(progress_r, { ...prog.value, paused: true });
+	h.res.set(level_up_pending_r, { pending: true, choices });
+};
+
+describe("make_perks_system — pick consumption", () => {
+	test("queue_perk_pick(0) while paused/pending → perk appended, paused cleared, dirty_stats set", () => {
+		const { h, player_id, tick } = make_progress_scenario({ with_player: true });
+		seed_pending(h, ["perk.atk_plus", "perk.def_plus", "perk.spd_plus"]);
+		const perks_sys = make_perks_system();
+		h.schedule.add("update", perks_sys.system, { name: "perks" });
+
+		perks_sys.queue_perk_pick(0);
+		tick();
+
+		const perks = h.world.get(player_id!, perks_c);
+		const prog = h.res.get(progress_r);
+		const lvl = h.res.get(level_up_pending_r);
+		if (!perks.ok || !prog.ok || !lvl.ok) return;
+		expect(perks.value.applied).toEqual(["perk.atk_plus"]);
+		expect(prog.value.paused).toBe(false);
+		expect(prog.value.dirty_stats).toBe(true);
+		expect(lvl.value.pending).toBe(false);
+		expect(lvl.value.choices).toEqual([]);
+	});
+
+	test("queue_perk_pick while NOT paused → no state change", () => {
+		const { h, player_id, tick } = make_progress_scenario({ with_player: true });
+		const perks_sys = make_perks_system();
+		h.schedule.add("update", perks_sys.system, { name: "perks" });
+
+		perks_sys.queue_perk_pick(0);
+		tick();
+
+		const perks = h.world.get(player_id!, perks_c);
+		const prog = h.res.get(progress_r);
+		if (!perks.ok || !prog.ok) return;
+		expect(perks.value.applied).toEqual([]);
+		expect(prog.value.paused).toBe(false);
+		expect(prog.value.dirty_stats).toBe(false);
+	});
+
+	test("perk.hp_plus pick also bumps hp_c.current by 5 (heal-on-pick hook)", () => {
+		const { h, player_id, tick } = make_progress_scenario({ with_player: true });
+		h.world.set(player_id!, hp_c, { current: 7, max: 10 });
+		seed_pending(h, ["perk.hp_plus", "perk.atk_plus", "perk.def_plus"]);
+		const perks_sys = make_perks_system();
+		h.schedule.add("update", perks_sys.system, { name: "perks" });
+
+		perks_sys.queue_perk_pick(0);
+		tick();
+
+		const hp = h.world.get(player_id!, hp_c);
+		const perks = h.world.get(player_id!, perks_c);
+		if (!hp.ok || !perks.ok) return;
+		expect(hp.value.current).toBe(12);
+		expect(perks.value.applied).toEqual(["perk.hp_plus"]);
+	});
+
+	test("stacking: same perk picked twice appears twice in perks_c.applied", () => {
+		const { h, player_id, tick } = make_progress_scenario({ with_player: true });
+		seed_pending(h, ["perk.atk_plus", "perk.def_plus", "perk.spd_plus"]);
+		const perks_sys = make_perks_system();
+		h.schedule.add("update", perks_sys.system, { name: "perks" });
+
+		perks_sys.queue_perk_pick(0);
+		tick();
+
+		// Re-arm pending and pick the same perk id again.
+		seed_pending(h, ["perk.atk_plus", "perk.def_plus", "perk.spd_plus"]);
+		perks_sys.queue_perk_pick(0);
+		tick();
+
+		const perks = h.world.get(player_id!, perks_c);
+		if (!perks.ok) return;
+		expect(perks.value.applied).toEqual(["perk.atk_plus", "perk.atk_plus"]);
 	});
 });

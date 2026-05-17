@@ -87,7 +87,7 @@ export const make_progress_scenario = (opts: ProgressScenarioOpts = {}): Progres
 			[hp_c, { current: 10, max: 10 }],
 			[xp_c, { current: 0, level: 1 }],
 			[perks_c, { applied: [] }],
-			[stats_c, { atk: 5, def: 2, spd: 1.0, max_hp: 10 }],
+			[stats_c, { atk: 5, def: 2, spd: 1.0, max_hp: 10, xp_gain_mul: 0 }],
 			[state_c, { kind: "idle" }],
 		);
 	}
