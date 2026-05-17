@@ -9,19 +9,20 @@ type Tile = {
 	frame: string;
 	visible: boolean;
 	anchor: { x: number; y: number };
+	z?: number;
 };
 
 const tiles: readonly Tile[] = [
-	{ marker: floor_c, texture: "dungeon", frame: "floor_1", visible: true, anchor: { x: 0.5, y: 0.5 } },
-	{ marker: exit_c, texture: "dungeon", frame: "floor_ladder", visible: true, anchor: { x: 0.5, y: 0.5 } },
-	{ marker: player_c, texture: "dungeon", frame: "knight_m_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.75 } },
+	{ marker: floor_c, texture: "dungeon", frame: "floor_1", visible: true, anchor: { x: 0.5, y: 0.5 }, z: 1 },
+	{ marker: exit_c, texture: "dungeon", frame: "floor_ladder", visible: true, anchor: { x: 0.5, y: 0.5 }, z: 2 },
+	{ marker: player_c, texture: "dungeon", frame: "knight_m_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.75 }, z: 3 },
 ];
 
 export const sprite_attach_system: System = w => {
-	for (const { marker, texture, frame, visible, anchor } of tiles) {
+	for (const { marker, texture, frame, visible, anchor, z } of tiles) {
 		for (const [id] of w.query([pos_c, marker] as const)) {
 			if (w.has(id, sprite_c)) continue;
-			w.set(id, sprite_c, { texture, frame, anchor, visible });
+			w.set(id, sprite_c, { texture, frame, anchor, visible, z });
 		}
 	}
 };

@@ -52,6 +52,7 @@ export const apply_wall_autotile = (w: World): void => {
 			frame,
 			anchor: { x: 0.5, y: 0.5 },
 			visible: true,
+			z: 2,
 		});
 	}
 };
