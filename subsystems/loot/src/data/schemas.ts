@@ -45,6 +45,11 @@ export const stats_c_value_schema = z.object({
 	hp: z.number(),
 });
 
+export const pos_c_value_schema = z.object({
+	x: z.number(),
+	y: z.number(),
+});
+
 export const visual_pos_c_value_schema = z.object({
 	x: z.number(),
 	y: z.number(),
@@ -62,13 +67,16 @@ export const run_seed_r_value_schema = z.object({
 	restart_count: z.number().int().nonnegative(),
 });
 
-// Per §2 Q10: `pending_click_idx` is transient and NOT registered for
-// snapshot. The registered shape is just `{ open, selected_slot }`; we
-// include `dirty_stats` here because it is part of the live resource shape
-// — the snapshot registration in Phase 4.5 picks a subset, not this schema
-// wholesale.
+// Per §2 Q10 line 232: only `{ open, selected_slot }` are part of the
+// snapshot surface. `dirty_stats` is a transient flag set by equipment
+// changes and cleared by `stats_recompute_system` mid-tick. It diverges
+// between original and restored sims because restore doesn't preserve
+// pending recompute requests — restored stats are already final. We use
+// `.default(false)` so a restore from a JSON blob that omits the field
+// still yields the full live resource shape (forge calls res.set with the
+// parsed value verbatim).
 export const inventory_ui_r_value_schema = z.object({
 	open: z.boolean(),
 	selected_slot: z.number().int().nonnegative().nullable(),
-	dirty_stats: z.boolean(),
+	dirty_stats: z.boolean().default(false),
 });

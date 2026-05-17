@@ -8,6 +8,7 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { make_pickups_system } from "./systems/pickups.ts";
 import { make_restart_system } from "./systems/restart.ts";
 import { make_stats_recompute_system } from "./systems/stats.ts";
+import { make_synthetic_slot_click_system } from "./systems/synthetic-slot-click.ts";
 import { tween_step_system } from "./systems/tween.ts";
 
 export type GamePluginOpts = {
@@ -39,6 +40,10 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", make_input_system(), { phase: 0, name: "lt.input" });
 	sch.add("update", movement_system, { every: step_every, phase: 1, name: "lt.movement" });
 	sch.add("update", make_pickups_system(), { phase: 2, name: "lt.pickups" });
+	// Synthetic slot-click drains replay events into the same queue the DOM
+	// pointer handler writes to; runs BEFORE inv.system so queued clicks are
+	// processed on the same tick the action edge fires.
+	sch.add("update", make_synthetic_slot_click_system(inv.queue_click), { phase: 2.5, name: "lt.synthetic_slot_click" });
 	sch.add("update", inv.system, { phase: 3, name: "lt.inventory" });
 	sch.add("update", make_stats_recompute_system(), { phase: 4, name: "lt.stats_recompute" });
 
