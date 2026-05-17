@@ -34,13 +34,7 @@ Citations point to FRICTION.md (this subsystem) and the relevant commits.
 
 ## 3. Continuous-motion subsystems skip `visual_pos_c` and the tween system
 
-**Target section:** "Rendering conventions" (adds to the existing patterns there).
-
-> ### Continuous motion vs. cell-step
->
-> Cell-step subsystems (`bestiary`, `dungeon-walk`) integrate via `g.move_tile` and use `pos_c` (snapped) + `visual_pos_c` (lerped) + `tween_step_system` to hide the cell jumps. Continuous-motion subsystems (`arena`) integrate `vel_c { vx, vy }` into `pos_c` directly each tick — there is no `visual_pos_c` and the tween system is omitted. `dir_vec_c` is repurposed as **facing persistence**: only updated on non-zero input, so a stationary player still has a heading for melee/ranged direction.
->
-> Do not mix the two models in one subsystem. Pick one at scaffold time. See `subsystems/arena/src/systems/movement.ts` and FRICTION.md §8.
+> **Merged into AGENTS.md (commit pending).**
 
 ---
 
@@ -74,28 +68,13 @@ Citations point to FRICTION.md (this subsystem) and the relevant commits.
 
 ## 6. Debug fixture build pipeline — `debug.html` references `./main.js`, not `./main-debug.js`
 
-**Target section:** "Debug fixture pattern" (extends the existing block).
-
-> ### Debug build pipeline rename
->
-> `bun build src/main-debug.ts --outdir dist/debug` emits `dist/debug/main-debug.js`. The build script then `mv`s it to `dist/debug/main.js` so the deployed `dist/debug/index.html` can ship a clean `<script src="./main.js">`. The `debug.html` source in the subsystem root must reference `./main.js`, NOT `./main-debug.js` — the rename happens at build time. Scaffold defaults that ship `./main-debug.js` will 404 in the deployed page. See `subsystems/arena/package.json` build script and FRICTION.md §9.
+> **Merged into AGENTS.md (commit pending).**
 
 ---
 
 ## 7. Bun test default 5 s timeout — replay-as-tests need explicit override
 
-**Target section:** new note under "Build / test / deploy".
-
-> ### Replay-as-test timeouts
->
-> `bun test` defaults to a 5 s per-test timeout. Replay-driven tests run the full recorded fixture (e.g. arena's `wave-clear.replay.json` is 2812 frames ≈ 30 s of fixed-dt simulation in the harness), which trips the default with a useless abort. Pass the timeout as the third arg to `test()`:
->
-> ```ts
-> const REPLAY_TIMEOUT_MS = 30000;
-> test("wave_r.total_kills === 15", () => { /* ... */ }, REPLAY_TIMEOUT_MS);
-> ```
->
-> See `subsystems/arena/test/replay.test.ts` and FRICTION.md §7.
+> **Merged into AGENTS.md (commit pending).**
 
 ---
 
