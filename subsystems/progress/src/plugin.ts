@@ -12,6 +12,7 @@ import { path_step_system } from "./systems/path-step.ts";
 import { make_perks_system, type PerksSystem } from "./systems/perks.ts";
 import { make_restart_system } from "./systems/restart.ts";
 import { make_stats_recompute_system } from "./systems/stats.ts";
+import { make_synthetic_perk_pick_system } from "./systems/synthetic-perk-pick.ts";
 import { tween_step_system } from "./systems/tween.ts";
 import { make_xp_system, type XpSystem } from "./systems/xp.ts";
 
@@ -64,6 +65,11 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", make_enemy_spawn_system(), { phase: 5, name: "pr.enemy_spawn" });
 	sch.add("update", make_melee_swing_system(xp_sys), { phase: 6, name: "pr.melee_swing" });
 	sch.add("update", xp_sys.system, { phase: 7, name: "pr.xp" });
+	// Synthetic perk-pick drains replay-recorded `pick_perk_0..2` action
+	// edges into the same queue the DOM pointer handler writes to; runs
+	// BEFORE perks.system so queued picks are consumed on the same tick
+	// (mirrors loot's synthetic-slot-click at phase 2.5 before inventory).
+	sch.add("update", make_synthetic_perk_pick_system(perks_sys.queue_perk_pick), { phase: 7.5, name: "pr.synthetic_perk_pick" });
 	sch.add("update", perks_sys.system, { phase: 8, name: "pr.perks" });
 	sch.add("update", make_stats_recompute_system(), { phase: 9, name: "pr.stats_recompute" });
 

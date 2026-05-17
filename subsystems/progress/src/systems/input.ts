@@ -1,14 +1,13 @@
-// input.ts — reads movement axes + Z swing + 1/2/3 pick_perk + R restart.
+// input.ts — reads movement axes. The `restart` (R) action is handled by
+// restart.ts directly; `swing` (Z) by melee-swing.ts; `pick_perk_0..2`
+// (1/2/3) by systems/synthetic-perk-pick.ts (mirrors loot's
+// synthetic-slot-click.ts replay-bridge pattern — per AGENTS.md "Synthetic
+// action bindings for replay-recordable UI clicks").
 //
 // Cell-step convention (per .plans/progress.md §2 Q1): set dir_c on the
 // player every tick. movement.ts only fires every `step_every` ticks, so
 // dir_c persists between movement attempts and the player keeps walking
 // in the same direction until input changes.
-//
-// `restart` (R) is handled by restart.ts directly. `swing` (Z) is handled
-// by melee-swing.ts. `pick_perk_0..2` is bridged to perks_sys.queue_perk_pick
-// here — per .plans/progress.md §2 Q4 the perk-pick path MUST work even
-// when paused; only the movement read gates on paused.
 import type { System } from "@f0rbit/forge";
 import { dir_c, player_c } from "../components.ts";
 import { progress_r } from "../resources.ts";
@@ -16,14 +15,10 @@ import type { PerksSystem } from "./perks.ts";
 
 const sign = (n: number): -1 | 0 | 1 => (n > 0.3 ? 1 : n < -0.3 ? -1 : 0);
 
-const PICK_PERK_ACTIONS = ["pick_perk_0", "pick_perk_1", "pick_perk_2"] as const;
-
-export const make_input_system = (perks_sys: PerksSystem): System => (w, ctx) => {
-	// Perk-pick always runs — even while paused. It's the only release path.
-	for (let i = 0; i < PICK_PERK_ACTIONS.length; i++) {
-		if (ctx.input.just(PICK_PERK_ACTIONS[i]!)) perks_sys.queue_perk_pick(i);
-	}
-
+// PerksSystem is still threaded through the constructor (Phase 5.3 API
+// contract) but no longer read here — synthetic-perk-pick is the sole
+// keyboard/replay bridge. Kept to avoid a plugin.ts signature churn.
+export const make_input_system = (_perks_sys: PerksSystem): System => (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
 	const paused = prog.ok && prog.value.paused;
 	if (paused) return;
