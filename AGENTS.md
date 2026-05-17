@@ -4,6 +4,10 @@
 
 `echo` is an infinite dungeon crawler built on `@f0rbit/forge`. The repo is a bun-workspaces monorepo of seven small playable subsystems (`subsystems/<name>/`) plus a composed final game (`main/`) and a static landing site (`hub/`). See [`PLAN.md`](./PLAN.md) for the full scoping document.
 
+## PLAN.md §7 LOC budgets understate by ~3×
+
+Empirical: arena landed at 2.6× of an 810 budget; loot at 3.17× of an 890 budget (2.25× excluding tests + debug fixture). PLAN.md §7 doesn't size tests + debug fixtures as separate columns, and collapses "X system" rows that ship as 2–3 separate testable systems. From phase-5 (`progress`) onwards, apply a 2.5–3× multiplier when reading the budgets, or break each phase into "core code / tests / debug fixture" columns before planning. This is a planning failure mode, not noise. See `subsystems/arena/PLAN.md` §5 and `subsystems/loot/PLAN.md` §5 phase totals.
+
 ## Repo layout
 
 ```
@@ -54,6 +58,10 @@ test("wave_r.total_kills === 15", () => { /* ... */ }, REPLAY_TIMEOUT_MS);
 
 See `subsystems/arena/test/replay.test.ts` and arena FRICTION.md §7.
 
+### `harness.tick()` only runs the `update` stage
+
+The bun test harness's `tick()` method runs only the `update` stage — `startup`, `pre`, `post`, and `render` are skipped. Tests that need world state pre-seeded must set resources + spawn entities directly (e.g. `ctx.res.set(item_registry_r, make_test_registry())`) rather than relying on `startup`-stage systems to do it. This bites every time a new subsystem writes its first test fixture. Document the seed helpers in `test/fixtures/<sub>-scenario.ts`. See `subsystems/loot/test/fixtures/loot-scenario.ts` and loot FRICTION.md §11.
+
 ## Forge promotion gates
 
 Subsystems may sit on different `@f0rbit/forge` minors during development; Phase 8 aligns everything to the latest forge minor and re-records any drifted replay fixtures. See `PLAN.md` §5 for the per-phase forge bump table.
@@ -73,6 +81,25 @@ Use `event_to_world(e, canvas, app.camera)` from `@f0rbit/forge/pixi` for DOM po
 ### Unfiltered overlay container
 
 `app.render.debug_overlay` (Container) sits OUTSIDE the lighting filter — children render at full brightness regardless of the player's eye-light reach. Use it for HUD, debug markers, FOV circles, click visualizations. Children of `app.render.world` get the lighting treatment (which darkens them in unseen areas).
+
+### Game UI overlays — `app.stage` sibling, mirror `surface_sprite`
+
+Primary game UI (inventory modal, dialogue panel, perk-choice overlay) goes on `app.stage` as a **sibling of `surface_sprite`**, NOT inside `app.render.world` (which gets the lighting filter), NOT on `app.render.debug_overlay` (semantically reserved for debug HUDs).
+
+The overlay container must manually mirror `surface_sprite.scale.x` and `surface_sprite.position.{x,y}` so design-space layout works. Apply the mirror **once at boot** AND **on every `app.render.resize()` callback** — NOT per-tick (wasted work for state that changes only on resize).
+
+`event_to_world` works for hit-testing because the overlay shares `surface_sprite`'s design-coord system once mirrored. See `subsystems/loot/src/main.ts` and loot FRICTION.md §5.
+
+### Sibling z-order in `app.stage` — `addChildAt(idx)`, not `addChild`
+
+Forge's built-in `app.stage` children render bottom-to-top in this order: `surface_sprite`, `debug_overlay`, `palette_overlay`. To insert a new sibling deterministically between them:
+
+```ts
+const idx = app.app.stage.getChildIndex(palette_overlay);
+app.app.stage.addChildAt(my_overlay, idx);
+```
+
+Plain `app.app.stage.addChild(my_overlay)` always appends at the top — wrong if you want the modal below the palette overlay. Note `app.app.stage` (the underlying Pixi `Application.stage`) vs `app.stage` (a re-export convenience). See `subsystems/loot/src/main.ts:120` and loot FRICTION.md §6.
 
 ### Wall sprites + autotile
 
@@ -128,3 +155,45 @@ Startup systems that read or initialise resources need the `ctx` parameter — `
 ### `world.spawn(...)` is variadic over `[Component, value]` tuples
 
 Spawn as `world.spawn([pos_c, p], [vel_c, v])` — pass each component-value pair as a separate argument. Do NOT wrap the pairs in an outer array (`world.spawn([[pos_c, p], [vel_c, v]])` is wrong and will silently spawn an empty entity).
+
+## Architecture patterns
+
+### Game-state gates, NOT `time.scale = 0`
+
+Do NOT model frame-pauses (hitstop, level-up pause, dialogue freeze) as `ctx.time.scale = 0`. `time.advance(real_dt, each)` increments the accumulator by `real_dt * scale`; with `scale = 0` the accumulator never fills, `sch.tick` never fires, and the `pre`-stage release system that's supposed to restore `scale = 1` never runs. Permanent freeze.
+
+Correct pattern: a gate resource (e.g. `hitstop_r.remaining > 0`, `paused_r.value`) → every gameplay system early-returns. A `pre`-stage release decrements/clears the gate; that release system must NOT gate on itself. `time.scale` stays at `1`. Render-stage systems keep ticking (shake + flash + light-fx continue to decay through the freeze — intentional). Replay determinism is preserved because `time.tick` advances normally. See `subsystems/arena/src/systems/hitstop.ts` and arena FRICTION.md §1 (commit `52ba5b6`).
+
+### Transient state in factory closures, not resources
+
+Anything in the resource bag is contracted into the snapshot surface. Click queues, animation pending-flags, network in-flight requests, DOM event buffers — anything that must NOT survive snapshot/restore — belongs in a factory closure, not a resource.
+
+Pattern: `make_<system>(): { system: System; <imperative_setter>(): void }`. The returned system is registered; the imperative setters are called by DOM handlers / replay bridges / etc. The closure-captured state never enters the snapshot surface. Loot's inventory click queue is the canonical example: `make_inventory_system(): { system, queue_click }`. See `subsystems/loot/src/systems/inventory.ts` and loot FRICTION.md §4.
+
+## Snapshot / persistence
+
+### Snapshot world-hash needs canonical-stringify
+
+Zod's `safeParse(value).data` normalises object key order to schema declaration order, NOT the construction order of the input. If your world-hash projection builds objects in one order and the post-restore copy is rebuilt from snapshot-parsed values, `JSON.stringify` produces byte-different strings for byte-identical state.
+
+Fix: either build the projection with canonical (sorted) key order, OR wrap the projection in a `canonical_stringify` that sorts keys at every depth before stringifying. Loot uses the latter; see `subsystems/loot/test/replay.test.ts:canonical_stringify` and loot FRICTION.md §1.
+
+### `Snapshotter.restore()` is destructive — boot the target first
+
+`restore(w, snap, ...)` calls `w.clear()` as the first step before re-creating entities from the snapshot. **If the restore target hasn't run its boot tick yet, the next `update`-stage tick will fire the startup gate (e.g. `setup_arena`) and clobber the restored entities silently** — no error, just wrong state on the following tick.
+
+Pattern: a `make_restore_target()` helper runs the boot tick first (which sets the `startup_done` resource flag and rehydrates any startup-only state), THEN passes the harness to `snapper.restore`. See `subsystems/loot/test/replay.test.ts:make_restore_target` and loot FRICTION.md §2.
+
+### Static config does NOT go in the snapshot
+
+Resources containing static lookup data (item registries, behaviour tables, sprite-frame name maps) should NOT be registered with the snapshotter. They rehydrate via the same startup-stage system that ran originally (e.g. `setup_<sub>`). Document the contract in code with a comment on the resource declaration: `// NOT snapshotted — static config, rehydrated by setup_<sub>`.
+
+This composes with the destructive-restore note above: the restore target's boot tick rehydrates the static config; restore re-populates the dynamic state on top. Loot's `item_registry_r` is the canonical example. See loot FRICTION.md §3.
+
+## Input
+
+### Synthetic action bindings for replay-recordable UI clicks
+
+DOM `pointerdown` does NOT flow through forge's bindings layer, so it is not in the replay stream. To make UI clicks replay-deterministic, wire each UI action as a digital action binding on a reserved key (e.g. `slot_click_0..11` bound to `F1..F12`). Real users never press these. The recorder emits them when the DOM handler fires; the replay-player consumes them via a tiny bridge system that calls the same imperative setter (e.g. `queue_click`) as the real DOM handler.
+
+This avoids extending the replay schema. Leave a comment in `bindings.ts` explaining why `F1..F12` exist. See `subsystems/loot/src/bindings.ts` + `subsystems/loot/src/systems/synthetic-slot-click.ts` and loot FRICTION.md §7.

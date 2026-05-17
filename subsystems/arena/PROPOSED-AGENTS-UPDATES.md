@@ -8,15 +8,7 @@ Citations point to FRICTION.md (this subsystem) and the relevant commits.
 
 ## 1. Hitstop is a game-state gate, NOT `time.scale = 0`
 
-**Target section:** new subsection under "Forge API gotchas" (or a new "Hitstop" subsection if the topic grows).
-
-> ### Hitstop = game-state gate
->
-> Do NOT model hitstop as `ctx.time.scale = 0`. `time.advance(real_dt, each)` increments the accumulator by `real_dt * scale`; with `scale = 0` the accumulator never fills, `sch.tick` never fires, and the `pre`-stage release system that's supposed to restore `scale = 1` never runs. Permanent freeze.
->
-> Correct pattern: `hitstop_r.remaining > 0` → every gameplay system early-returns. A `pre`-stage release decrements `remaining`; that system must NOT gate on itself. `time.scale` stays at `1`. Render-stage systems keep ticking (shake + flash + light-fx continue to decay through the freeze — intentional). Replay determinism preserved because `time.tick` advances normally.
->
-> See `subsystems/arena/src/systems/hitstop.ts` and FRICTION.md §1 (commit `52ba5b6`).
+> **Merged into AGENTS.md (commit pending).**
 
 ---
 
