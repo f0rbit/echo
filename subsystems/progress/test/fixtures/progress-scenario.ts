@@ -8,7 +8,6 @@ import {
 	progress_r,
 	run_seed_r,
 	wall_index_r,
-	type PerkRegistry,
 } from "../../src/resources.ts";
 import { g } from "../../src/grid.ts";
 import {
@@ -23,6 +22,7 @@ import {
 	visual_pos_c,
 	xp_c,
 } from "../../src/components.ts";
+import { make_perk_registry, PERKS, type PerkRegistry } from "../../src/data/perks.ts";
 
 export type ProgressScenarioOpts = {
 	seed?: number;
@@ -40,10 +40,11 @@ export type ProgressScenario = {
 
 const fixed_dt = 1 / 60;
 
-// Phase 5.1 fills this with a real `make_perk_registry(PERKS)` call. Until
-// then, the empty map is enough for components/resources to typecheck and for
-// the scaffold-stage smoke tests.
-export const make_test_registry = (): PerkRegistry => ({ perks: new Map() });
+// Returns the strict registry shape from data/perks.ts populated with the
+// shipped PERKS pool. Call sites that need to set it into perk_registry_r
+// must widen via `as unknown as` because resources.ts intentionally holds
+// the loose `{ perks: Map<string, unknown> }` shape (mirrors loot's pattern).
+export const make_test_registry = (): PerkRegistry => make_perk_registry(PERKS);
 
 // Phase 5.6 fills this — boots a fresh harness through its startup tick so
 // `setup_progress` rehydrates static config (perk_registry_r) BEFORE the
@@ -67,7 +68,8 @@ export const make_progress_scenario = (opts: ProgressScenarioOpts = {}): Progres
 		height: g.rows * g.tile,
 	});
 	h.res.set(run_seed_r, { base: seed, restart_count: 0 });
-	h.res.set(perk_registry_r, make_test_registry());
+	const reg = make_test_registry();
+	h.res.set(perk_registry_r, { perks: reg.perks as unknown as Map<string, unknown> });
 	h.res.set(creature_occupancy_r, { cells: new Set<number>() });
 	h.res.set(wall_index_r, { cells: new Set<number>() });
 	h.res.set(progress_r, { paused: false, dirty_stats: false });
