@@ -30,6 +30,7 @@ const reap_dead_chasers = (w: World, ctx: Ctx): void => {
 		if (h.current <= 0) {
 			w.despawn(id);
 			wave.value.chasers_alive = Math.max(0, wave.value.chasers_alive - 1);
+			wave.value.total_kills += 1;
 		}
 	}
 };

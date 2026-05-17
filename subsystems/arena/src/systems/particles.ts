@@ -77,9 +77,13 @@ export const advance_particles = (p: Particles, dt: number): void => {
 	}
 };
 
+// Emit is NOT gated on hitstop: hits and particle emission happen on the same
+// tick that hitstop_trigger sets remaining=4 (trigger runs at update phase 7,
+// emit at phase 9). Gating here would mean particles never emit for a kill
+// burst, because hit_events_r is cleared in pre at the start of the next tick
+// (before hitstop releases). `particles_advance` IS gated so emitted particles
+// freeze in place during the 4-tick hitstop "punch" — that's the visual stop.
 export const make_particles_emit_system = (): System => (_w, ctx) => {
-	const hs = ctx.res.get(hitstop_r);
-	if (hs.ok && hs.value.remaining > 0) return;
 	const p = ctx.res.get(particles_r);
 	if (!p.ok) return;
 	const events = ctx.res.get(hit_events_r);

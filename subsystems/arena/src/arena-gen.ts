@@ -23,7 +23,7 @@ const reset_resources = (ctx: Ctx, base_seed: number, restart_count: number): vo
 		width: DESIGN_WIDTH,
 		height: DESIGN_HEIGHT,
 	});
-	ctx.res.set(wave_r, { current: 1, total: 3, chasers_alive: 0 });
+	ctx.res.set(wave_r, { current: 1, total: 3, chasers_alive: 0, total_kills: 0 });
 	ctx.res.set(hitstop_r, { remaining: 0 });
 	ctx.res.set(camera_shake_r, { magnitude: 0, decay: 0 });
 	ctx.res.set(run_seed_r, { base: base_seed, restart_count });

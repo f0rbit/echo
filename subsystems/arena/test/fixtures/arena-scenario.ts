@@ -27,7 +27,7 @@ export const make_arena_scenario = (opts: ArenaScenarioOpts = {}): ArenaScenario
 		height: g.rows * g.tile,
 	});
 	h.res.set(run_seed_r, { base: seed, restart_count: 0 });
-	h.res.set(wave_r, { current: 0, total: 3, chasers_alive: 0 });
+	h.res.set(wave_r, { current: 0, total: 3, chasers_alive: 0, total_kills: 0 });
 	h.res.set(hitstop_r, { remaining: 0 });
 	h.res.set(hit_events_r, { events: [] });
 	h.res.set(particles_r, { entries: [], head: 0, capacity: particle_capacity });

@@ -35,6 +35,7 @@ export type Wave = {
 	current: number;
 	total: number;
 	chasers_alive: number;
+	total_kills: number;
 };
 
 export type RunSeed = { base: number; restart_count: number };

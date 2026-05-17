@@ -27,7 +27,7 @@ const make_sim = (): Sim => {
 	// Initialize at the win state (current=total, chasers_alive=0) so the fixture's
 	// initial schedule.tick is a no-op. Tests overwrite wave_r as needed before
 	// their own ticks.
-	h.res.set(wave_r, { current: 3, total: 3, chasers_alive: 0 });
+	h.res.set(wave_r, { current: 3, total: 3, chasers_alive: 0, total_kills: 0 });
 	h.schedule.add("update", make_waves_system(), { phase: 0, name: "waves" });
 	return {
 		w: h.world,
@@ -124,7 +124,7 @@ describe("wave manager", () => {
 		// Reset arena_r to design size so setup_arena perimeter math is consistent.
 		h.res.set(arena_r, { cols: g.cols, rows: g.rows, width: DESIGN_WIDTH, height: DESIGN_HEIGHT });
 		h.res.set(run_seed_r, { base: 42, restart_count: 0 });
-		h.res.set(wave_r, { current: 1, total: 3, chasers_alive: 0 });
+		h.res.set(wave_r, { current: 1, total: 3, chasers_alive: 0, total_kills: 0 });
 
 		// Initial setup_arena to give us a populated world.
 		setup_arena(h.world, h.ctx);
