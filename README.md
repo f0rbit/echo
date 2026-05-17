@@ -7,7 +7,7 @@ See [`PLAN.md`](./PLAN.md) for the full scoping document.
 ## Live URLs (post-deploy)
 
 - Hub: <https://f0rbit.github.io/echo/>
-- Subsystems: <https://f0rbit.github.io/echo/dungeon-walk/>, <https://f0rbit.github.io/echo/bestiary/>, <https://f0rbit.github.io/echo/arena/> (+ <https://f0rbit.github.io/echo/arena/debug/>), <https://f0rbit.github.io/echo/loot/> (+ <https://f0rbit.github.io/echo/loot/debug/>), `/progress/`, `/boss/`, `/hub/`
+- Subsystems: <https://f0rbit.github.io/echo/dungeon-walk/>, <https://f0rbit.github.io/echo/bestiary/>, <https://f0rbit.github.io/echo/arena/> (+ <https://f0rbit.github.io/echo/arena/debug/>), <https://f0rbit.github.io/echo/loot/> (+ <https://f0rbit.github.io/echo/loot/debug/>), <https://f0rbit.github.io/echo/progress/> (+ <https://f0rbit.github.io/echo/progress/debug/>) — XP, levelling, perk-choice on level-up, localStorage disk save/load, `/boss/`, `/hub/`
 - Composed game: <https://f0rbit.github.io/echo/main/>
 
 ## Dev quick-start
