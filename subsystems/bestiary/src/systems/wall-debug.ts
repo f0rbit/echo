@@ -6,57 +6,28 @@ import type { Camera } from "@f0rbit/forge/pixi";
 import { event_to_world, sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { PATTERN_TO_TILE } from "./wall-autotile.ts";
+import { CORNER_STATES_TO_TILE, compute_corner_states } from "./wall-autotile.ts";
 
 declare global {
 	var echoWallDebug: ((on?: boolean) => boolean) | undefined;
 	var echoWallClick: ((on?: boolean) => boolean) | undefined;
 }
 
-const N = 1;
-const E = 2;
-const S = 4;
-const W = 8;
+const STATE_NAMES = ["outer", "side-A", "side-B", "concave", "filled"] as const;
 
-const PATTERN_COLORS: Record<number, { color: number; name: string }> = {
-	0x0: { color: 0xffffff, name: "isolated" },
-	0x1: { color: 0xff5555, name: "N only" },
-	0x2: { color: 0x55ff55, name: "E only" },
-	0x3: { color: 0xff8800, name: "NE (corner SW-open)" },
-	0x4: { color: 0x5555ff, name: "S only" },
-	0x5: { color: 0xaa00ff, name: "NS (vertical)" },
-	0x6: { color: 0x00ddff, name: "ES (corner NW-open)" },
-	0x7: { color: 0x880000, name: "NES (T-W edge)" },
-	0x8: { color: 0xffff00, name: "W only" },
-	0x9: { color: 0xff00ff, name: "NW (corner SE-open)" },
-	0xa: { color: 0x00ffff, name: "EW (horizontal)" },
-	0xb: { color: 0x008800, name: "NEW (T-S edge top)" },
-	0xc: { color: 0xff66bb, name: "SW (corner NE-open)" },
-	0xd: { color: 0x000088, name: "NSW (T-E edge left)" },
-	0xe: { color: 0x888800, name: "ESW (T-N edge bottom)" },
-	0xf: { color: 0x888888, name: "NESW (4-way / interior)" },
-};
+const tile_index = (col: number, row: number): number => row * 12 + col;
 
-const PATTERN_NAMES: Record<number, string> = {
-	0x0: "isolated",
-	0x1: "N only",
-	0x2: "E only",
-	0x3: "NE (corner SW-open)",
-	0x4: "S only",
-	0x5: "NS (vertical)",
-	0x6: "ES (corner NW-open)",
-	0x7: "NES (T-W edge)",
-	0x8: "W only",
-	0x9: "NW (corner SE-open)",
-	0xa: "EW (horizontal)",
-	0xb: "NEW (T-S edge top)",
-	0xc: "SW (corner NE-open)",
-	0xd: "NSW (T-E edge left)",
-	0xe: "ESW (T-N edge bottom)",
-	0xf: "NESW (4-way / interior)",
-};
+const TILE_COLOR_PALETTE: ReadonlyArray<number> = [
+	0xff5555, 0x55ff55, 0x5555ff, 0xff8800, 0xaa00ff, 0x00ddff, 0x880000, 0xffff00,
+	0xff00ff, 0x00ffff, 0x008800, 0xff66bb, 0x000088, 0x888800, 0x888888, 0xffffff,
+	0xff3366, 0x33ff66, 0x3366ff, 0xffaa33, 0xaa33ff, 0x33aaff, 0xaa3333, 0xffff33,
+	0xff66ff, 0x66ffff, 0x33aa33, 0xff99cc, 0x222288, 0xaaaa33, 0xaaaaaa, 0xffcc88,
+	0xcc8855, 0x88cc55, 0x5588cc, 0xcc55aa, 0xaacc55, 0x55ccaa, 0xaa55cc, 0xccaa55,
+	0x884422, 0x224488, 0x448822, 0x882244, 0x224422, 0x442288, 0x886622,
+];
 
-const wall_pattern = new Map<Id, number>();
+type Bits = { tl: number; tr: number; bl: number; br: number };
+const wall_states = new Map<Id, Bits>();
 const wall_click_index = new Map<Id, number>();
 const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
@@ -66,21 +37,12 @@ let active_camera: Camera | null = null;
 let visible_state = false;
 let click_state = false;
 
-const compute_pattern = (cx: number, cy: number, cells: Set<number>): number => {
-	const is_wall = (x: number, y: number): boolean =>
-		!g.in_bounds(x, y) || cells.has(g.key(x, y));
-	let mask = 0;
-	if (is_wall(cx, cy - 1)) mask |= N;
-	if (is_wall(cx + 1, cy)) mask |= E;
-	if (is_wall(cx, cy + 1)) mask |= S;
-	if (is_wall(cx - 1, cy)) mask |= W;
-	return mask;
-};
-
 const apply_tints = (on: boolean): void => {
 	if (!active_world) return;
-	for (const [id, pattern] of wall_pattern) {
-		const tint = on ? PATTERN_COLORS[pattern]!.color : 0xffffff;
+	for (const [id, s] of wall_states) {
+		const tile = CORNER_STATES_TO_TILE[`${s.tl},${s.tr},${s.bl},${s.br}` as const];
+		const idx = tile ? tile_index(tile.col, tile.row) % TILE_COLOR_PALETTE.length : 0;
+		const tint = on ? TILE_COLOR_PALETTE[idx]! : 0xffffff;
 		const r = active_world.get(id, sprite_c);
 		if (r.ok) {
 			active_world.set(id, sprite_c, { ...r.value, tint });
@@ -104,19 +66,20 @@ const draw_click_marker_at_canvas = (cx: number, cy: number): void => {
 
 const handle_click = (id: Id): void => {
 	if (!active_world) return;
-	const pattern = wall_pattern.get(id);
-	if (pattern === undefined) return;
+	const s = wall_states.get(id);
+	if (!s) return;
 	const next_index = (wall_click_index.get(id) ?? -1) + 1;
 	wall_click_index.set(id, next_index);
 	const col = next_index % 12;
 	const row = Math.floor(next_index / 12) % 4;
-	const default_tile = PATTERN_TO_TILE[pattern]!;
+	const default_tile = CORNER_STATES_TO_TILE[`${s.tl},${s.tr},${s.bl},${s.br}` as const]!;
 	const r = active_world.get(id, sprite_c);
 	if (r.ok) {
 		active_world.set(id, sprite_c, { ...r.value, frame: `wat_${col}_${row}` });
 	}
+	const state_str = `[${STATE_NAMES[s.tl]},${STATE_NAMES[s.tr]},${STATE_NAMES[s.bl]},${STATE_NAMES[s.br]}]`;
 	console.log(
-		`click: pattern=0x${pattern.toString(16).toUpperCase()} (${PATTERN_NAMES[pattern]}) → tile (${col},${row}) [default was (${default_tile.col},${default_tile.row})]`
+		`click: corner_states ${state_str} → tile (${col},${row}) [default was (${default_tile.col},${default_tile.row})]`
 	);
 };
 
@@ -161,12 +124,13 @@ export const make_wall_debug_system = (
 		const c = g.world_to_cell(p.x, p.y);
 		cells.add(g.key(c.x, c.y));
 	}
+	const is_wall = (x: number, y: number): boolean =>
+		!g.in_bounds(x, y) || cells.has(g.key(x, y));
 
 	for (const [id, p] of w.query([pos_c, wall_c] as const).collect()) {
 		const c = g.world_to_cell(p.x, p.y);
 		const k = g.key(c.x, c.y);
-		const pattern = compute_pattern(c.x, c.y, cells);
-		wall_pattern.set(id, pattern);
+		wall_states.set(id, compute_corner_states(c.x, c.y, is_wall));
 		cell_to_id.set(k, id);
 	}
 
@@ -175,14 +139,8 @@ export const make_wall_debug_system = (
 			visible_state = on === undefined ? !visible_state : on;
 			apply_tints(visible_state);
 			if (visible_state) {
-				console.log("Wall pattern legend:");
-				console.table(
-					Object.entries(PATTERN_COLORS).map(([p, v]) => ({
-						hex: p,
-						color: "#" + v.color.toString(16).padStart(6, "0"),
-						name: v.name,
-					}))
-				);
+				console.log("Wall debug: tinted by autotile sheet position (47 unique tiles).");
+				console.log("Corner states: 0=outer, 1=side-A(vertical only), 2=side-B(horizontal only), 3=concave, 4=filled.");
 			}
 			return visible_state;
 		};
@@ -194,7 +152,7 @@ export const make_wall_debug_system = (
 			apply_interactivity(click_state);
 			if (click_state) {
 				console.log("Wall click cycling ON. Click any wall to cycle through 48 tiles.");
-				console.log("Toggle off with echoWallClick(false). Patterns + colors via echoWallDebug(true).");
+				console.log("Toggle off with echoWallClick(false). Tints via echoWallDebug(true).");
 			}
 			return click_state;
 		};
