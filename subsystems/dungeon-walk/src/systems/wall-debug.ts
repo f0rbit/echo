@@ -58,7 +58,6 @@ const wall_pattern = new Map<Id, number>();
 const wall_click_index = new Map<Id, number>();
 const cell_to_id = new Map<number, Id>();
 let active_world: World | null = null;
-let active_container: Container | null = null;
 let active_canvas: HTMLCanvasElement | null = null;
 let visible_state = false;
 let click_state = false;
@@ -104,23 +103,33 @@ const handle_click = (id: Id): void => {
 };
 
 const on_dom_click = (e: PointerEvent): void => {
-	if (!click_state || !active_world || !active_canvas || !active_container) return;
+	if (!click_state || !active_world || !active_canvas) return;
 	const rect = active_canvas.getBoundingClientRect();
 	const canvas_x = e.clientX - rect.left;
 	const canvas_y = e.clientY - rect.top;
-	// Use Pixi's toLocal — handles the full inverse transform stack (stage + container + etc.)
-	const local = active_container.toLocal({ x: canvas_x, y: canvas_y });
-	const cell = g.world_to_cell(local.x, local.y);
+	// Manual inverse of fit-to-viewport transform (renderer-level, not container-level)
+	// Forge's renderer applies fit-scale at renderer level, not container level,
+	// so toLocal() can't invert it; we compute the inverse using canvas vs world dimensions.
+	const world_px_w = g.cols * g.tile;
+	const world_px_h = g.rows * g.tile;
+	const canvas_w = active_canvas.width;
+	const canvas_h = active_canvas.height;
+	const fit_scale = Math.min(canvas_w / world_px_w, canvas_h / world_px_h);
+	const offset_x = (canvas_w - world_px_w * fit_scale) / 2;
+	const offset_y = (canvas_h - world_px_h * fit_scale) / 2;
+	const wx = (canvas_x - offset_x) / fit_scale;
+	const wy = (canvas_y - offset_y) / fit_scale;
+	const cell = g.world_to_cell(wx, wy);
 	if (!g.in_bounds(cell.x, cell.y)) {
-		console.log(`click oob: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${local.x.toFixed(1)},${local.y.toFixed(1)}) → cell(${cell.x},${cell.y})`);
+		console.log(`click oob: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}, offset=(${offset_x.toFixed(0)},${offset_y.toFixed(0)})]`);
 		return;
 	}
 	const id = cell_to_id.get(g.key(cell.x, cell.y));
 	if (id === undefined) {
-		console.log(`click hit empty cell: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${local.x.toFixed(1)},${local.y.toFixed(1)}) → cell(${cell.x},${cell.y}) — no wall here`);
+		console.log(`click hit empty cell: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) — no wall`);
 		return;
 	}
-	console.log(`click resolved: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${local.x.toFixed(1)},${local.y.toFixed(1)}) → cell(${cell.x},${cell.y})`);
+	console.log(`click: canvas(${canvas_x.toFixed(0)},${canvas_y.toFixed(0)}) → world(${wx.toFixed(1)},${wy.toFixed(1)}) → cell(${cell.x},${cell.y}) [fit_scale=${fit_scale.toFixed(2)}]`);
 	handle_click(id);
 };
 
@@ -134,7 +143,6 @@ const apply_interactivity = (on: boolean): void => {
 
 export const make_wall_debug_system = (container: Container): System => (w: World) => {
 	active_world = w;
-	active_container = container;
 	active_canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
 	const cells = new Set<number>();
 	for (const [, p] of w.query([pos_c, wall_c] as const).collect()) {
