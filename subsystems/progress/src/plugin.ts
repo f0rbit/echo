@@ -60,10 +60,10 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	const perks_sys = opts.perks_system ?? make_perks_system();
 
 	sch.add("startup", make_arena_gen_system(), { name: "pr.arena_gen" });
-	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "pr.wall_autotile" });
 
-	sch.add("pre", make_restart_system(), { name: "pr.restart" });
-	sch.add("pre", creature_occupancy_system, { name: "pr.creature_occupancy" });
+	sch.add("pre", make_restart_system(), { phase: 0, name: "pr.restart" });
+	sch.add("pre", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { phase: 1, name: "pr.wall_autotile" });
+	sch.add("pre", creature_occupancy_system, { phase: 2, name: "pr.creature_occupancy" });
 
 	sch.add("update", make_input_system(perks_sys), { phase: 0, name: "pr.input" });
 	sch.add("update", movement_system, { every: step_every, phase: 1, name: "pr.movement" });

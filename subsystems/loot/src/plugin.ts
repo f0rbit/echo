@@ -39,9 +39,9 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	const inv = opts.inventory_system ?? make_inventory_system();
 
 	sch.add("startup", make_arena_gen_system(), { name: "lt.arena_gen" });
-	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "lt.wall_autotile" });
 
-	sch.add("pre", make_restart_system(), { name: "lt.restart" });
+	sch.add("pre", make_restart_system(), { phase: 0, name: "lt.restart" });
+	sch.add("pre", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { phase: 1, name: "lt.wall_autotile" });
 
 	sch.add("update", make_input_system(), { phase: 0, name: "lt.input" });
 	sch.add("update", movement_system, { every: step_every, phase: 1, name: "lt.movement" });

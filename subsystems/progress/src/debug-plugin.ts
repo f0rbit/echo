@@ -105,7 +105,7 @@ const debug_setup_progress = (w: World, ctx: Ctx): void => {
 	for (let cy = 0; cy < g.rows; cy++) {
 		for (let cx = 0; cx < g.cols; cx++) {
 			const p = g.cell_to_world(cx, cy);
-			w.spawn([pos_c, p], [floor_c, true]);
+			w.spawn([pos_c, p], [visual_pos_c, { ...p }], [floor_c, true]);
 		}
 	}
 	for (let cy = 0; cy < g.rows; cy++) {
@@ -113,7 +113,7 @@ const debug_setup_progress = (w: World, ctx: Ctx): void => {
 			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
 			if (!on_edge) continue;
 			const p = g.cell_to_world(cx, cy);
-			w.spawn([pos_c, p], [wall_c, true]);
+			w.spawn([pos_c, p], [visual_pos_c, { ...p }], [wall_c, true]);
 		}
 	}
 
