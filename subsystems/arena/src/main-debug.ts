@@ -22,6 +22,9 @@ const main = async (): Promise<void> => {
 		},
 		bindings: game_bindings,
 		pos: pos_c,
+		assets: [
+			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+		],
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);
@@ -48,10 +51,15 @@ const main = async (): Promise<void> => {
 	apply_filter_area();
 	app.render.world.filters = [light.filter];
 
-	const entity_graphics = new Graphics();
-	entity_graphics.label = "ar.entity_graphics";
-	entity_graphics.zIndex = 50;
-	app.render.world.addChild(entity_graphics);
+	const background_graphics = new Graphics();
+	background_graphics.label = "ar.background_graphics";
+	background_graphics.zIndex = 0;
+	app.render.world.addChild(background_graphics);
+
+	const swing_graphics = new Graphics();
+	swing_graphics.label = "ar.swing_graphics";
+	swing_graphics.zIndex = 50;
+	app.render.world.addChild(swing_graphics);
 
 	const particles_overlay = new Graphics();
 	particles_overlay.label = "ar.particles_overlay";
@@ -66,7 +74,7 @@ const main = async (): Promise<void> => {
 		debug_container,
 	});
 
-	app.schedule.add("render", make_entity_render_system(entity_graphics), {
+	app.schedule.add("render", make_entity_render_system({ background: background_graphics, swing: swing_graphics }), {
 		phase: 10,
 		name: "ar.entity_render",
 	});

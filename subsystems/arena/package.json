@@ -6,8 +6,8 @@
 	"main": "src/main.ts",
 	"scripts": {
 		"dev": "bun build src/main.ts --outdir dist --watch --target browser",
-		"build": "bun build src/main.ts --outdir dist --target browser && bun build src/main-debug.ts --outdir dist/debug --target browser && mv dist/debug/main-debug.js dist/debug/main.js && cp index.html dist/ && cp debug.html dist/debug/index.html",
-		"build:debug": "bun build src/main-debug.ts --outdir dist/debug --target browser && mv dist/debug/main-debug.js dist/debug/main.js && cp debug.html dist/debug/index.html",
+		"build": "bun build src/main.ts --outdir dist --target browser && bun build src/main-debug.ts --outdir dist/debug --target browser && mv dist/debug/main-debug.js dist/debug/main.js && cp index.html dist/ && cp debug.html dist/debug/index.html && cp -r public/* dist/ && cp -r public/* dist/debug/",
+		"build:debug": "bun build src/main-debug.ts --outdir dist/debug --target browser && mv dist/debug/main-debug.js dist/debug/main.js && cp debug.html dist/debug/index.html && cp -r public/* dist/debug/",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit"
 	},

@@ -26,6 +26,7 @@ import {
 	make_particles_emit_system,
 	make_particles_render_system,
 } from "./systems/particles.ts";
+import { sprite_attach_system } from "./systems/sprite-attach.ts";
 
 export type DebugPluginOpts = {
 	light?: LightSystem;
@@ -123,6 +124,8 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts): v
 	if (opts.light) {
 		sch.add("update", make_light_fx_system(opts.light), { phase: 11, name: "ar.light_fx" });
 	}
+
+	sch.add("post", sprite_attach_system, { phase: 0, name: "ar.sprite_attach" });
 
 	if (opts.particles_overlay) {
 		sch.add("post", make_particles_render_system(opts.particles_overlay), { name: "ar.particles_render" });

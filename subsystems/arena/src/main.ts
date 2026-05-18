@@ -22,6 +22,9 @@ const main = async (): Promise<void> => {
 		},
 		bindings: game_bindings,
 		pos: pos_c,
+		assets: [
+			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+		],
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);
@@ -51,15 +54,21 @@ const main = async (): Promise<void> => {
 	apply_filter_area();
 	app.render.world.filters = [light.filter];
 
-	// Entity overlay — a Graphics in `app.render.world` for the per-tick
-	// redraw of player/dummy/chasers/projectiles/swings/arena background.
-	const entity_graphics = new Graphics();
-	entity_graphics.label = "ar.entity_graphics";
-	entity_graphics.zIndex = 50;
-	app.render.world.addChild(entity_graphics);
+	// Background overlay — drawn BELOW all sprites (sprite_c.z=3/4).
+	const background_graphics = new Graphics();
+	background_graphics.label = "ar.background_graphics";
+	background_graphics.zIndex = 0;
+	app.render.world.addChild(background_graphics);
+
+	// Swing overlay — drawn ABOVE sprites so the melee arc visually flashes
+	// over the player. zIndex 50 sits between sprites (≤4) and particles (100).
+	const swing_graphics = new Graphics();
+	swing_graphics.label = "ar.swing_graphics";
+	swing_graphics.zIndex = 50;
+	app.render.world.addChild(swing_graphics);
 
 	// Particle overlay — a Graphics in `app.render.world` so it composites with
-	// the same lighting filter as game sprites. zIndex 100 → above entities.
+	// the same lighting filter as game sprites. zIndex 100 → above swing.
 	const particles_overlay = new Graphics();
 	particles_overlay.label = "ar.particles_overlay";
 	particles_overlay.zIndex = 100;
@@ -67,7 +76,7 @@ const main = async (): Promise<void> => {
 
 	game_plugin(app.world, app.schedule, { light, particles_overlay });
 
-	app.schedule.add("render", make_entity_render_system(entity_graphics), {
+	app.schedule.add("render", make_entity_render_system({ background: background_graphics, swing: swing_graphics }), {
 		phase: 10,
 		name: "ar.entity_render",
 	});
