@@ -1,9 +1,11 @@
 import type { Ctx, Schedule, Snapshotter, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import type { Graphics } from "pixi.js";
 import {
 	chaser_c,
 	dir_c,
+	floor_c,
 	hp_c,
 	path_c,
 	perks_c,
@@ -11,6 +13,7 @@ import {
 	state_c,
 	stats_c,
 	visual_pos_c,
+	wall_c,
 	xp_c,
 } from "./components.ts";
 import { g } from "./grid.ts";
@@ -99,6 +102,21 @@ const debug_setup_progress = (w: World, ctx: Ctx): void => {
 	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [floor_c, true]);
+		}
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
+			if (!on_edge) continue;
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [wall_c, true]);
+		}
+	}
+
 	const wp = g.cell_to_world(PLAYER_SPAWN.x, PLAYER_SPAWN.y);
 	w.spawn(
 		[player_c, true],
@@ -183,6 +201,7 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	const snapper = make_progress_snapshotter();
 
 	sch.add("startup", (w, ctx) => debug_setup_progress(w, ctx), "pr.debug.setup");
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "pr.debug.wall_autotile" });
 
 	sch.add("pre", creature_occupancy_system, { name: "pr.creature_occupancy" });
 

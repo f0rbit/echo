@@ -1,5 +1,8 @@
 import type { Schedule, World } from "@f0rbit/forge";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import type { Graphics } from "pixi.js";
+import { wall_c } from "./components.ts";
+import { g } from "./grid.ts";
 import { make_arena_gen_system } from "./arena-gen.ts";
 import { chaser_think_system } from "./systems/ai-chaser.ts";
 import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
@@ -57,6 +60,7 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	const perks_sys = opts.perks_system ?? make_perks_system();
 
 	sch.add("startup", make_arena_gen_system(), { name: "pr.arena_gen" });
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "pr.wall_autotile" });
 
 	sch.add("pre", make_restart_system(), { name: "pr.restart" });
 	sch.add("pre", creature_occupancy_system, { name: "pr.creature_occupancy" });

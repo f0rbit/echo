@@ -22,6 +22,8 @@ export type State = { kind: "idle" | "chasing" | "swinging" | "dying" };
 // A* path-following — cells array + cursor. Mirrors bestiary's Path.
 export type Path = { cells: readonly Cell[]; idx: number };
 
+export const floor_c: Component<true> = component<true>("pr.floor");
+export const wall_c: Component<true> = component<true>("pr.wall");
 export const player_c: Component<true> = component<true>("pr.player");
 export const chaser_c: Component<true> = component<true>("pr.chaser");
 

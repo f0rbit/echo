@@ -14,11 +14,13 @@ import { pos_c } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
 import {
 	dir_c,
+	floor_c,
 	hp_c,
 	perks_c,
 	player_c,
 	stats_c,
 	visual_pos_c,
+	wall_c,
 	xp_c,
 } from "./components.ts";
 import { g } from "./grid.ts";
@@ -35,6 +37,30 @@ import { make_perk_registry } from "./data/perks.ts";
 import { BASE_STATS } from "./systems/stats.ts";
 
 const PLAYER_SPAWN: Cell = { x: 10, y: 5 };
+
+// Spawn a floor entity at every cell and a wall entity at perimeter cells.
+// Floors are a deterministic, render-only carpet (no AI/collision/replay-state
+// reads them); walls are also visual-only — the existing enemy_spawn pool
+// already restricts chasers to the 8-cell interior subset (corners +
+// cardinal midpoints at x:1..cols-2, y:1..rows-2), so no spawn-pool change
+// is needed. Stable iteration order (y-major, x-minor) keeps entity-IDs
+// deterministic across replay runs.
+const spawn_tiles = (w: World): void => {
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [floor_c, true]);
+		}
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
+			if (!on_edge) continue;
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [wall_c, true]);
+		}
+	}
+};
 
 const spawn_player = (w: World, cell: Cell): void => {
 	const wp = g.cell_to_world(cell.x, cell.y);
@@ -70,6 +96,7 @@ export const setup_arena = (w: World, ctx: Ctx): void => {
 	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 
+	spawn_tiles(w);
 	spawn_player(w, PLAYER_SPAWN);
 };
 
