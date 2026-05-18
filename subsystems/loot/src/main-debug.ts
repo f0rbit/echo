@@ -1,5 +1,7 @@
 import { boot } from "@f0rbit/forge/pixi";
 import type { Id } from "@f0rbit/forge";
+import { make_eye_follow_system, make_light_system, presets } from "@f0rbit/forge/light";
+import { Rectangle } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
 import {
 	equipment_c,
@@ -41,6 +43,7 @@ const main = async (): Promise<void> => {
 		pos: visual_pos_c,
 		assets: [
 			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+			{ kind: "atlas", alias: "walls", url: "walls-autotile.json" },
 		],
 	});
 	if (!r.ok) {
@@ -51,7 +54,31 @@ const main = async (): Promise<void> => {
 
 	app.render.world.sortableChildren = true;
 
+	const light = make_light_system({
+		grid: g,
+		ambient: presets.warm_torch.ambient,
+		eye: {
+			color: presets.warm_torch.default_torch_color,
+			radius_cells: 6,
+			intensity: 0.95,
+			falloff: 2.5,
+			flicker: { kind: "torch", amount: 0.12, seed: 1 },
+		},
+	});
+
+	const apply_filter_area = (): void => {
+		const vp = app.render.viewport();
+		app.render.world.filterArea = new Rectangle(0, 0, vp.view.width, vp.view.height);
+	};
+	apply_filter_area();
+	app.render.world.filters = [light.filter];
+
 	const inv_sys = debug_plugin(app.world, app.schedule);
+
+	app.schedule.add("post", make_eye_follow_system(light, g, visual_pos_c, player_c), { name: "lt.debug.light_eye_follow" });
+	app.schedule.add("render", (_w, ctx) => {
+		light.update(ctx, () => false);
+	}, { phase: 99, name: "lt.debug.light_update" });
 
 	const get_player_id = (): Id | null => {
 		const players = app.world.query([player_c] as const).collect();
@@ -120,6 +147,7 @@ const main = async (): Promise<void> => {
 
 	globalThis.addEventListener("resize", () => {
 		app.render.resize(globalThis.innerWidth, globalThis.innerHeight);
+		apply_filter_area();
 		apply_modal_viewport();
 	});
 	globalThis.addEventListener("beforeunload", () => {

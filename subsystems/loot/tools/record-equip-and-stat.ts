@@ -11,15 +11,19 @@ import { inventory_ui_r } from "../src/resources.ts";
  *
  * Sequence at seed=1 (deterministic — see arena-gen.ts):
  *   1. boot
- *   2. walk west then north-west to pick up:
- *        slot 0 → item.mace_heavy        (weapon, atk +5)
- *        slot 1 → item.ring_of_power     (ring,   atk +1)
- *        slot 2 → item.ring_of_warding   (ring,   def +1)
+ *   2. walk north to (9,1), then south to (8,6), then west to (4,7) to pick up:
+ *        slot 0 → item.mace_heavy        (weapon, atk +5)   at cell (9,1)
+ *        slot 1 → item.ring_of_power     (ring,   atk +1)   at cell (8,6)
+ *        slot 2 → item.ring_of_warding   (ring,   def +1)   at cell (4,7)
  *   3. press I  → inventory_ui_r.open = true
  *   4. emit synthetic slot_click_0 → equip mace as weapon
  *   5. emit synthetic slot_click_1 → equip ring_of_power as ring1
  *   6. emit synthetic slot_click_2 → equip ring_of_warding as ring2
  *   7. run on past the last action so any pending edges drain
+ *
+ * Walk targets were re-derived after Phase 5.9.2 (polish-pass) added
+ * perimeter wall reservation — the seed=1 pickup cells shifted off the
+ * boundary, so the route through the three items changed shape.
  *
  * Synthetic slot_click_<i> bindings are mapped to F1..F12 in bindings.ts;
  * the recorder injects press/release events on those actions so the replay
@@ -40,19 +44,23 @@ type Step = -1 | 0 | 1;
 const SIGN = (n: number): Step => (n > 0 ? 1 : n < 0 ? -1 : 0);
 
 // Cells the player walks through; the last entry of each "leg" is a pickup.
+// Player spawns at (10,5). After Phase 5.9.2 (perimeter wall reservation
+// shifted pickup spawns off the boundary), seed=1 places the target items at:
+//   (6,6) — mace_heavy
+//   (3,5) — ring_of_power
+//   (2,4) — ring_of_warding
 const WALK_TARGETS: ReadonlyArray<{ x: number; y: number }> = [
 	{ x: 10, y: 6 },
 	{ x: 9, y: 6 },
 	{ x: 8, y: 6 },
 	{ x: 7, y: 6 },
-	{ x: 6, y: 6 },
-	{ x: 5, y: 6 }, // pickup mace_heavy
+	{ x: 6, y: 6 }, // pickup mace_heavy
+	{ x: 5, y: 6 },
 	{ x: 5, y: 5 },
 	{ x: 4, y: 5 },
 	{ x: 3, y: 5 }, // pickup ring_of_power
 	{ x: 2, y: 5 },
-	{ x: 1, y: 5 },
-	{ x: 1, y: 4 }, // pickup ring_of_warding
+	{ x: 2, y: 4 }, // pickup ring_of_warding
 ];
 
 // Click sequence: slot indices to click after opening the inventory.

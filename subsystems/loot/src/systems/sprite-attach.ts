@@ -1,7 +1,7 @@
 import type { Component, Ctx, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { sprite_c } from "@f0rbit/forge/pixi";
-import { pickup_c, player_c } from "../components.ts";
+import { floor_c, pickup_c, player_c } from "../components.ts";
 import { item_registry_r } from "../resources.ts";
 import type { ItemDef, ItemId, ItemRegistry } from "../data/items.ts";
 
@@ -21,6 +21,7 @@ type Tile = {
 };
 
 const tiles: readonly Tile[] = [
+	{ marker: floor_c, texture: "dungeon", frame: "floor_1", visible: true, anchor: { x: 0.5, y: 0.5 }, z: 1 },
 	{ marker: player_c, texture: "dungeon", frame: "knight_m_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.75 }, z: 3 },
 ];
 

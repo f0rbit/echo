@@ -1,13 +1,16 @@
 import type { Ctx, Schedule, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import {
 	dir_c,
 	equipment_c,
+	floor_c,
 	inventory_c,
 	pickup_c,
 	player_c,
 	stats_c,
 	visual_pos_c,
+	wall_c,
 	type Equipment,
 } from "./components.ts";
 import { g } from "./grid.ts";
@@ -72,6 +75,21 @@ const debug_setup_arena = (w: World, ctx: Ctx): void => {
 	const reg = make_item_registry();
 	ctx.res.set(item_registry_r, { items: reg.items as unknown as Map<string, unknown> });
 
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [floor_c, true]);
+		}
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
+			if (!on_edge) continue;
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [wall_c, true]);
+		}
+	}
+
 	const wp = g.cell_to_world(PLAYER_SPAWN.x, PLAYER_SPAWN.y);
 	w.spawn(
 		[player_c, true],
@@ -116,6 +134,7 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	const inv = opts.inventory_system ?? make_inventory_system();
 
 	sch.add("startup", (w, ctx) => debug_setup_arena(w, ctx), "lt.debug.setup");
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "lt.debug.wall_autotile" });
 
 	sch.add("update", make_debug_auto_action_system(inv.queue_click), { phase: 0, name: "lt.debug_auto_action" });
 	sch.add("update", movement_system, { every: step_every, phase: 1, name: "lt.movement" });

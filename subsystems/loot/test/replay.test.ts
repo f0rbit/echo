@@ -39,8 +39,8 @@ const EXPECTED_WEAPON_AFTER_FIRST_CLICK = "item.mace_heavy";
 // (def +1). Final atk = 11. After first equip click (mace only): 5 + 5 = 10.
 const EXPECTED_ATK_AFTER_FIRST_CLICK = 10;
 const EXPECTED_FINAL_STATS = { atk: 11, def: 3, hp: 10, spd: 1 } as const;
-// The recorder runs until tick 158 (see record-equip-and-stat.ts).
-const EXPECTED_END_TICK = 158;
+// The recorder runs until tick 148 (see record-equip-and-stat.ts).
+const EXPECTED_END_TICK = 148;
 
 type Sim = { ctx: Ctx; w: World; tick: () => void; doc: ReplayDoc; h: ReturnType<typeof harness> };
 
@@ -185,9 +185,10 @@ describe("loot replay deliverable", () => {
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
 			const sim = make_sim(r.value);
-			// Walk ends around tick 121; advance a few ticks past to let the
-			// pickup system commit the last item.
-			advance_to(sim, 125);
+			// Walk ends around tick 111; advance to tick 115 — past the last
+			// pickup commit but BEFORE the first equip click (tick 120) so the
+			// items are still in inventory slots rather than equipment.
+			advance_to(sim, 115);
 			const pv = player_view(sim.w);
 			expect(pv).not.toBeNull();
 			if (!pv) return;
@@ -206,9 +207,9 @@ describe("loot replay deliverable", () => {
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
 			const sim = make_sim(r.value);
-			// First click is at tick 130 (OPEN_TICK=125, CLICK_BASE_TICK=129);
+			// First click is at tick 120 (OPEN_TICK=115, CLICK_BASE_TICK=119);
 			// advance a few ticks past the press edge.
-			advance_to(sim, 132);
+			advance_to(sim, 122);
 			const pv = player_view(sim.w);
 			expect(pv).not.toBeNull();
 			if (!pv) return;
@@ -224,7 +225,7 @@ describe("loot replay deliverable", () => {
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
 			const sim = make_sim(r.value);
-			advance_to(sim, 132);
+			advance_to(sim, 122);
 			const pv = player_view(sim.w);
 			expect(pv).not.toBeNull();
 			if (!pv) return;
@@ -240,8 +241,9 @@ describe("loot replay deliverable", () => {
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
 			const sim = make_sim(r.value);
-			// Pick a mid-replay tick: just after the second equip click.
-			const snap_tick = 140;
+			// Pick a mid-replay tick: just after the second equip click
+			// (tick 126; third click fires at 132).
+			const snap_tick = 130;
 			advance_to(sim, snap_tick);
 
 			const snap = make_loot_snapshotter().take(sim.w, {
@@ -274,7 +276,7 @@ describe("loot replay deliverable", () => {
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
 
-			const snap_tick = 140;
+			const snap_tick = 130;
 
 			const sim_a = make_sim(r.value);
 			advance_to(sim_a, snap_tick);
@@ -298,9 +300,8 @@ describe("loot replay deliverable", () => {
 				res: sim_b.h.res,
 			});
 			// Attach the replay AFTER restore — it'll inject any events still
-			// scheduled at ticks > snap_tick. (In this fixture there are none
-			// after tick 140, but the path is the load-bearing one for future
-			// fixtures with post-snapshot inputs.)
+			// scheduled at ticks > snap_tick. (slot_click_2 fires at tick 132,
+			// after snap_tick=130, so this path IS exercised.)
 			replay.play(r2.value, sim_b.h.input, () => sim_b.h.time.tick);
 
 			advance_to_end(sim_a);

@@ -17,6 +17,8 @@ export type Stats = {
 };
 export type Dir = { dx: -1 | 0 | 1; dy: -1 | 0 | 1 };
 
+export const floor_c: Component<true> = component<true>("loot.floor");
+export const wall_c: Component<true> = component<true>("loot.wall");
 export const player_c: Component<true> = component<true>("loot.player");
 export const pickup_c: Component<Pickup> = component<Pickup>("loot.pickup");
 export const inventory_c: Component<Inventory> = component<Inventory>("loot.inventory");

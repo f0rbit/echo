@@ -4,11 +4,13 @@ import type { Cell } from "@f0rbit/forge/grid";
 import {
 	dir_c,
 	equipment_c,
+	floor_c,
 	inventory_c,
 	pickup_c,
 	player_c,
 	stats_c,
 	visual_pos_c,
+	wall_c,
 	type Equipment,
 } from "./components.ts";
 import { g } from "./grid.ts";
@@ -33,9 +35,22 @@ const INVENTORY_SLOTS = 12;
 
 const empty_equipment: Equipment = { weapon: null, offhand: null, ring1: null, ring2: null };
 
+// Reserved cells: the player's spawn + its 4 neighbours (so the player
+// can step in any direction without immediately colliding with a pickup),
+// PLUS every perimeter cell (those are now wall sprites — pickups must
+// not land on top of a wall). Wall cells are visual-only (no collision
+// change) but a pickup under a wall would be unreachable + invisible.
 const reserved_keys = (player: Cell): Set<number> => {
 	const reserved = new Set<number>([g.key(player.x, player.y)]);
 	for (const n of g.neighbors4(player.x, player.y)) reserved.add(g.key(n.x, n.y));
+	for (let cx = 0; cx < g.cols; cx++) {
+		reserved.add(g.key(cx, 0));
+		reserved.add(g.key(cx, g.rows - 1));
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		reserved.add(g.key(0, cy));
+		reserved.add(g.key(g.cols - 1, cy));
+	}
 	return reserved;
 };
 
@@ -45,16 +60,42 @@ const pick_pickup_cells = (rng: { next: () => number; int: (lo: number, hi: numb
 	const cells: Cell[] = [];
 	const used = new Set<number>(reserved);
 	let attempts = 0;
+	// Sample the inner rectangle directly (cols/rows minus the wall ring)
+	// so the rng stream isn't burned discarding perimeter draws. This keeps
+	// the per-seed pickup layout deterministic + reproducible.
 	while (cells.length < count && attempts < 200) {
 		attempts++;
-		const x = rng.int(0, g.cols - 1);
-		const y = rng.int(0, g.rows - 1);
+		const x = rng.int(1, g.cols - 2);
+		const y = rng.int(1, g.rows - 2);
 		const k = g.key(x, y);
 		if (used.has(k)) continue;
 		used.add(k);
 		cells.push({ x, y });
 	}
 	return cells;
+};
+
+// Spawn a floor entity at every cell and a wall entity at perimeter cells.
+// Floors are a deterministic, render-only carpet (no AI/collision/replay-state
+// reads them); walls are also visual-only here — pickup placement reserves
+// perimeter cells so the player still has the full inner rectangle to move on.
+// Stable iteration order (y-major, x-minor) keeps entity-IDs deterministic
+// across replay runs.
+const spawn_tiles = (w: World): void => {
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [floor_c, true]);
+		}
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
+			if (!on_edge) continue;
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [wall_c, true]);
+		}
+	}
 };
 
 const spawn_player = (w: World, cell: Cell): void => {
@@ -98,6 +139,7 @@ export const setup_arena = (w: World, ctx: Ctx): void => {
 	const reg = make_item_registry();
 	ctx.res.set(item_registry_r, { items: reg.items as unknown as Map<string, unknown> });
 
+	spawn_tiles(w);
 	spawn_player(w, PLAYER_SPAWN);
 	const cells = pick_pickup_cells(ctx.rng, PLAYER_SPAWN);
 	spawn_pickups(w, cells, ITEMS);

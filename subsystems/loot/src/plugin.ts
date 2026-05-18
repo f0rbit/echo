@@ -1,4 +1,7 @@
 import type { Schedule, World } from "@f0rbit/forge";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
+import { wall_c } from "./components.ts";
+import { g } from "./grid.ts";
 import { make_arena_gen_system } from "./arena-gen.ts";
 import { make_input_system } from "./systems/input.ts";
 import { make_inventory_system, type InventorySystem } from "./systems/inventory.ts";
@@ -36,6 +39,7 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	const inv = opts.inventory_system ?? make_inventory_system();
 
 	sch.add("startup", make_arena_gen_system(), { name: "lt.arena_gen" });
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "lt.wall_autotile" });
 
 	sch.add("pre", make_restart_system(), { name: "lt.restart" });
 
