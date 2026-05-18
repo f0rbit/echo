@@ -11,6 +11,10 @@ import { xp_threshold, type PerkId, type PerkRegistry } from "../data/perks.ts";
 //
 // app.render.debug_overlay is in canvas-pixel space, so the system reads
 // the camera viewport each tick to right-align.
+//
+// Crisp text: `resolution: 4` only — parent is `app.render.debug_overlay`
+// (canvas-pixel space, no container scale). No `scale.set(0.5)` needed. See
+// AGENTS.md "Crisp text recipe" (Phase 5.9.5).
 
 const PANEL_W = 80;
 const MARGIN = 4;
@@ -62,7 +66,7 @@ export const make_hud = (opts: HudOpts): Hud => {
 	container.label = "pr.hud";
 	container.zIndex = 9999;
 
-	const lv_text = new Text({ text: "LV 1", style: LV_STYLE });
+	const lv_text = new Text({ text: "LV 1", style: LV_STYLE, resolution: 4 });
 	lv_text.position.set(0, 0);
 	container.addChild(lv_text);
 
@@ -70,18 +74,18 @@ export const make_hud = (opts: HudOpts): Hud => {
 	xp_bar.label = "pr.hud.xp_bar";
 	container.addChild(xp_bar);
 
-	const hp_text = new Text({ text: "HP 0/0", style: LABEL_STYLE });
+	const hp_text = new Text({ text: "HP 0/0", style: LABEL_STYLE, resolution: 4 });
 	container.addChild(hp_text);
 
-	const stats_text = new Text({ text: "", style: LABEL_STYLE });
+	const stats_text = new Text({ text: "", style: LABEL_STYLE, resolution: 4 });
 	container.addChild(stats_text);
 
-	const perks_label = new Text({ text: "Perks:", style: LABEL_STYLE });
+	const perks_label = new Text({ text: "Perks:", style: LABEL_STYLE, resolution: 4 });
 	container.addChild(perks_label);
 
 	const perk_lines: Text[] = [];
 	for (let i = 0; i < 6; i++) {
-		const t = new Text({ text: "", style: PERK_STYLE });
+		const t = new Text({ text: "", style: PERK_STYLE, resolution: 4 });
 		container.addChild(t);
 		perk_lines.push(t);
 	}

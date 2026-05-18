@@ -26,6 +26,10 @@ const MARGIN = 4;
  * Toggleable via Tab key (`debug_toggle` digital binding in bindings.ts). The
  * Tab toggle flips a closure-local boolean so this fixture stays free of new
  * resources (out of scope per Phase 3.6).
+ *
+ * Crisp text: `resolution: 4` only — parent is `app.render.debug_overlay`
+ * (canvas-pixel space, no container scale). No `scale.set(0.5)` needed. See
+ * AGENTS.md "Crisp text recipe" (Phase 5.9.5).
  */
 export const make_debug_overlay_system = (parent: Container): System => {
 	const container = new Container();
@@ -37,7 +41,7 @@ export const make_debug_overlay_system = (parent: Container): System => {
 	const acquire_line = (idx: number): Text => {
 		const existing = lines[idx];
 		if (existing) return existing;
-		const t = new Text({ text: "", style: LABEL_STYLE });
+		const t = new Text({ text: "", style: LABEL_STYLE, resolution: 4 });
 		t.position.set(MARGIN, MARGIN + idx * LINE_HEIGHT);
 		container.addChild(t);
 		lines[idx] = t;

@@ -18,6 +18,9 @@ import { g } from "../grid.ts";
 // Hit-test math (button_rects + button_at) is pure and unit-tested in
 // test/perk-choice-ui.test.ts. NEVER reimplement fit_scale — event_to_world
 // covers DPR + RenderTexture math (echo AGENTS.md "Canvas → world coords").
+//
+// Crisp text: `resolution: 4` + `text.scale.set(0.5)` — parent is `app.stage`
+// modal mirroring `surface_sprite`. See AGENTS.md "Crisp text recipe".
 
 const DESIGN_W = g.cols * g.tile;
 const DESIGN_H = g.rows * g.tile;
@@ -37,28 +40,33 @@ const COLOR_BUTTON_FILL = 0x202028;
 const COLOR_BORDER = 0x4a4a55;
 const COLOR_TEXT = 0xffffff;
 
+// fontSize + wordWrapWidth doubled vs. design because Text gets
+// `scale.set(0.5)` — crisp-text recipe renders the glyph cache at 4× DPI
+// then halves display. Visible size = stored × 0.5 = original design value.
+// wordWrap works in the pre-scale source space, so wordWrapWidth doubles
+// alongside fontSize to keep the same effective wrap width on screen.
 const TITLE_STYLE = {
 	fontFamily: "monospace",
-	fontSize: 8,
+	fontSize: 16,
 	fill: COLOR_TEXT,
-	stroke: { color: 0x000000, width: 2 },
+	stroke: { color: 0x000000, width: 4 },
 } as const;
 
 const NAME_STYLE = {
 	fontFamily: "monospace",
-	fontSize: 8,
+	fontSize: 16,
 	fill: COLOR_TEXT,
 	wordWrap: true,
-	wordWrapWidth: BUTTON_W - 6,
+	wordWrapWidth: (BUTTON_W - 6) * 2,
 	align: "center" as const,
 } as const;
 
 const MOD_STYLE = {
 	fontFamily: "monospace",
-	fontSize: 7,
+	fontSize: 14,
 	fill: 0xc0c0c8,
 	wordWrap: true,
-	wordWrapWidth: BUTTON_W - 6,
+	wordWrapWidth: (BUTTON_W - 6) * 2,
 	align: "center" as const,
 } as const;
 
@@ -100,6 +108,12 @@ const def_for = (registry: PerkRegistry | null, perk_id: string | null): PerkDef
 	return registry.perks.get(perk_id as PerkId) ?? null;
 };
 
+const crisp_text = (text: string, style: Record<string, unknown>): Text => {
+	const t = new Text({ text, style, resolution: 4 });
+	t.scale.set(0.5);
+	return t;
+};
+
 export type PerkChoiceUIOpts = {
 	on_pick: (idx: number) => void;
 	get_visible: () => boolean;
@@ -126,7 +140,7 @@ export const make_perk_choice_ui = (opts: PerkChoiceUIOpts): PerkChoiceUI => {
 	button_layer.label = "pr.perk_choice_ui.buttons";
 	container.addChild(button_layer);
 
-	const title = new Text({ text: "Choose a perk (1/2/3 or click)", style: TITLE_STYLE });
+	const title = crisp_text("Choose a perk (1/2/3 or click)", TITLE_STYLE);
 	title.anchor.set(0.5, 0);
 	title.position.set(DESIGN_W / 2, GRID_Y - 20);
 	container.addChild(title);
@@ -135,13 +149,13 @@ export const make_perk_choice_ui = (opts: PerkChoiceUIOpts): PerkChoiceUI => {
 	const mod_texts: Text[] = [];
 	for (let i = 0; i < BUTTON_COUNT; i++) {
 		const r = button_rects[i]!;
-		const name = new Text({ text: "", style: NAME_STYLE });
+		const name = crisp_text("", NAME_STYLE);
 		name.anchor.set(0.5, 0);
 		name.position.set(r.x + r.w / 2, r.y + 4);
 		container.addChild(name);
 		name_texts.push(name);
 
-		const mod = new Text({ text: "", style: MOD_STYLE });
+		const mod = crisp_text("", MOD_STYLE);
 		mod.anchor.set(0.5, 0);
 		mod.position.set(r.x + r.w / 2, r.y + 20);
 		container.addChild(mod);

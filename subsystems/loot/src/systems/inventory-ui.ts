@@ -17,6 +17,11 @@ import { g } from "../grid.ts";
 // Per-slot sprite layer: lazy-init one Sprite per slot at first redraw,
 // cached in `slot_sprites[]`. Frames are 16×16; slots are 24×24 so we render
 // at 1:1 and center via anchor 0.5. Empty slots toggle visibility off.
+//
+// Crisp text: `resolution: 4` + `text.scale.set(0.5)` — parent is `app.stage`
+// modal mirroring `surface_sprite` (i.e. container is scaled to design-space
+// → window). Glyph rendered at 4× DPI then halved keeps the cache texture
+// from being upscaled by Pixi v8. See AGENTS.md "Crisp text recipe".
 
 const DESIGN_W = g.cols * g.tile;
 const DESIGN_H = g.rows * g.tile;
@@ -46,9 +51,12 @@ const INFO_PAD = 4;
 const INFO_X = GRID_X + GRID_W + 6;
 const INFO_Y = GRID_Y;
 
+// fontSize doubled vs. design (7 → 14) because Text gets `scale.set(0.5)` —
+// crisp-text recipe renders the glyph cache at 4× DPI then halves display.
+// Visible size = 14 × 0.5 = 7 design-px (matches the pre-recipe size).
 const LABEL_STYLE = {
 	fontFamily: "monospace",
-	fontSize: 7,
+	fontSize: 14,
 	fill: COLOR_INFO_TEXT,
 } as const;
 
@@ -164,11 +172,13 @@ export const make_inventory_ui = (opts: InventoryUIOpts): InventoryUI => {
 	info_layer.label = "lt.inventory_ui.info_bg";
 	container.addChild(info_layer);
 
-	const info_name = new Text({ text: "", style: LABEL_STYLE });
+	const info_name = new Text({ text: "", style: LABEL_STYLE, resolution: 4 });
+	info_name.scale.set(0.5);
 	info_name.position.set(INFO_X + INFO_PAD, INFO_Y + INFO_PAD);
 	container.addChild(info_name);
 
-	const info_modifier = new Text({ text: "", style: LABEL_STYLE });
+	const info_modifier = new Text({ text: "", style: LABEL_STYLE, resolution: 4 });
+	info_modifier.scale.set(0.5);
 	info_modifier.position.set(INFO_X + INFO_PAD, INFO_Y + INFO_PAD + 10);
 	container.addChild(info_modifier);
 
