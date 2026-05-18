@@ -28,6 +28,7 @@ import {
 } from "./resources.ts";
 import { make_perk_registry } from "./data/perks.ts";
 import { chaser_think_system } from "./systems/ai-chaser.ts";
+import { make_contact_damage_system } from "./systems/contact-damage.ts";
 import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
 import { make_entity_render_system } from "./systems/entity-render.ts";
 import { make_melee_swing_system } from "./systems/melee-swing.ts";
@@ -110,7 +111,7 @@ const debug_setup_progress = (w: World, ctx: Ctx): void => {
 		walls.add(g.key(g.cols - 1, cy));
 	}
 	ctx.res.set(wall_index_r, { cells: walls });
-	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
+	ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 
 	for (let cy = 0; cy < g.rows; cy++) {
@@ -222,6 +223,7 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	sch.add("update", chaser_think_system, { every: AI_TICK_EVERY, phase: 3, name: "pr.ai_chaser" });
 	sch.add("update", path_step_system, { every: step_every, phase: 4, name: "pr.path_step" });
 	sch.add("update", make_melee_swing_system(xp_sys), { phase: 6, name: "pr.melee_swing" });
+	sch.add("update", make_contact_damage_system(), { phase: 6.5, name: "pr.contact_damage" });
 	sch.add("update", xp_sys.system, { phase: 7, name: "pr.xp" });
 	sch.add("update", make_synthetic_perk_pick_system(perks_sys.queue_perk_pick), { phase: 7.5, name: "pr.synthetic_perk_pick" });
 	sch.add("update", perks_sys.system, { phase: 8, name: "pr.perks" });

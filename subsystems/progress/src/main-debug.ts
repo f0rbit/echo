@@ -123,6 +123,10 @@ const main = async (): Promise<void> => {
 		const reg = app.res.get(perk_registry_r);
 		return reg.ok ? (reg.value as unknown as PerkRegistry) : null;
 	};
+	const get_dead = (): boolean => {
+		const prog = app.res.get(progress_r);
+		return prog.ok && prog.value.dead;
+	};
 	const get_visible = (): boolean => {
 		const prog = app.res.get(progress_r);
 		const lvl = app.res.get(level_up_pending_r);
@@ -153,7 +157,7 @@ const main = async (): Promise<void> => {
 	let detach_pointer: (() => void) | null = null;
 	if (canvas) detach_pointer = perk_ui.attach_pointer(canvas, app.camera);
 
-	const hud = make_hud({ get_stats, get_xp, get_hp, get_perks, get_registry, camera: app.camera });
+	const hud = make_hud({ get_stats, get_xp, get_hp, get_perks, get_registry, get_dead, camera: app.camera });
 	app.render.debug_overlay.addChild(hud.container);
 
 	app.schedule.add("render", perk_ui.system, { phase: 90, name: "pr.perk_choice_ui" });

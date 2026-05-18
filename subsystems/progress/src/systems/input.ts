@@ -20,8 +20,8 @@ const sign = (n: number): -1 | 0 | 1 => (n > 0.3 ? 1 : n < -0.3 ? -1 : 0);
 // keyboard/replay bridge. Kept to avoid a plugin.ts signature churn.
 export const make_input_system = (_perks_sys: PerksSystem): System => (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
-	const paused = prog.ok && prog.value.paused;
-	if (paused) return;
+	const blocked = prog.ok && (prog.value.paused || prog.value.dead);
+	if (blocked) return;
 
 	const [ax, ay] = ctx.input.vector("move.x", "move.y");
 	const dx = sign(ax);

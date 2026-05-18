@@ -72,7 +72,7 @@ export const make_progress_scenario = (opts: ProgressScenarioOpts = {}): Progres
 	h.res.set(perk_registry_r, { perks: reg.perks as unknown as Map<string, unknown> });
 	h.res.set(creature_occupancy_r, { cells: new Set<number>() });
 	h.res.set(wall_index_r, { cells: new Set<number>() });
-	h.res.set(progress_r, { paused: false, dirty_stats: false });
+	h.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	h.res.set(level_up_pending_r, { pending: false, choices: [] });
 
 	let player_id: Id | null = null;

@@ -131,7 +131,7 @@ describe("disk_save / disk_load — localStorage transport", () => {
 	test("full round-trip preserves player + chasers + paused state after restore", () => {
 		const src = make_progress_scenario({ with_player: true, with_chasers: 4 });
 		// Force a mid-level-up pause to verify gate resources round-trip.
-		src.h.res.set(progress_r, { paused: true, dirty_stats: false });
+		src.h.res.set(progress_r, { paused: true, dirty_stats: false, dead: false });
 		src.h.res.set(level_up_pending_r, { pending: true, choices: ["perk.atk_plus", "perk.def_plus", "perk.spd_plus"] });
 
 		// Mutate player state so restore is observably different from default.

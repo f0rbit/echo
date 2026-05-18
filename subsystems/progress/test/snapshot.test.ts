@@ -177,7 +177,7 @@ describe("progress snapshot round-trip", () => {
 	test("paused-with-pending-choices — gate resources round-trip so UI mode survives", () => {
 		const src = make_progress_scenario({ with_player: true });
 		const choices = ["perk.atk_plus", "perk.def_plus", "perk.hp_plus"];
-		src.h.res.set(progress_r, { paused: true, dirty_stats: false });
+		src.h.res.set(progress_r, { paused: true, dirty_stats: false, dead: false });
 		src.h.res.set(level_up_pending_r, { pending: true, choices });
 
 		const snap = make_progress_snapshotter().take(src.h.world, {

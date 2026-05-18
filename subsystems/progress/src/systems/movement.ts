@@ -19,7 +19,7 @@ export const step_every = ticks_per_step(6, 1 / 60);
 
 export const movement_system: System = (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
-	if (prog.ok && prog.value.paused) return;
+	if (prog.ok && (prog.value.paused || prog.value.dead)) return;
 
 	const wi = ctx.res.get(wall_index_r);
 	const walls = wi.ok ? wi.value.cells : new Set<number>();

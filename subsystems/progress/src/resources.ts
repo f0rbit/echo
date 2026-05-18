@@ -29,7 +29,9 @@ export type WallIndex = { cells: ReadonlySet<number> };
 //   paused — true while level_up_pending_r.pending is true; gameplay systems
 //            early-return; the perk-pick consumer is the sole release path.
 //   dirty_stats — set when perks change; consumed by stats-recompute system.
-export type Progress = { paused: boolean; dirty_stats: boolean };
+//   dead — set by contact-damage when player hp hits 0; gameplay systems
+//          gate on `paused || dead`. Cleared by restart.ts.
+export type Progress = { paused: boolean; dirty_stats: boolean; dead: boolean };
 
 // Level-up gate: 3 perk ids drawn when XP threshold crosses. The pick-perk
 // systems (Phase 5.4) drain `choices` and clear `pending`.

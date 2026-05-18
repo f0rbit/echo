@@ -37,7 +37,7 @@ const find_chaser_at = (w: World, target: { x: number; y: number }): Id | null =
 
 export const make_melee_swing_system = (xp_sys: XpSystem): System => (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
-	if (prog.ok && prog.value.paused) return;
+	if (prog.ok && (prog.value.paused || prog.value.dead)) return;
 	if (!ctx.input.just("swing")) return;
 
 	const players = w.query([player_c] as const).collect();

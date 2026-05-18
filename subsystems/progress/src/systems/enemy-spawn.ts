@@ -45,7 +45,7 @@ export const make_enemy_spawn_system = (): System => {
 	let rng: Rng | null = null;
 	return (w, ctx) => {
 		const prog = ctx.res.get(progress_r);
-		if (prog.ok && prog.value.paused) return;
+		if (prog.ok && (prog.value.paused || prog.value.dead)) return;
 		if (ctx.time.tick % SPAWN_EVERY !== 0) return;
 
 		const alive = w.query([chaser_c] as const).collect().length;

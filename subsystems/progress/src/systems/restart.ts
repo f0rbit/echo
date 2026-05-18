@@ -18,7 +18,7 @@ export const make_restart_system = (): System => (w, ctx) => {
 	const restart_count = (prev.ok ? prev.value.restart_count : 0) + 1;
 	w.clear();
 	ctx.res.set(run_seed_r, { base, restart_count });
-	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
+	ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 	setup_arena(w, ctx);
 };

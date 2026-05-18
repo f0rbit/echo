@@ -5,6 +5,7 @@ import { wall_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { make_arena_gen_system } from "./arena-gen.ts";
 import { chaser_think_system } from "./systems/ai-chaser.ts";
+import { make_contact_damage_system } from "./systems/contact-damage.ts";
 import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
 import { make_enemy_spawn_system } from "./systems/enemy-spawn.ts";
 import { make_entity_render_system } from "./systems/entity-render.ts";
@@ -27,7 +28,11 @@ import { make_xp_system, type XpSystem } from "./systems/xp.ts";
 //   pre     → restart, creature_occupancy
 //   update  → input → movement (every step_every) → tween → ai_chaser →
 //             path_step (every step_every) → enemy_spawn → melee_swing →
-//             xp → perks → stats_recompute
+//             contact_damage → xp → perks → stats_recompute
+//
+// contact_damage runs AFTER melee_swing so the player wins on a tick
+// where they swing at an adjacent chaser — the chaser is already
+// despawned by melee, contact_damage's query yields nothing.
 //   post    → sprite_attach (writes sprite_c once per marker; forge's
 //             auto-installed sprite_sync_system reads it)
 //   render  → entity_render (background rect only; if a Graphics handle was
@@ -72,6 +77,7 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", path_step_system, { every: step_every, phase: 4, name: "pr.path_step" });
 	sch.add("update", make_enemy_spawn_system(), { phase: 5, name: "pr.enemy_spawn" });
 	sch.add("update", make_melee_swing_system(xp_sys), { phase: 6, name: "pr.melee_swing" });
+	sch.add("update", make_contact_damage_system(), { phase: 6.5, name: "pr.contact_damage" });
 	sch.add("update", xp_sys.system, { phase: 7, name: "pr.xp" });
 	// Synthetic perk-pick drains replay-recorded `pick_perk_0..2` action
 	// edges into the same queue the DOM pointer handler writes to; runs

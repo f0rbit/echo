@@ -112,7 +112,7 @@ export const setup_arena = (w: World, ctx: Ctx): void => {
 
 	ctx.res.set(creature_occupancy_r, { cells: new Set<number>() });
 	ctx.res.set(wall_index_r, { cells: perimeter_keys() });
-	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
+	ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 
 	spawn_tiles(w);

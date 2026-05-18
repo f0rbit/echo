@@ -82,11 +82,14 @@ export const run_seed_r_value_schema = z.object({
 // reloads into a pause. `dirty_stats` is a transient flag set by perk-pick
 // and cleared by stats-recompute mid-tick; included so the resource shape
 // round-trips, but it diverges between original and restored sims (restored
-// stats are already final). `.default(false)` keeps loads tolerant of JSON
-// blobs that omit the field — mirrors loot's inventory_ui_r pattern.
+// stats are already final). `dead` survives restore so a save-on-death
+// reloads frozen with the restart prompt up. `.default(false)` on both
+// keeps loads tolerant of older JSON blobs that omit the field — mirrors
+// loot's inventory_ui_r pattern.
 export const progress_r_value_schema = z.object({
 	paused: z.boolean(),
 	dirty_stats: z.boolean().default(false),
+	dead: z.boolean().default(false),
 });
 
 // Per §2 Q10 line 235: if you save mid-pick, you reload mid-pick.
