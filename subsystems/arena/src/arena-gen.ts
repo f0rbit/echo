@@ -1,6 +1,6 @@
 import type { Ctx, System, World } from "@f0rbit/forge";
 import { pos_c, rng as make_rng } from "@f0rbit/forge";
-import { player_c, dummy_c, chaser_c, health_c, weapon_c, hitbox_c, vel_c, dir_vec_c } from "./components.ts";
+import { player_c, dummy_c, chaser_c, floor_c, wall_c, health_c, weapon_c, hitbox_c, vel_c, dir_vec_c } from "./components.ts";
 import { arena_r, wave_r, hitstop_r, run_seed_r, hit_events_r, particles_r, camera_shake_r } from "./resources.ts";
 import { g } from "./grid.ts";
 
@@ -112,11 +112,34 @@ export const spawn_wave = (w: World, ctx: Ctx, n: number): void => {
 	wave.value.chasers_alive = n;
 };
 
+// Spawn a floor entity at every cell and a wall entity at perimeter cells.
+// Floors are a deterministic, render-only carpet (no AI/collision/replay-state
+// reads them); walls are also visual-only here — the player is clamped to the
+// canvas by movement_system so no `wall_index_r` is needed. Stable iteration
+// order (y-major, x-minor) keeps entity-IDs deterministic across replay runs.
+const spawn_tiles = (w: World): void => {
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [floor_c, true]);
+		}
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
+			if (!on_edge) continue;
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [wall_c, true]);
+		}
+	}
+};
+
 export const setup_arena = (w: World, ctx: Ctx): void => {
 	const prev_seed = ctx.res.get(run_seed_r);
 	const base = prev_seed.ok ? prev_seed.value.base : ctx.rng.seed;
 	const restart_count = prev_seed.ok ? prev_seed.value.restart_count : 0;
 	reset_resources(ctx, base, restart_count);
+	spawn_tiles(w);
 	spawn_player(w);
 	spawn_dummy(w);
 	spawn_wave(w, ctx, WAVE_SIZE);

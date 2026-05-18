@@ -26,6 +26,8 @@ export type Flash = {
 };
 export type Lifetime = { ticks_remaining: number };
 
+export const floor_c: Component<true> = component<true>("ar.floor");
+export const wall_c: Component<true> = component<true>("ar.wall");
 export const player_c: Component<true> = component<true>("ar.player");
 export const dummy_c: Component<true> = component<true>("ar.dummy");
 export const chaser_c: Component<true> = component<true>("ar.chaser");

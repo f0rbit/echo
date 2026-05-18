@@ -2,43 +2,32 @@ import type { System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import type { Graphics } from "pixi.js";
 import { swing_c } from "../components.ts";
-import { arena_r } from "../resources.ts";
 
-const COLOR_BG = 0x16161e;
 const COLOR_SWING = 0x9ece6a;
 const SWING_ALPHA = 0.33;
 
 export type EntityRenderTargets = {
-	background: Graphics;
 	swing: Graphics;
 };
 
 /**
- * Render-stage system — draws the arena background rect and the melee-swing
- * arc on two separate Graphics overlays in `app.render.world`. The host wires
- * the two overlays with different zIndex values so the background sits below
- * sprites and the swing arc above them.
+ * Render-stage system — draws the melee-swing arc on a Graphics overlay in
+ * `app.render.world`. The host wires it with a zIndex above sprites so the
+ * arc visually flashes over the player.
  *
- * Player / dummy / chaser / projectile entities are now real pixel-art sprites
- * from the 0x72 dungeon atlas, attached by `sprite_attach_system` and rendered
- * by forge's auto-installed `sprite_sync_system`. Only the two things that
- * can't be a sprite live here:
- *
- *  - Arena background rect — needs the full design-coord extent.
- *  - Swing arc wedge — depends on `swing_c.dir` angle + `swing_c.radius`.
+ * Player / dummy / chaser / projectile / floor / wall entities are all real
+ * pixel-art sprites from the 0x72 dungeon + walls-autotile atlases, attached
+ * by `sprite_attach_system` (and `make_wall_autotile_system` for walls) and
+ * rendered by forge's auto-installed `sprite_sync_system`. The swing arc is
+ * the only thing left that can't be a sprite (depends on `swing_c.dir` angle
+ * + `swing_c.radius`).
  *
  * Phase ordering inside `render`: must run BEFORE `ar.light_update` (phase 99)
  * and `ar.camera_shake_apply` (phase 100). Phase 10 fits.
  */
 export const make_entity_render_system = (targets: EntityRenderTargets): System =>
-	(w, ctx) => {
-		targets.background.clear();
+	(w) => {
 		targets.swing.clear();
-
-		const arena = ctx.res.get(arena_r);
-		const width = arena.ok ? arena.value.width : 320;
-		const height = arena.ok ? arena.value.height : 180;
-		targets.background.rect(0, 0, width, height).fill({ color: COLOR_BG });
 
 		for (const [, pos, sw] of w.query([pos_c, swing_c] as const).collect()) {
 			const center_angle = Math.atan2(sw.dir.y, sw.dir.x);

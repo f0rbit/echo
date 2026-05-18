@@ -1,6 +1,11 @@
 import type { Schedule, System, World } from "@f0rbit/forge";
 import type { Graphics } from "pixi.js";
 import type { LightSystem } from "@f0rbit/forge/light";
+import { make_eye_follow_system } from "@f0rbit/forge/light";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
+import { pos_c } from "@f0rbit/forge";
+import { player_c, wall_c } from "./components.ts";
+import { g } from "./grid.ts";
 import { make_arena_gen } from "./arena-gen.ts";
 import { make_input_system } from "./systems/input.ts";
 import { make_movement_system } from "./systems/movement.ts";
@@ -36,6 +41,7 @@ const clear_hit_events_system: System = (_w, ctx) => {
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", make_arena_gen(), "ar.setup_arena");
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), "ar.wall_autotile");
 
 	sch.add("pre", clear_hit_events_system, { phase: 0, name: "ar.hit_events_clear" });
 	sch.add("pre", make_restart_system(), { phase: 1, name: "ar.restart" });
@@ -54,6 +60,7 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", make_flash_system(), { phase: 10, name: "ar.flash" });
 	if (opts.light) {
 		sch.add("update", make_light_fx_system(opts.light), { phase: 11, name: "ar.light_fx" });
+		sch.add("post", make_eye_follow_system(opts.light, g, pos_c, player_c), { name: "ar.light_eye_follow" });
 	}
 
 	sch.add("post", sprite_attach_system, { phase: 0, name: "ar.sprite_attach" });

@@ -1,7 +1,7 @@
 import type { Component, System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { sprite_c } from "@f0rbit/forge/pixi";
-import { chaser_c, dummy_c, player_c, projectile_c } from "../components.ts";
+import { chaser_c, dummy_c, floor_c, player_c, projectile_c } from "../components.ts";
 
 // sprite-attach.ts — mirror of bestiary/loot pattern. Each entity with a
 // supported marker (and pos_c) gets a sprite_c written exactly once; forge's
@@ -24,6 +24,7 @@ type Tile = {
 };
 
 const tiles: readonly Tile[] = [
+	{ marker: floor_c, texture: "dungeon", frame: "floor_1", visible: true, anchor: { x: 0.5, y: 0.5 }, z: 1 },
 	{ marker: player_c, texture: "dungeon", frame: "knight_m_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.75 }, z: 3 },
 	{ marker: dummy_c, texture: "dungeon", frame: "chest_empty_open_anim_f0", visible: true, anchor: { x: 0.5, y: 0.5 }, z: 3 },
 	{ marker: chaser_c, texture: "dungeon", frame: "goblin_idle_anim_f0", visible: true, anchor: { x: 0.5, y: 0.5 }, z: 3 },

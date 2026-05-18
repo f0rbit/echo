@@ -2,7 +2,8 @@ import type { Ctx, Schedule, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import type { Container, Graphics } from "pixi.js";
 import type { LightSystem } from "@f0rbit/forge/light";
-import { dummy_c, dir_vec_c, health_c, hitbox_c, player_c, vel_c, weapon_c } from "./components.ts";
+import { dummy_c, dir_vec_c, floor_c, health_c, hitbox_c, player_c, vel_c, wall_c, weapon_c } from "./components.ts";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import { g } from "./grid.ts";
 import {
 	arena_r,
@@ -64,6 +65,21 @@ const setup_debug_arena = (w: World, ctx: Ctx): void => {
 		capacity: PARTICLE_CAPACITY,
 	});
 
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [floor_c, true]);
+		}
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		for (let cx = 0; cx < g.cols; cx++) {
+			const on_edge = cx === 0 || cx === g.cols - 1 || cy === 0 || cy === g.rows - 1;
+			if (!on_edge) continue;
+			const p = g.cell_to_world(cx, cy);
+			w.spawn([pos_c, p], [wall_c, true]);
+		}
+	}
+
 	w.spawn(
 		[player_c, true],
 		[pos_c, { x: PLAYER_SPAWN.x, y: PLAYER_SPAWN.y }],
@@ -109,6 +125,7 @@ const clear_hit_events_system: System = (_w, ctx) => {
  */
 export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts): void => {
 	sch.add("startup", (w, ctx) => setup_debug_arena(w, ctx), "ar.debug.setup");
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), "ar.debug.wall_autotile");
 
 	sch.add("pre", clear_hit_events_system, { phase: 0, name: "ar.hit_events_clear" });
 	sch.add("pre", make_hitstop_release_system(), { phase: 2, name: "ar.hitstop_release" });

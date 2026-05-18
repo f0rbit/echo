@@ -1,6 +1,6 @@
 import { boot } from "@f0rbit/forge/pixi";
 import { pos_c } from "@f0rbit/forge";
-import { make_light_system } from "@f0rbit/forge/light";
+import { make_light_system, presets } from "@f0rbit/forge/light";
 import { Graphics, Rectangle } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
 import { debug_plugin } from "./debug-plugin.ts";
@@ -24,6 +24,7 @@ const main = async (): Promise<void> => {
 		pos: pos_c,
 		assets: [
 			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+			{ kind: "atlas", alias: "walls", url: "walls-autotile.json" },
 		],
 	});
 	if (!r.ok) {
@@ -34,12 +35,13 @@ const main = async (): Promise<void> => {
 
 	const light = make_light_system({
 		grid: g,
-		ambient: [1, 1, 1],
+		ambient: presets.moon_cavern.ambient,
 		eye: {
-			color: [1, 1, 1],
-			radius_cells: Math.max(g.cols, g.rows) * 2,
-			intensity: 1,
-			falloff: 0.01,
+			color: presets.moon_cavern.default_torch_color,
+			radius_cells: 6,
+			intensity: 0.95,
+			falloff: 2.5,
+			flicker: { kind: "torch", amount: 0.12, seed: 1 },
 		},
 	});
 
@@ -50,11 +52,6 @@ const main = async (): Promise<void> => {
 	};
 	apply_filter_area();
 	app.render.world.filters = [light.filter];
-
-	const background_graphics = new Graphics();
-	background_graphics.label = "ar.background_graphics";
-	background_graphics.zIndex = 0;
-	app.render.world.addChild(background_graphics);
 
 	const swing_graphics = new Graphics();
 	swing_graphics.label = "ar.swing_graphics";
@@ -74,7 +71,7 @@ const main = async (): Promise<void> => {
 		debug_container,
 	});
 
-	app.schedule.add("render", make_entity_render_system({ background: background_graphics, swing: swing_graphics }), {
+	app.schedule.add("render", make_entity_render_system({ swing: swing_graphics }), {
 		phase: 10,
 		name: "ar.entity_render",
 	});
