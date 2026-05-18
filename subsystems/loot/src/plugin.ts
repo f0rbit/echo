@@ -1,18 +1,16 @@
 import type { Schedule, World } from "@f0rbit/forge";
-import type { Graphics } from "pixi.js";
 import { make_arena_gen_system } from "./arena-gen.ts";
-import { make_entity_render_system } from "./systems/entity-render.ts";
 import { make_input_system } from "./systems/input.ts";
 import { make_inventory_system, type InventorySystem } from "./systems/inventory.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { make_pickups_system } from "./systems/pickups.ts";
 import { make_restart_system } from "./systems/restart.ts";
+import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { make_stats_recompute_system } from "./systems/stats.ts";
 import { make_synthetic_slot_click_system } from "./systems/synthetic-slot-click.ts";
 import { tween_step_system } from "./systems/tween.ts";
 
 export type GamePluginOpts = {
-	entity_graphics?: Graphics;
 	inventory_system?: InventorySystem;
 };
 
@@ -23,8 +21,12 @@ export type GamePluginOpts = {
 //   pre     → restart
 //   update  → input → movement (every step_every) → pickups → inventory →
 //             stats_recompute
-//   post    → tween
-//   render  → entity_render (if a Graphics handle was passed in)
+//   post    → sprite_attach → tween
+//
+// Rendering is handled by forge's built-in sprite_sync_system (auto-installed
+// by `boot()` when an `assets` + `pos` pair is configured). `sprite_attach`
+// writes sprite_c onto player / pickup entities; forge syncs them to actual
+// Pixi Sprites every post tick.
 //
 // `make_inventory_system()` returns { system, queue_click }. The host (main.ts
 // or tests) creates it before plugin install so it can wire DOM pointerdown
@@ -47,11 +49,8 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", inv.system, { phase: 3, name: "lt.inventory" });
 	sch.add("update", make_stats_recompute_system(), { phase: 4, name: "lt.stats_recompute" });
 
-	sch.add("post", tween_step_system, { name: "lt.tween" });
-
-	if (opts.entity_graphics) {
-		sch.add("render", make_entity_render_system(opts.entity_graphics), { phase: 10, name: "lt.entity_render" });
-	}
+	sch.add("post", sprite_attach_system, { phase: 0, name: "lt.sprite_attach" });
+	sch.add("post", tween_step_system, { phase: 1, name: "lt.tween" });
 
 	return inv;
 };

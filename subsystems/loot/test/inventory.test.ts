@@ -7,7 +7,7 @@ import { inventory_ui_r } from "../src/resources.ts";
 import { g } from "../src/grid.ts";
 
 const SWORD = "item.sword_of_fire";
-const SHIELD = "item.shield_iron";
+const SHIELD = "item.staff_warding";
 const RING1 = "item.ring_of_haste";
 const RING2 = "item.ring_of_vigor";
 const RING3 = "item.ring_of_power";

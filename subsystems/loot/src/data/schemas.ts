@@ -16,6 +16,7 @@ export const item_def_schema = z.object({
 	kind: item_kind_schema,
 	modifier: stat_modifier_schema,
 	color: z.number().int().nonnegative(),
+	frame: z.string().min(1),
 });
 
 // The Zod schemas below validate the same shapes declared in

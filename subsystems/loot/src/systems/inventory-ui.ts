@@ -1,18 +1,22 @@
 import type { System } from "@f0rbit/forge";
-import { Container, Graphics, Text } from "pixi.js";
-import { event_to_world, type Camera } from "@f0rbit/forge/pixi";
+import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { event_to_world, type Assets, type Camera } from "@f0rbit/forge/pixi";
 import type { Equipment, Inventory } from "../components.ts";
 import type { ItemDef, ItemId, ItemRegistry } from "../data/items.ts";
 import { g } from "../grid.ts";
 
 // inventory-ui.ts — modal inventory overlay on app.stage (sibling of
 // surface_sprite, below palette_overlay) per .plans/loot.md §2 Q4. Renders a
-// 4×3 grid of 12 slots tinted by ItemDef.color, a selection cursor, equipped
-// rings, and a right-side info panel. Hidden unless inventory_ui_r.open.
+// 4×3 grid of 12 slots, each showing the item's atlas sprite frame on a dark
+// backdrop. Hidden unless inventory_ui_r.open.
 //
 // DOM pointerdown handler: event_to_world (forge handles DPR + RenderTexture
 // math per echo AGENTS.md "Canvas → world coords") → design-coord slot_at hit
 // test → opts.on_slot_click(idx). NEVER reimplement fit_scale.
+//
+// Per-slot sprite layer: lazy-init one Sprite per slot at first redraw,
+// cached in `slot_sprites[]`. Frames are 16×16; slots are 24×24 so we render
+// at 1:1 and center via anchor 0.5. Empty slots toggle visibility off.
 
 const DESIGN_W = g.cols * g.tile;
 const DESIGN_H = g.rows * g.tile;
@@ -98,6 +102,17 @@ const format_modifier = (def: ItemDef): string => {
 	return parts.join("\n");
 };
 
+// resolve_frame — look up a named atlas frame and return its Texture, or null
+// if the atlas isn't loaded / the frame is missing. Mirrors forge's internal
+// resolve_texture helper (not exported).
+const resolve_frame = (assets: Assets | undefined, alias: string, frame: string): Texture | null => {
+	if (!assets) return null;
+	const sheet = assets.atlas(alias);
+	if (!sheet.ok) return null;
+	const tex = (sheet.value.textures as Record<string, Texture | undefined>)[frame];
+	return tex ?? null;
+};
+
 export type InventoryUIOpts = {
 	on_slot_click: (idx: number) => void;
 	get_inventory: () => Inventory | null;
@@ -105,6 +120,7 @@ export type InventoryUIOpts = {
 	get_registry: () => ItemRegistry | null;
 	get_open: () => boolean;
 	get_selected: () => number | null;
+	assets?: Assets;
 };
 
 export type InventoryUI = {
@@ -125,6 +141,24 @@ export const make_inventory_ui = (opts: InventoryUIOpts): InventoryUI => {
 	const slot_layer = new Graphics();
 	slot_layer.label = "lt.inventory_ui.slots";
 	container.addChild(slot_layer);
+
+	const sprite_layer = new Container();
+	sprite_layer.label = "lt.inventory_ui.sprites";
+	container.addChild(sprite_layer);
+
+	// Per-slot Sprite. Lazy frame attach: first redraw after the atlas loads
+	// resolves the texture and assigns it to the matching slot's Sprite.
+	const slot_sprites: Sprite[] = [];
+	for (let i = 0; i < SLOT_COUNT; i++) {
+		const r = slot_rects[i]!;
+		const sp = new Sprite();
+		sp.label = `lt.inventory_ui.slot_${i}`;
+		sp.anchor.set(0.5, 0.5);
+		sp.position.set(r.x + r.w / 2, r.y + r.h / 2);
+		sp.visible = false;
+		sprite_layer.addChild(sp);
+		slot_sprites.push(sp);
+	}
 
 	const info_layer = new Graphics();
 	info_layer.label = "lt.inventory_ui.info_bg";
@@ -157,12 +191,24 @@ export const make_inventory_ui = (opts: InventoryUIOpts): InventoryUI => {
 			const r = slot_rects[i]!;
 			const item_id = inv?.slots[i] ?? null;
 			const def = def_for(reg, item_id);
-			const fill_color = def?.color ?? COLOR_EMPTY;
-			slot_layer.rect(r.x, r.y, r.w, r.h).fill({ color: fill_color });
+			slot_layer.rect(r.x, r.y, r.w, r.h).fill({ color: COLOR_EMPTY });
 			const border = item_id && equipped.has(item_id)
 				? COLOR_BORDER_EQUIPPED
 				: COLOR_BORDER;
 			slot_layer.rect(r.x, r.y, r.w, r.h).stroke({ color: border, width: 1 });
+
+			const sp = slot_sprites[i]!;
+			if (def) {
+				const tex = resolve_frame(opts.assets, "dungeon", def.frame);
+				if (tex) {
+					sp.texture = tex;
+					sp.visible = true;
+				} else {
+					sp.visible = false;
+				}
+			} else {
+				sp.visible = false;
+			}
 		}
 		if (selected !== null && selected >= 0 && selected < SLOT_COUNT) {
 			const r = slot_rects[selected]!;

@@ -143,7 +143,7 @@ describe("loot snapshot round-trip", () => {
 	test("equipment round-trip — every slot preserved", () => {
 		const equipment = {
 			weapon: "item.sword_of_fire",
-			offhand: "item.shield_iron",
+			offhand: "item.staff_warding",
 			ring1: "item.ring_of_power",
 			ring2: "item.ring_of_haste",
 		};
@@ -180,7 +180,7 @@ describe("loot snapshot round-trip", () => {
 	test("pickup entities round-trip — 5 floor pickups preserved", () => {
 		const pickups = [
 			{ cell: { x: 1, y: 1 }, item_id: "item.sword_of_fire" },
-			{ cell: { x: 3, y: 3 }, item_id: "item.shield_iron" },
+			{ cell: { x: 3, y: 3 }, item_id: "item.staff_warding" },
 			{ cell: { x: 5, y: 5 }, item_id: "item.ring_of_power" },
 			{ cell: { x: 7, y: 7 }, item_id: "item.potion_of_might" },
 			{ cell: { x: 9, y: 9 }, item_id: "item.mace_heavy" },

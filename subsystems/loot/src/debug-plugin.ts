@@ -1,6 +1,5 @@
 import type { Ctx, Schedule, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
-import type { Graphics } from "pixi.js";
 import {
 	dir_c,
 	equipment_c,
@@ -13,10 +12,10 @@ import {
 } from "./components.ts";
 import { g } from "./grid.ts";
 import { arena_r, inventory_ui_r, item_registry_r, run_seed_r } from "./resources.ts";
-import { make_entity_render_system } from "./systems/entity-render.ts";
 import { make_inventory_system, type InventorySystem } from "./systems/inventory.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { make_pickups_system } from "./systems/pickups.ts";
+import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { make_stats_recompute_system } from "./systems/stats.ts";
 import { BASE_STATS } from "./systems/stats.ts";
 import { tween_step_system } from "./systems/tween.ts";
@@ -42,7 +41,6 @@ import { make_item_registry, type ItemId } from "./data/items.ts";
 //   tick 360+     → idle; HUD shows final stats.
 
 export type DebugPluginOpts = {
-	entity_graphics?: Graphics;
 	inventory_system?: InventorySystem;
 };
 
@@ -53,7 +51,7 @@ const empty_equipment: Equipment = { weapon: null, offhand: null, ring1: null, r
 // which is also the inventory-slot index they land in after walk-right.
 const PICKUP_LAYOUT: ReadonlyArray<{ x: number; y: number; id: string }> = [
 	{ x: 4, y: 5, id: "item.sword_of_fire" },
-	{ x: 5, y: 5, id: "item.shield_iron" },
+	{ x: 5, y: 5, id: "item.staff_warding" },
 	{ x: 6, y: 5, id: "item.ring_of_haste" },
 	{ x: 7, y: 5, id: "item.ring_of_vigor" },
 	{ x: 8, y: 5, id: "item.potion_of_healing" },
@@ -125,11 +123,8 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	sch.add("update", inv.system, { phase: 3, name: "lt.inventory" });
 	sch.add("update", make_stats_recompute_system(), { phase: 4, name: "lt.stats_recompute" });
 
-	sch.add("post", tween_step_system, { name: "lt.tween" });
-
-	if (opts.entity_graphics) {
-		sch.add("render", make_entity_render_system(opts.entity_graphics), { phase: 10, name: "lt.entity_render" });
-	}
+	sch.add("post", sprite_attach_system, { phase: 0, name: "lt.sprite_attach" });
+	sch.add("post", tween_step_system, { phase: 1, name: "lt.tween" });
 
 	return inv;
 };

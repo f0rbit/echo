@@ -13,7 +13,7 @@ import { g } from "../src/grid.ts";
 // tick) detects the same-cell overlap and collects.
 
 const SWORD = "item.sword_of_fire";
-const SHIELD = "item.shield_iron";
+const SHIELD = "item.staff_warding";
 const RING = "item.ring_of_haste";
 const POTION = "item.potion_of_healing";
 

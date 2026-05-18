@@ -1,6 +1,5 @@
 import { boot } from "@f0rbit/forge/pixi";
 import type { Id } from "@f0rbit/forge";
-import { Graphics } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
 import {
 	equipment_c,
@@ -40,6 +39,9 @@ const main = async (): Promise<void> => {
 		},
 		bindings: game_bindings,
 		pos: visual_pos_c,
+		assets: [
+			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+		],
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);
@@ -49,12 +51,7 @@ const main = async (): Promise<void> => {
 
 	app.render.world.sortableChildren = true;
 
-	const entity_graphics = new Graphics();
-	entity_graphics.label = "lt.entity_graphics";
-	entity_graphics.zIndex = 50;
-	app.render.world.addChild(entity_graphics);
-
-	const inv_sys = debug_plugin(app.world, app.schedule, { entity_graphics });
+	const inv_sys = debug_plugin(app.world, app.schedule);
 
 	const get_player_id = (): Id | null => {
 		const players = app.world.query([player_c] as const).collect();
@@ -99,6 +96,7 @@ const main = async (): Promise<void> => {
 		get_registry,
 		get_open,
 		get_selected,
+		assets: app.assets,
 	});
 	const palette_idx = app.app.stage.getChildIndex(app.render.palette_overlay);
 	app.app.stage.addChildAt(inventory_ui.container, palette_idx);

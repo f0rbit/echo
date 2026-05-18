@@ -5,7 +5,7 @@ import { equipment_c, stats_c, type Equipment } from "../src/components.ts";
 import { inventory_ui_r } from "../src/resources.ts";
 
 const SWORD = "item.sword_of_fire"; // atk +3
-const SHIELD = "item.shield_iron"; // def +2
+const SHIELD = "item.staff_warding"; // def +2
 const RING_HASTE = "item.ring_of_haste"; // spd_mul +0.10
 const RING_POWER = "item.ring_of_power"; // atk +1
 // Synthetic registry for stacking math (so the test pins exact numerics
@@ -42,6 +42,7 @@ describe("compute_stats — composition", () => {
 			kind: "ring",
 			modifier: { spd_mul: 0.1 },
 			color: 0,
+			frame: "flask_big_blue",
 		});
 		items.set("item.ring_of_test_15" as any, {
 			id: "item.ring_of_test_15" as any,
@@ -49,6 +50,7 @@ describe("compute_stats — composition", () => {
 			kind: "ring",
 			modifier: { spd_mul: 0.15 },
 			color: 0,
+			frame: "flask_big_blue",
 		});
 		const reg = { items };
 		const eq: Equipment = { ...empty_eq, ring1: "item.ring_of_haste", ring2: "item.ring_of_test_15" };
@@ -76,6 +78,7 @@ describe("compute_stats — composition", () => {
 			kind: "ring",
 			modifier: { atk: -999 },
 			color: 0,
+			frame: "flask_big_red",
 		});
 		const reg = { items };
 		const eq: Equipment = { ...empty_eq, ring1: "item.cursed" };

@@ -1,6 +1,5 @@
 import { boot } from "@f0rbit/forge/pixi";
 import type { Id } from "@f0rbit/forge";
-import { Graphics } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
 import {
 	equipment_c,
@@ -32,9 +31,13 @@ const main = async (): Promise<void> => {
 			pixel_perfect: true,
 		},
 		bindings: game_bindings,
-		// Camera follows the smoothed visual position so cell-step movement
-		// looks continuous (mirrors bestiary's main.ts).
+		// Camera follows the smoothed visual position; sprite_sync_system reads
+		// the same component so the player + pickups tween through cell steps
+		// instead of jumping (mirrors bestiary's main.ts).
 		pos: visual_pos_c,
+		assets: [
+			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+		],
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);
@@ -44,16 +47,7 @@ const main = async (): Promise<void> => {
 
 	app.render.world.sortableChildren = true;
 
-	// Entity overlay — Graphics on app.render.world, per-tick redraw of the
-	// background rect + player + pickups (mirrors arena's entity-render).
-	const entity_graphics = new Graphics();
-	entity_graphics.label = "lt.entity_graphics";
-	entity_graphics.zIndex = 50;
-	app.render.world.addChild(entity_graphics);
-
-	// game_plugin returns the InventorySystem so we can wire its queue_click
-	// to the inventory UI's pointerdown handler (Option B per Phase 4.4 spec).
-	const inv_sys = game_plugin(app.world, app.schedule, { entity_graphics });
+	const inv_sys = game_plugin(app.world, app.schedule);
 
 	// Closures over app.world — read the player's inventory_c / equipment_c
 	// per redraw. find_player walks the player_c query each call; trivial cost
@@ -105,6 +99,7 @@ const main = async (): Promise<void> => {
 		get_registry,
 		get_open,
 		get_selected,
+		assets: app.assets,
 	});
 	// Z-stack: surface_sprite (idx 0) → debug_overlay (idx 1) →
 	// inventory_ui_container (idx 2) → palette_overlay (idx 3). addChild
