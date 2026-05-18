@@ -47,6 +47,9 @@ const main = async (): Promise<void> => {
 		},
 		bindings: game_bindings,
 		pos: visual_pos_c,
+		assets: [
+			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
+		],
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);
@@ -56,9 +59,10 @@ const main = async (): Promise<void> => {
 
 	app.render.world.sortableChildren = true;
 
+	// Background overlay — drawn BELOW all sprites (sprite_c.z=3 for player + chasers).
 	const entity_graphics = new Graphics();
-	entity_graphics.label = "pr.entity_graphics";
-	entity_graphics.zIndex = 50;
+	entity_graphics.label = "pr.background_graphics";
+	entity_graphics.zIndex = 0;
 	app.render.world.addChild(entity_graphics);
 
 	const { perks_sys, xp_sys } = game_plugin(app.world, app.schedule, { entity_graphics });

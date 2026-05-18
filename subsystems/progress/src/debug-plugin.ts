@@ -31,6 +31,7 @@ import { make_melee_swing_system } from "./systems/melee-swing.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
 import { path_step_system } from "./systems/path-step.ts";
 import { make_perks_system, type PerksSystem } from "./systems/perks.ts";
+import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { BASE_STATS, make_stats_recompute_system } from "./systems/stats.ts";
 import { make_synthetic_perk_pick_system } from "./systems/synthetic-perk-pick.ts";
 import { tween_step_system } from "./systems/tween.ts";
@@ -195,6 +196,8 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	sch.add("update", make_synthetic_perk_pick_system(perks_sys.queue_perk_pick), { phase: 7.5, name: "pr.synthetic_perk_pick" });
 	sch.add("update", perks_sys.system, { phase: 8, name: "pr.perks" });
 	sch.add("update", make_stats_recompute_system(), { phase: 9, name: "pr.stats_recompute" });
+
+	sch.add("post", sprite_attach_system, { phase: 0, name: "pr.sprite_attach" });
 
 	if (opts.entity_graphics) {
 		sch.add("render", make_entity_render_system(opts.entity_graphics), { phase: 10, name: "pr.entity_render" });

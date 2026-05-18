@@ -11,6 +11,7 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { path_step_system } from "./systems/path-step.ts";
 import { make_perks_system, type PerksSystem } from "./systems/perks.ts";
 import { make_restart_system } from "./systems/restart.ts";
+import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { make_stats_recompute_system } from "./systems/stats.ts";
 import { make_synthetic_perk_pick_system } from "./systems/synthetic-perk-pick.ts";
 import { tween_step_system } from "./systems/tween.ts";
@@ -24,7 +25,10 @@ import { make_xp_system, type XpSystem } from "./systems/xp.ts";
 //   update  → input → movement (every step_every) → tween → ai_chaser →
 //             path_step (every step_every) → enemy_spawn → melee_swing →
 //             xp → perks → stats_recompute
-//   render  → entity_render (if a Graphics handle was passed in)
+//   post    → sprite_attach (writes sprite_c once per marker; forge's
+//             auto-installed sprite_sync_system reads it)
+//   render  → entity_render (background rect only; if a Graphics handle was
+//             passed in)
 //
 // Tween runs in `update` (not `post`) so the lerp lands before render.
 // melee_swing must run BEFORE xp so the kill-emitted xp gain is drained
@@ -72,6 +76,8 @@ export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {})
 	sch.add("update", make_synthetic_perk_pick_system(perks_sys.queue_perk_pick), { phase: 7.5, name: "pr.synthetic_perk_pick" });
 	sch.add("update", perks_sys.system, { phase: 8, name: "pr.perks" });
 	sch.add("update", make_stats_recompute_system(), { phase: 9, name: "pr.stats_recompute" });
+
+	sch.add("post", sprite_attach_system, { phase: 0, name: "pr.sprite_attach" });
 
 	if (opts.entity_graphics) {
 		sch.add("render", make_entity_render_system(opts.entity_graphics), { phase: 10, name: "pr.entity_render" });
