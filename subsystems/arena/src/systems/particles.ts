@@ -1,6 +1,6 @@
 import type { Ctx, System } from "@f0rbit/forge";
 import type { Graphics } from "pixi.js";
-import { particles_r, hit_events_r, hitstop_r, type Particles } from "../resources.ts";
+import { game_state_r, particles_r, hit_events_r, hitstop_r, type Particles } from "../resources.ts";
 
 const PARTICLES_PER_HIT = 12;
 const PARTICLE_SPEED_MIN = 20;
@@ -84,6 +84,9 @@ export const advance_particles = (p: Particles, dt: number): void => {
 // (before hitstop releases). `particles_advance` IS gated so emitted particles
 // freeze in place during the 4-tick hitstop "punch" — that's the visual stop.
 export const make_particles_emit_system = (): System => (_w, ctx) => {
+	const gs = ctx.res.get(game_state_r);
+	if (gs.ok && gs.value.state !== "playing") return;
+
 	const p = ctx.res.get(particles_r);
 	if (!p.ok) return;
 	const events = ctx.res.get(hit_events_r);
@@ -95,6 +98,8 @@ export const make_particles_emit_system = (): System => (_w, ctx) => {
 };
 
 export const make_particles_advance_system = (): System => (_w, ctx: Ctx) => {
+	const gs = ctx.res.get(game_state_r);
+	if (gs.ok && gs.value.state !== "playing") return;
 	const hs = ctx.res.get(hitstop_r);
 	if (hs.ok && hs.value.remaining > 0) return;
 	const p = ctx.res.get(particles_r);

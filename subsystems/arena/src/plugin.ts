@@ -6,7 +6,7 @@ import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import { pos_c } from "@f0rbit/forge";
 import { player_c, wall_c } from "./components.ts";
 import { g } from "./grid.ts";
-import { make_arena_gen } from "./arena-gen.ts";
+import { make_game_state_system } from "./systems/game-state.ts";
 import { make_input_system } from "./systems/input.ts";
 import { make_movement_system } from "./systems/movement.ts";
 import { make_combat_melee_system } from "./systems/combat-melee.ts";
@@ -40,12 +40,23 @@ const clear_hit_events_system: System = (_w, ctx) => {
 };
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
-	sch.add("startup", make_arena_gen(), "ar.setup_arena");
-	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), "ar.wall_autotile");
+	// NOTE: setup_arena is NOT registered at startup any more. The pre-stage
+	// game-state system owns world spawning — it calls setup_arena on the
+	// menu->playing transition. Wall autotile still runs at startup but only
+	// matters once walls exist (game-state spawns them via setup_arena).
+	// We re-run autotile after enter-playing by registering it pre-stage too?
+	// No — autotile runs once on startup, walls then have sprite_c set. After
+	// w.clear() + setup_arena (re-spawn), the wall entities are NEW, so they
+	// need autotile to run again to assign sprite frames. Register the autotile
+	// system at pre stage AFTER the game-state system so it picks up freshly
+	// spawned walls. The autotile system itself is idempotent (skips entities
+	// already carrying sprite_c).
+	sch.add("pre", make_game_state_system(), { phase: 0, name: "ar.game_state" });
+	sch.add("pre", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { phase: 1, name: "ar.wall_autotile" });
 
-	sch.add("pre", clear_hit_events_system, { phase: 0, name: "ar.hit_events_clear" });
-	sch.add("pre", make_restart_system(), { phase: 1, name: "ar.restart" });
-	sch.add("pre", make_hitstop_release_system(), { phase: 2, name: "ar.hitstop_release" });
+	sch.add("pre", clear_hit_events_system, { phase: 2, name: "ar.hit_events_clear" });
+	sch.add("pre", make_restart_system(), { phase: 3, name: "ar.restart" });
+	sch.add("pre", make_hitstop_release_system(), { phase: 4, name: "ar.hitstop_release" });
 
 	sch.add("update", make_input_system(), { phase: 0, name: "ar.input" });
 	sch.add("update", make_movement_system(), { phase: 1, name: "ar.movement" });

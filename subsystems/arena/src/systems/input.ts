@@ -1,7 +1,7 @@
 import type { System } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { player_c, dir_vec_c, vel_c, weapon_c, swing_c, lifetime_c } from "../components.ts";
-import { hitstop_r } from "../resources.ts";
+import { game_state_r, hitstop_r } from "../resources.ts";
 import { spawn_projectile } from "./combat-ranged.ts";
 
 const MELEE_ARC_RADIANS = Math.PI / 2; // 90°
@@ -25,6 +25,9 @@ const PLAYER_SPEED = 80; // pixels per second
  */
 
 export const make_input_system = (): System => (w, ctx) => {
+	const gs = ctx.res.get(game_state_r);
+	if (gs.ok && gs.value.state !== "playing") return;
+
 	const hs = ctx.res.get(hitstop_r);
 	if (hs.ok && hs.value.remaining > 0) return;
 

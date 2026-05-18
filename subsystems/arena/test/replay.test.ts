@@ -6,12 +6,12 @@ import type { Ctx, ReplayDoc, World } from "@f0rbit/forge";
 import { replay_schema } from "@f0rbit/forge";
 import { game_bindings } from "../src/bindings.ts";
 import { chaser_c, health_c, player_c } from "../src/components.ts";
-import { particles_r, wave_r } from "../src/resources.ts";
+import { game_state_r, particles_r, wave_r } from "../src/resources.ts";
 import { game_plugin } from "../src/plugin.ts";
 
 const replay_path = new URL("../replays/wave-clear.replay.json", import.meta.url).pathname;
 const replay_json = readFileSync(replay_path, "utf8");
-const expected_hash = "b875c1d14577f46c8e2b1ea686c44ff8e717948ffe8857b1089b7dc9b7bf0e87";
+const expected_hash = "6428ac41eb6cbfcbb7f4ca78a526fafea0e3851ad259653a605db669273bdcec";
 const REPLAY_TIMEOUT_MS = 30000;
 
 type Sim = { ctx: Ctx; w: World; tick: () => void; doc: ReplayDoc };
@@ -20,7 +20,8 @@ const make_sim = (doc: ReplayDoc): Sim => {
 	const h = harness({ seed: doc.seed, fixed_dt: doc.fixed_dt, bindings: game_bindings });
 	game_plugin(h.world, h.schedule);
 	replay.play(doc, h.input, () => h.time.tick);
-	// Initial startup tick (matches the recorder — see tools/record-wave-clear.ts).
+	// Tick 1: boot tick — game_state seeds menu, no spawn. (Matches the
+	// recorder — see tools/record-wave-clear.ts.)
 	h.time.advance(doc.fixed_dt);
 	h.schedule.tick(h.world, h.ctx);
 	return {
@@ -82,6 +83,24 @@ const advance_to_end = (sim: Sim): void => {
 };
 
 describe("arena replay deliverable", () => {
+	test("game_state_r transitions to playing on tick 2 (start_game press)", () => {
+		const r = replay.load(replay_json);
+		expect(r.ok).toBe(true);
+		if (!r.ok) return;
+		const sim = make_sim(r.value);
+		// After make_sim: tick=1, state="menu" (game_state seeded itself).
+		const before = sim.ctx.res.get(game_state_r);
+		expect(before.ok).toBe(true);
+		if (!before.ok) return;
+		expect(before.value.state).toBe("menu");
+		// Tick 2 fires start_game press → enter_playing.
+		sim.tick();
+		const after = sim.ctx.res.get(game_state_r);
+		expect(after.ok).toBe(true);
+		if (!after.ok) return;
+		expect(after.value.state).toBe("playing");
+	}, REPLAY_TIMEOUT_MS);
+
 	test("replay JSON loads and validates against replay_schema", () => {
 		const r = replay.load(replay_json);
 		expect(r.ok).toBe(true);
@@ -101,6 +120,8 @@ describe("arena replay deliverable", () => {
 		const last_event_tick = r.value.frames[r.value.frames.length - 1]?.tick ?? 0;
 		const target = last_event_tick + 1;
 
+		// First sim tick (tick 2) fires start_game → setup_arena spawns wave_r.
+		sim.tick();
 		let prev_kills = wave_state(sim).total_kills;
 		const ctx = sim.ctx as Ctx & { time: { tick: number } };
 		while (ctx.time.tick < target) {

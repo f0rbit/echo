@@ -3,7 +3,7 @@ import { pos_c } from "@f0rbit/forge";
 import type { LightHandle, LightSystem } from "@f0rbit/forge/light";
 import { g } from "../grid.ts";
 import { player_c, swing_c } from "../components.ts";
-import { hit_events_r } from "../resources.ts";
+import { game_state_r, hit_events_r } from "../resources.ts";
 
 const SCREEN_FLASH_TICKS = 8;
 const SCREEN_FLASH_RADIUS = 32;
@@ -44,6 +44,9 @@ export const make_light_fx_system = (ls: LightSystem): System => {
 	const hit_glows: ActiveHitGlow[] = [];
 
 	return (w, ctx) => {
+		const gs = ctx.res.get(game_state_r);
+		if (gs.ok && gs.value.state !== "playing") return;
+
 		const swings = w.query([player_c, pos_c, swing_c] as const).collect();
 		if (swings.length > 0 && !screen_flash) {
 			const player = w.query([player_c, pos_c] as const).collect()[0];

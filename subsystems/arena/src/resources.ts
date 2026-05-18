@@ -1,4 +1,7 @@
 import { resource, type ResKey, type Id } from "@f0rbit/forge";
+import type { Fsm } from "./fsm.ts";
+
+export type GameState = Fsm<"menu" | "playing" | "won" | "lost">;
 
 export type Arena = {
 	cols: number;
@@ -56,3 +59,4 @@ export const hitstop_r: ResKey<Hitstop> = resource<Hitstop>("ar.hitstop");
 export const wave_r: ResKey<Wave> = resource<Wave>("ar.wave");
 export const run_seed_r: ResKey<RunSeed> = resource<RunSeed>("ar.run_seed");
 export const hit_events_r: ResKey<HitEvents> = resource<HitEvents>("ar.hit_events");
+export const game_state_r: ResKey<GameState> = resource<GameState>("ar.game_state");

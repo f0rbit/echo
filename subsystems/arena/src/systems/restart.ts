@@ -1,6 +1,6 @@
 import type { System } from "@f0rbit/forge";
 import { setup_arena } from "../arena-gen.ts";
-import { run_seed_r } from "../resources.ts";
+import { game_state_r, run_seed_r } from "../resources.ts";
 
 /**
  * Restart — R key wipes the world and re-runs setup_arena.
@@ -13,6 +13,8 @@ import { run_seed_r } from "../resources.ts";
  */
 
 export const make_restart_system = (): System => (w, ctx) => {
+	const gs = ctx.res.get(game_state_r);
+	if (gs.ok && gs.value.state !== "playing") return;
 	if (!ctx.input.just("restart")) return;
 
 	const prev = ctx.res.get(run_seed_r);

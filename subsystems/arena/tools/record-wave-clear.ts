@@ -51,8 +51,18 @@ const recorder = replay.record(h.input, h.ctx, { seed: SEED });
 
 game_plugin(h.world, h.schedule);
 
+// Tick 1: boot tick. game_state_system seeds game_state_r = menu and returns
+// without spawning anything. No inputs injected.
 h.time.advance(FIXED_DT);
 h.schedule.tick(h.world, h.ctx);
+
+// Tick 2: emit `start_game` press → menu->playing transition fires this tick,
+// setup_arena spawns the world. No combat inputs yet — those start tick 3.
+h.input.inject_actions([{ kind: "press", action: "start_game" }]);
+h.time.advance(FIXED_DT);
+h.schedule.tick(h.world, h.ctx);
+// Release start_game on the next advance so it doesn't latch.
+h.input.inject_actions([{ kind: "release", action: "start_game" }]);
 
 let cur_dx: Step = 0;
 let cur_dy: Step = 0;

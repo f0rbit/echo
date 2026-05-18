@@ -1,6 +1,6 @@
 import { pos_c, type System } from "@f0rbit/forge";
 import { chaser_c, player_c, vel_c, health_c, hitbox_c } from "../components.ts";
-import { hit_events_r, hitstop_r, wave_r } from "../resources.ts";
+import { game_state_r, hit_events_r, hitstop_r, wave_r } from "../resources.ts";
 
 const CHASER_SPEED = 30; // pixels per second
 const CHASER_DAMAGE = 1;
@@ -22,6 +22,9 @@ const EPS_SQ = 1e-6;
  */
 
 export const make_enemy_ai_system = (): System => (w, ctx) => {
+	const gs = ctx.res.get(game_state_r);
+	if (gs.ok && gs.value.state !== "playing") return;
+
 	const hs = ctx.res.get(hitstop_r);
 	if (hs.ok && hs.value.remaining > 0) return;
 

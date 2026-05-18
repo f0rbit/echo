@@ -6,6 +6,7 @@ const extras: Bindings = {
 		melee: [{ kind: "key", code: "KeyZ" }],
 		ranged: [{ kind: "key", code: "KeyX" }],
 		restart: [{ kind: "key", code: "KeyR" }],
+		start_game: [{ kind: "key", code: "Space" }],
 		debug_toggle: [{ kind: "key", code: "Tab" }],
 	},
 	axes: {},

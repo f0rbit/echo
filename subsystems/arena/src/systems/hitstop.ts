@@ -1,5 +1,5 @@
 import type { System } from "@f0rbit/forge";
-import { hit_events_r, hitstop_r } from "../resources.ts";
+import { game_state_r, hit_events_r, hitstop_r } from "../resources.ts";
 
 const HITSTOP_TICKS = 4;
 
@@ -12,6 +12,9 @@ const HITSTOP_TICKS = 4;
  * → release system never runs → permanent freeze).
  */
 export const make_hitstop_trigger_system = (): System => (_w, ctx) => {
+	const gs = ctx.res.get(game_state_r);
+	if (gs.ok && gs.value.state !== "playing") return;
+
 	const events = ctx.res.get(hit_events_r);
 	if (!events.ok) return;
 	if (events.value.events.length === 0) return;
