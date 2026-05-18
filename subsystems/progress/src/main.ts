@@ -21,6 +21,7 @@ import { level_up_pending_r, perk_registry_r, progress_r } from "./resources.ts"
 import type { PerkRegistry } from "./data/perks.ts";
 import { make_hud } from "./systems/hud.ts";
 import { make_perk_choice_ui } from "./systems/perk-choice-ui.ts";
+import { setup_static } from "./arena-gen.ts";
 import { disk_load } from "./disk-save.ts";
 import { make_palette_cmds } from "./palette-cmds.ts";
 import { make_progress_snapshotter } from "./snapshot.ts";
@@ -206,6 +207,13 @@ const main = async (): Promise<void> => {
 	// pattern (echo AGENTS.md "Snapshotter.restore() is destructive — boot
 	// the target first"). After this, snapper.restore replaces the
 	// default-state world with the persisted snapshot if one exists.
+	//
+	// snapper.restore() calls `world.clear()` which wipes every entity —
+	// including the floor + wall entities that are intentionally NOT
+	// snapshotted (static config per AGENTS.md). Re-run setup_static after
+	// restore to rehydrate them. setup_static is idempotent so this only
+	// re-spawns the tiles that restore wiped; the snapshotted player +
+	// chasers + their state stay untouched.
 	app.tick(1 / 60);
 	const loaded = disk_load();
 	if (loaded.ok) {
@@ -214,7 +222,9 @@ const main = async (): Promise<void> => {
 			rng: app.rng,
 			res: app.res,
 		});
-		if (!restored.ok) {
+		if (restored.ok) {
+			setup_static(app.world, app.ctx());
+		} else {
 			console.warn("[progress] disk restore failed; proceeding with fresh state", restored.error); // non-deterministic-ok: dev diagnostic
 		}
 	} else if (loaded.error.kind !== "no_save") {

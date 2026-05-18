@@ -49,7 +49,16 @@ const PLAYER_SPAWN: Cell = { x: 10, y: 5 };
 // cardinal midpoints at x:1..cols-2, y:1..rows-2), so no spawn-pool change
 // is needed. Stable iteration order (y-major, x-minor) keeps entity-IDs
 // deterministic across replay runs.
+//
+// Idempotent: skips spawning if any floor_c entity already exists. Safe to
+// call from both the startup `arena_gen` system AND from main.ts after
+// disk-restore (which destructively clears the world — see AGENTS.md
+// "Snapshotter.restore() is destructive"). Without the guard, a normal
+// boot (no save) would double-spawn since `setup_static` runs in both
+// `setup_arena` (startup) and could be called again post-restore.
 const spawn_tiles = (w: World): void => {
+	const existing = w.query([floor_c] as const).collect();
+	if (existing.length > 0) return;
 	for (let cy = 0; cy < g.rows; cy++) {
 		for (let cx = 0; cx < g.cols; cx++) {
 			const p = g.cell_to_world(cx, cy);
@@ -95,7 +104,20 @@ const spawn_player = (w: World, cell: Cell): void => {
 	);
 };
 
-export const setup_arena = (w: World, ctx: Ctx): void => {
+// setup_static — resources + tile entities (floors + walls). Idempotent
+// across both code paths it's called from:
+//   1. Startup `arena_gen` system (fresh boot, no snapshot).
+//   2. main.ts post-restore (after `snapper.restore` destructively cleared
+//      the entity world but preserved non-snapshotted resources — see
+//      AGENTS.md "Static config NOT in snapshot"; floors + walls vanish
+//      because they're entities, not resources).
+// `spawn_tiles` skips when floor_c entities already exist. Resource writes
+// that are pure functions of static state (arena_r, perk_registry_r,
+// wall_index_r, creature_occupancy_r) overwrite safely. Snapshotted
+// resources (progress_r, level_up_pending_r) are guarded so a post-restore
+// call doesn't clobber restored state; run_seed_r's get-or-default
+// preserves the restored base/restart_count.
+export const setup_static = (w: World, ctx: Ctx): void => {
 	ctx.res.set(arena_r, {
 		cols: g.cols,
 		rows: g.rows,
@@ -112,11 +134,22 @@ export const setup_arena = (w: World, ctx: Ctx): void => {
 
 	ctx.res.set(creature_occupancy_r, { cells: new Set<number>() });
 	ctx.res.set(wall_index_r, { cells: perimeter_keys() });
-	ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
-	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
+	if (!ctx.res.get(progress_r).ok) ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
+	if (!ctx.res.get(level_up_pending_r).ok) ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 
 	spawn_tiles(w);
+};
+
+// setup_dynamic — player spawn. NOT idempotent: re-running spawns a
+// duplicate player. Must NOT be called after disk-restore (the snapshot
+// already contains the player entity).
+export const setup_dynamic = (w: World): void => {
 	spawn_player(w, PLAYER_SPAWN);
+};
+
+export const setup_arena = (w: World, ctx: Ctx): void => {
+	setup_static(w, ctx);
+	setup_dynamic(w);
 };
 
 export const make_arena_gen_system = (): System => (w, ctx) => {
