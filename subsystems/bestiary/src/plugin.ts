@@ -2,7 +2,7 @@ import type { Container } from "pixi.js";
 import type { Schedule, System, World } from "@f0rbit/forge";
 import type { Camera } from "@f0rbit/forge/pixi";
 import { arena_gen_system } from "./arena-gen.ts";
-import { player_c, summoner_c, visual_pos_c } from "./components.ts";
+import { player_c, summoner_c, visual_pos_c, wall_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { wall_index_r } from "./resources.ts";
 import { chaser_think_system } from "./systems/ai/chaser.ts";
@@ -28,7 +28,7 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
-import { wall_autotile_system } from "./systems/wall-autotile.ts";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import { wall_index_system } from "./systems/wall-index.ts";
 import { make_wall_debug_system } from "./systems/wall-debug.ts";
 
@@ -47,7 +47,7 @@ export type GamePluginOpts = {
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", arena_gen_system, "bst.gen");
-	sch.add("startup", wall_autotile_system, "bst.wall_autotile");
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), "bst.wall_autotile");
 	if (opts.world_container && opts.debug_container && opts.camera) {
 		sch.add("startup", make_wall_debug_system(opts.world_container, opts.debug_container, opts.camera), "bst.wall_debug");
 	}

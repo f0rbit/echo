@@ -9,10 +9,10 @@ import { movement_system, step_every } from "./systems/movement.ts";
 import { restart_system } from "./systems/restart.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
 import { tween_step_system } from "./systems/tween.ts";
-import { wall_autotile_system } from "./systems/wall-autotile.ts";
+import { make_wall_autotile_system } from "@f0rbit/forge/autotile";
 import { wall_index_system } from "./systems/wall-index.ts";
 import { make_wall_debug_system } from "./systems/wall-debug.ts";
-import { player_c, visual_pos_c } from "./components.ts";
+import { player_c, visual_pos_c, wall_c } from "./components.ts";
 import { g } from "./grid.ts";
 import { wall_index_r } from "./resources.ts";
 
@@ -32,7 +32,7 @@ export type GamePluginOpts = {
 
 export const game_plugin = (_w: World, sch: Schedule, opts: GamePluginOpts = {}): void => {
 	sch.add("startup", dungeon_gen_system, "dw.gen");
-	sch.add("startup", wall_autotile_system, "dw.wall_autotile");
+	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), "dw.wall_autotile");
 	if (opts.world_container && opts.debug_container && opts.camera) {
 		sch.add("startup", make_wall_debug_system(opts.world_container, opts.debug_container, opts.camera), "dw.wall_debug");
 	}

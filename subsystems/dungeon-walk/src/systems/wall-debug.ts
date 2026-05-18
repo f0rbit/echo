@@ -6,7 +6,7 @@ import type { Camera } from "@f0rbit/forge/pixi";
 import { event_to_world, sprite_c } from "@f0rbit/forge/pixi";
 import { wall_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { CORNER_STATES_TO_TILE, compute_corner_states } from "./wall-autotile.ts";
+import { LOOKUP, compute_corner_states } from "@f0rbit/forge/autotile";
 
 declare global {
 	var echoWallDebug: ((on?: boolean) => boolean) | undefined;
@@ -40,7 +40,7 @@ let click_state = false;
 const apply_tints = (on: boolean): void => {
 	if (!active_world) return;
 	for (const [id, s] of wall_states) {
-		const tile = CORNER_STATES_TO_TILE[`${s.tl},${s.tr},${s.bl},${s.br}` as const];
+		const tile = LOOKUP[`${s.tl},${s.tr},${s.bl},${s.br}` as const];
 		const idx = tile ? tile_index(tile.col, tile.row) % TILE_COLOR_PALETTE.length : 0;
 		const tint = on ? TILE_COLOR_PALETTE[idx]! : 0xffffff;
 		const r = active_world.get(id, sprite_c);
@@ -72,7 +72,7 @@ const handle_click = (id: Id): void => {
 	wall_click_index.set(id, next_index);
 	const col = next_index % 12;
 	const row = Math.floor(next_index / 12) % 4;
-	const default_tile = CORNER_STATES_TO_TILE[`${s.tl},${s.tr},${s.bl},${s.br}` as const]!;
+	const default_tile = LOOKUP[`${s.tl},${s.tr},${s.bl},${s.br}` as const]!;
 	const r = active_world.get(id, sprite_c);
 	if (r.ok) {
 		active_world.set(id, sprite_c, { ...r.value, frame: `wat_${col}_${row}` });

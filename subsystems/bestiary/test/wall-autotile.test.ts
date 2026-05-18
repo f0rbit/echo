@@ -6,8 +6,8 @@ import { g } from "../src/grid.ts";
 import {
 	apply_wall_autotile,
 	compute_corner_states,
-	CORNER_STATES_TO_TILE,
-} from "../src/systems/wall-autotile.ts";
+	LOOKUP,
+} from "@f0rbit/forge/autotile";
 import expected_map from "./fixtures/pattern-to-tile.json";
 
 type Bit = 0 | 1;
@@ -35,12 +35,12 @@ const spawn_wall = (w: ReturnType<typeof world>, cx: number, cy: number): Return
 };
 
 describe("wall autotile (Godot 3x3 minimal, corner-based)", () => {
-	test("CORNER_STATES_TO_TILE matches committed fixture (47 entries)", () => {
+	test("LOOKUP matches committed fixture (47 entries)", () => {
 		const fixture = expected_map as Record<string, { col: number; row: number }>;
-		expect(Object.keys(CORNER_STATES_TO_TILE).length).toBe(47);
+		expect(Object.keys(LOOKUP).length).toBe(47);
 		expect(Object.keys(fixture).length).toBe(47);
 		for (const [k, v] of Object.entries(fixture)) {
-			expect(CORNER_STATES_TO_TILE[k as keyof typeof CORNER_STATES_TO_TILE]).toEqual(v);
+			expect(LOOKUP[k as keyof typeof LOOKUP]).toEqual(v);
 		}
 	});
 
@@ -53,7 +53,7 @@ describe("wall autotile (Godot 3x3 minimal, corner-based)", () => {
 			const query_id = spawn_wall(w, cx, cy);
 			for (const n of neighbors_for_mask(mask, cx, cy)) spawn_wall(w, n.x, n.y);
 
-			apply_wall_autotile(w);
+			apply_wall_autotile(w, { wall_c, texture: "walls", grid: g });
 			const sprite = w.get(query_id, sprite_c);
 			expect(sprite.ok).toBe(true);
 			if (!sprite.ok) continue;
