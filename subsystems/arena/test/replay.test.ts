@@ -11,7 +11,7 @@ import { game_plugin } from "../src/plugin.ts";
 
 const replay_path = new URL("../replays/wave-clear.replay.json", import.meta.url).pathname;
 const replay_json = readFileSync(replay_path, "utf8");
-const expected_hash = "6428ac41eb6cbfcbb7f4ca78a526fafea0e3851ad259653a605db669273bdcec";
+const expected_hash = "cf5afe1c20af3b2ea25aa781bc47598821b64d21a00f93e9f5c62a49c913959e";
 const REPLAY_TIMEOUT_MS = 30000;
 
 type Sim = { ctx: Ctx; w: World; tick: () => void; doc: ReplayDoc };

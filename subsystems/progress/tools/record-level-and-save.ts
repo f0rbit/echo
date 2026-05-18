@@ -130,6 +130,25 @@ for (let i = 0; i < SAFETY_CAP; i++) {
 		const d = chebyshev(target, cell);
 		if (d > 1) {
 			set_axis(sign(target.x - cell.x), sign(target.y - cell.y));
+		} else if (d === 0) {
+			// Co-located with the chaser (chaser spawned on the player's cell).
+			// Step into an interior cell so we can attack from adjacent. Bias
+			// toward the player's existing facing if it's interior; otherwise
+			// pick any cardinal that lands in the interior cell rect.
+			//   interior: 1..cols-2, 1..rows-2
+			const try_dirs: ReadonlyArray<[Step, Step]> = [
+				[cur_dx as Step, cur_dy as Step],
+				[1, 0], [-1, 0], [0, 1], [0, -1],
+			];
+			for (const [dx, dy] of try_dirs) {
+				if (dx === 0 && dy === 0) continue;
+				const nx = cell.x + dx;
+				const ny = cell.y + dy;
+				if (nx >= 1 && nx <= g.cols - 2 && ny >= 1 && ny <= g.rows - 2) {
+					set_axis(dx, dy);
+					break;
+				}
+			}
 		} else {
 			// Adjacent — face the chaser then swing on the same tick. dir_c is
 			// set by input.ts from the axis edge, which fires before melee.

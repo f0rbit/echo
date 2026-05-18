@@ -49,9 +49,10 @@ import {
 //                           (AGENTS.md "Static config NOT in snapshot").
 //   creature_occupancy_r  — runtime-derived; rebuilt each tick by
 //                           creature_occupancy_system.
-//   wall_index_r          — runtime-derived; empty in progress v1 (no
-//                           walls), but the resource exists so the copied
-//                           bestiary systems compile unchanged.
+//   wall_index_r          — startup-derived (perimeter cell ring); rehydrated
+//                           by setup_arena. Same contract as perk_registry_r —
+//                           the value comes from g.cols/rows, not from gameplay
+//                           state, so it doesn't need to survive in the snapshot.
 export const make_progress_snapshotter = (): Snapshotter =>
 	snapshotter()
 		.register(pos_c, pos_c_value_schema)

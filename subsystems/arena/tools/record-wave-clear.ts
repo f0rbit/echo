@@ -30,7 +30,12 @@ const PHASE_LEN = 4;
 const DANGER_RADIUS_SQ = 16 * 16;
 const ARENA_W = 320;
 const ARENA_H = 180;
-const EDGE_BUFFER = 16;
+// EDGE_BUFFER stacks on top of movement.ts's wall clamp (which keeps the
+// player off the perimeter tile = [16, ARENA_W-16] x [16, ARENA_H-16]).
+// 32 = wall_tile (16) + one extra tile so the flee logic has room to step
+// before hitting the clamp. Tuned post-wall-collision to keep wave 3 clean
+// (no sacrifice hits).
+const EDGE_BUFFER = 32;
 
 type Step = -1 | 0 | 1;
 const SIGN = (n: number): Step => (n > 0 ? 1 : n < 0 ? -1 : 0);

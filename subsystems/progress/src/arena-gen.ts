@@ -6,9 +6,12 @@
 // config, NOT snapshotted (AGENTS.md "Static config does NOT go in the
 // snapshot"). Phase 5.5+'s restore() relies on this running first.
 //
-// creature_occupancy_r + wall_index_r are seeded empty so the copied
-// chaser AI + path-step systems boot cleanly without crashing on a
-// missing-resource lookup. Both rehydrate every tick.
+// wall_index_r is seeded with the perimeter cell ring so movement +
+// ai-chaser + path-step all share the same blocked predicate (cells
+// 0/cols-1 along x, 0/rows-1 along y are walls). Like perk_registry_r,
+// wall_index_r is NOT in the snapshot — it's rehydrated at startup so
+// restore() preserves it. creature_occupancy_r is seeded empty and
+// rebuilt every tick by creature_occupancy_system.
 import type { Ctx, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
@@ -40,7 +43,8 @@ const PLAYER_SPAWN: Cell = { x: 10, y: 5 };
 
 // Spawn a floor entity at every cell and a wall entity at perimeter cells.
 // Floors are a deterministic, render-only carpet (no AI/collision/replay-state
-// reads them); walls are also visual-only — the existing enemy_spawn pool
+// reads them); walls are decorative entities + their cell keys feed
+// wall_index_r (see perimeter_keys below). The existing enemy_spawn pool
 // already restricts chasers to the 8-cell interior subset (corners +
 // cardinal midpoints at x:1..cols-2, y:1..rows-2), so no spawn-pool change
 // is needed. Stable iteration order (y-major, x-minor) keeps entity-IDs
@@ -60,6 +64,21 @@ const spawn_tiles = (w: World): void => {
 			w.spawn([pos_c, p], [visual_pos_c, { ...p }], [wall_c, true]);
 		}
 	}
+};
+
+// Perimeter cell keys — fed to wall_index_r so movement / ai-chaser /
+// path-step share one source of truth for "wall" cells.
+const perimeter_keys = (): ReadonlySet<number> => {
+	const out = new Set<number>();
+	for (let cx = 0; cx < g.cols; cx++) {
+		out.add(g.key(cx, 0));
+		out.add(g.key(cx, g.rows - 1));
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		out.add(g.key(0, cy));
+		out.add(g.key(g.cols - 1, cy));
+	}
+	return out;
 };
 
 const spawn_player = (w: World, cell: Cell): void => {
@@ -92,7 +111,7 @@ export const setup_arena = (w: World, ctx: Ctx): void => {
 	ctx.res.set(perk_registry_r, { perks: reg.perks as unknown as Map<string, unknown> });
 
 	ctx.res.set(creature_occupancy_r, { cells: new Set<number>() });
-	ctx.res.set(wall_index_r, { cells: new Set<number>() });
+	ctx.res.set(wall_index_r, { cells: perimeter_keys() });
 	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 

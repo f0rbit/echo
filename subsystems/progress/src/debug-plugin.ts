@@ -98,7 +98,18 @@ const debug_setup_progress = (w: World, ctx: Ctx): void => {
 	ctx.res.set(perk_registry_r, { perks: reg.perks as unknown as Map<string, unknown> });
 
 	ctx.res.set(creature_occupancy_r, { cells: new Set<number>() });
-	ctx.res.set(wall_index_r, { cells: new Set<number>() });
+	// Same perimeter ring as production setup_arena — keeps the debug
+	// fixture's blocked-cell contract identical to the playable build.
+	const walls = new Set<number>();
+	for (let cx = 0; cx < g.cols; cx++) {
+		walls.add(g.key(cx, 0));
+		walls.add(g.key(cx, g.rows - 1));
+	}
+	for (let cy = 0; cy < g.rows; cy++) {
+		walls.add(g.key(0, cy));
+		walls.add(g.key(g.cols - 1, cy));
+	}
+	ctx.res.set(wall_index_r, { cells: walls });
 	ctx.res.set(progress_r, { paused: false, dirty_stats: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 
