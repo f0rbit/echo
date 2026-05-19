@@ -96,7 +96,13 @@ const spawn_player = (w: World, cell: Cell): void => {
 		[player_c, true],
 		[pos_c, wp],
 		[visual_pos_c, { ...wp }],
-		[dir_c, { dx: 0, dy: 0 }],
+		// Initial facing right ({1, 0}). input.ts is facing-persistent (only
+		// writes dir_c on nonzero input), so the spawn-cell value sticks
+		// until the player first moves. Gives a clean visual heading and
+		// (in case any future directional ability reads dir_c) a sensible
+		// default. Melee-swing is direction-agnostic chebyshev-1, so this
+		// only matters for facing-only effects.
+		[dir_c, { dx: 1, dy: 0 }],
 		[hp_c, { current: BASE_STATS.max_hp, max: BASE_STATS.max_hp }],
 		[xp_c, { current: 0, level: 1 }],
 		[perks_c, { applied: [] }],

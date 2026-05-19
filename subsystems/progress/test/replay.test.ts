@@ -31,26 +31,28 @@ const replay_path = new URL("../replays/level-and-save.replay.json", import.meta
 const replay_json = readFileSync(replay_path, "utf8");
 
 // Baked end-state values (recorded by tools/record-level-and-save.ts on
-// seed=1). With contact damage active (Phase 5.4.bugfix), the recorder's
-// greedy nearest-target strategy dies before the third pick — multiple
-// chasers flank the player faster than melee can level up. The replay
-// captures a partial run; tests assert that partial state.
-const EXPECTED_FINAL_PERKS: readonly string[] = ["perk.atk_plus"];
+// seed=1). With contact damage active (Phase 5.4.bugfix) AND chebyshev-1
+// melee (Phase 5.4.bugfix2 — stationary-melee fix), the recorder
+// survives long enough for 2 picks before multi-chaser flank damage
+// drains HP. The replay artefact captures the partial run; tests assert
+// that partial state.
+const EXPECTED_FINAL_PERKS: readonly string[] = ["perk.atk_plus", "perk.hp_plus"];
 // BASE stats { atk: 5, def: 2, spd: 1, max_hp: 10, xp_gain_mul: 0 } plus
-// perk.atk_plus (+3 atk):
+// perk.atk_plus (+3 atk) + perk.hp_plus (+5 hp):
 //   atk = 5 + 3 = 8
-const EXPECTED_FINAL_STATS = { atk: 8, def: 2, spd: 1, max_hp: 10, xp_gain_mul: 0 } as const;
-const EXPECTED_FINAL_LEVEL = 2;
-// Recorder dies at tick 1101, then settles 30 ticks.
-const EXPECTED_END_TICK = 1131;
+//   max_hp = 10 + 5 = 15
+const EXPECTED_FINAL_STATS = { atk: 8, def: 2, spd: 1, max_hp: 15, xp_gain_mul: 0 } as const;
+const EXPECTED_FINAL_LEVEL = 3;
+// Recorder dies at tick 2134, then settles 30 ticks.
+const EXPECTED_END_TICK = 2164;
 // Tick after the first level-up pick (consumed on the tick after the
-// press edge).
-const TICK_AFTER_FIRST_PICK = 603;
-// Snap tick chosen AFTER death — by this point all forked RNG sub-streams
-// have advanced. The closure-held spawn fork is NOT in the snapshot, but
-// once `dead = true` gates enemy_spawn, no more spawn draws fire, so the
-// parallel-world continuation stays byte-stable.
-const MID_REPLAY_SNAP_TICK = 1120;
+// press edge at tick 462).
+const TICK_AFTER_FIRST_PICK = 463;
+// Snap tick chosen AFTER death (tick 2134) — by this point all forked
+// RNG sub-streams have advanced. The closure-held spawn fork is NOT in
+// the snapshot, but once `dead = true` gates enemy_spawn, no more spawn
+// draws fire, so the parallel-world continuation stays byte-stable.
+const MID_REPLAY_SNAP_TICK = 2150;
 
 type Sim = { ctx: Ctx; w: World; tick: () => void; doc: ReplayDoc; h: ReturnType<typeof harness> };
 
