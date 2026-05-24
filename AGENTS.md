@@ -286,6 +286,12 @@ Do NOT model frame-pauses (hitstop, level-up pause, dialogue freeze) as `ctx.tim
 
 Correct pattern: a gate resource (e.g. `hitstop_r.remaining > 0`, `paused_r.value`) → every gameplay system early-returns. A `pre`-stage release decrements/clears the gate; that release system must NOT gate on itself. `time.scale` stays at `1`. Render-stage systems keep ticking (shake + flash + light-fx continue to decay through the freeze — intentional). Replay determinism is preserved because `time.tick` advances normally. See `subsystems/arena/src/systems/hitstop.ts` and arena FRICTION.md §1 (commit `52ba5b6`).
 
+### Real-time melee + sacrifice-on-contact enemies need a swing-active window, NOT edge-triggered hits
+
+Edge-triggered melee (`ctx.input.just("swing")` → kill adjacent) works only when the player's input phase and the enemy contact phase reliably align in the same tick. In real-time subsystems where chasers sacrifice-on-contact (despawn + damage as soon as they reach chebyshev-1), the player-perceived window for a Z press is essentially 0 — every chaser dies to contact before any edge-trigger can land. Z feels broken even though the code is "correct".
+
+Correct pattern: Z press queues `swing_state_r.active_until_tick = current_tick + WINDOW` (~15 ticks ≈ 250ms — a swing arc duration). Melee-swing system fires every tick while the window is open, killing any adjacent chaser. After the window expires, no effect until next Z press. Contact-damage's sacrifice behaviour stays — the window is short enough that spam-killing isn't possible. `swing_state_r` IS in the snapshot (replay determinism). See `subsystems/progress/src/systems/melee-swing.ts` + progress FRICTION.md §24 (commit `1b2acd0`). The previous note below about "dir_c persistence is critical for melee" is partially stale — current progress melee uses chebyshev-adjacency, not dir_c, but the convention still applies if a future subsystem ships a directional ranged ability.
+
 ### Transient state in factory closures, not resources
 
 Anything in the resource bag is contracted into the snapshot surface. Click queues, animation pending-flags, network in-flight requests, DOM event buffers — anything that must NOT survive snapshot/restore — belongs in a factory closure, not a resource.
