@@ -20,6 +20,7 @@ import { g } from "./grid.ts";
 import { game_plugin } from "./plugin.ts";
 import { level_up_pending_r, perk_registry_r, progress_r } from "./resources.ts";
 import type { PerkRegistry } from "./data/perks.ts";
+import { make_dead_screen_ui } from "./systems/dead-screen-ui.ts";
 import { make_hud } from "./systems/hud.ts";
 import { make_perk_choice_ui, type UiTextures } from "./systems/perk-choice-ui.ts";
 import { load_ui_assets } from "./ui/assets.ts";
@@ -29,6 +30,7 @@ import { make_palette_cmds } from "./palette-cmds.ts";
 import { make_progress_snapshotter } from "./snapshot.ts";
 import { make_auto_save_system } from "./systems/auto-save.ts";
 import { make_camera_shake_apply_system } from "./systems/camera-shake.ts";
+import { make_swing_arc_system } from "./systems/swing-arc.ts";
 
 // main.ts — Phase 5.4 boot. Adds perk-choice modal overlay + XP/level HUD on
 // top of Phase 5.3's entity-render wiring. Mirrors loot/src/main.ts's
@@ -111,6 +113,15 @@ const main = async (): Promise<void> => {
 	particles_overlay.zIndex = 100;
 	app.render.world.addChild(particles_overlay);
 
+	// Swing-arc overlay — drawn above the player (z=3) but below particles
+	// (z=100). Same lighting filter as the rest of the world, so the arc
+	// reads brighter where the player's eye-light reaches and dimmer at
+	// the edges (intentional — matches the moon_cavern mood).
+	const swing_arc_overlay = new Graphics();
+	swing_arc_overlay.label = "pr.swing_arc_overlay";
+	swing_arc_overlay.zIndex = 4;
+	app.render.world.addChild(swing_arc_overlay);
+
 	const { perks_sys, xp_sys } = game_plugin(app.world, app.schedule, { entity_graphics, particles_overlay });
 
 	// Camera shake apply — render-stage, AFTER forge.render so the world
@@ -119,6 +130,15 @@ const main = async (): Promise<void> => {
 	app.schedule.add("render", make_camera_shake_apply_system(app.render), {
 		phase: 100,
 		name: "pr.camera_shake_apply",
+	});
+
+	// Swing arc — render-stage, BEFORE the camera-shake apply so the arc
+	// shakes with the world during a kill. Phase 50 places it after
+	// forge.render (which uses default phase 0) but before camera_shake's
+	// phase 100.
+	app.schedule.add("render", make_swing_arc_system(swing_arc_overlay), {
+		phase: 50,
+		name: "pr.swing_arc",
 	});
 
 	app.schedule.add("post", make_eye_follow_system(light, g, visual_pos_c, player_c), { name: "pr.light_eye_follow" });
@@ -203,22 +223,47 @@ const main = async (): Promise<void> => {
 		const vp = app.camera.viewport();
 		perk_ui.container.scale.set(vp.scale, vp.scale);
 		perk_ui.container.position.set(vp.offset.x, vp.offset.y);
+		// Dead-screen modal mirrors the same viewport transform so its
+		// design-coord layout + click hit-test land on screen pixels
+		// identically to the perk-choice modal.
+		dead_ui.container.scale.set(vp.scale, vp.scale);
+		dead_ui.container.position.set(vp.offset.x, vp.offset.y);
 	};
 	apply_modal_viewport();
+
+	// Dead-screen modal — same app.stage sibling depth as perk-choice
+	// (echo AGENTS.md "Game UI overlays — app.stage sibling, mirror
+	// surface_sprite"). Visible iff progress_r.dead. The Restart button
+	// injects a synthetic `restart` press into the live input layer; the
+	// existing `pr.restart` system (which gates on
+	// `ctx.input.just("restart")`) handles the rest. R-key restart
+	// continues to work unchanged because both keyboard + click feed the
+	// same `restart` action.
+	const dead_ui = make_dead_screen_ui({
+		on_restart: () => app.input.inject_actions([{ kind: "press", action: "restart" }]),
+		get_dead,
+		get_ui_textures: () => ui_textures,
+	});
+	app.app.stage.addChildAt(dead_ui.container, palette_idx);
 
 	// Pointerdown → event_to_world → button_at → perks_sys.queue_perk_pick.
 	// Teardown stashed for tab-away / unmount cleanliness.
 	const canvas = app.canvas();
 	let detach_pointer: (() => void) | null = null;
-	if (canvas) detach_pointer = perk_ui.attach_pointer(canvas, app.camera);
+	let detach_dead_pointer: (() => void) | null = null;
+	if (canvas) {
+		detach_pointer = perk_ui.attach_pointer(canvas, app.camera);
+		detach_dead_pointer = dead_ui.attach_pointer(canvas, app.camera);
+	}
 
 	// HUD — top-right LV/XP/HP/stats/perks panel on app.render.debug_overlay
 	// (unfiltered overlay; canvas-pixel space). The system right-aligns each
 	// tick by reading camera viewport.
-	const hud = make_hud({ get_stats, get_xp, get_hp, get_perks, get_registry, get_dead, camera: app.camera });
+	const hud = make_hud({ get_stats, get_xp, get_hp, get_perks, get_registry, camera: app.camera });
 	app.render.debug_overlay.addChild(hud.container);
 
 	app.schedule.add("render", perk_ui.system, { phase: 90, name: "pr.perk_choice_ui" });
+	app.schedule.add("render", dead_ui.system, { phase: 90.5, name: "pr.dead_screen_ui" });
 	app.schedule.add("render", hud.system, { phase: 91, name: "pr.hud" });
 
 	globalThis.addEventListener("resize", () => {
@@ -228,6 +273,7 @@ const main = async (): Promise<void> => {
 	});
 	globalThis.addEventListener("beforeunload", () => {
 		detach_pointer?.();
+		detach_dead_pointer?.();
 	});
 
 	// Boot tick: fire startup stage (arena-gen seeds resources + spawns

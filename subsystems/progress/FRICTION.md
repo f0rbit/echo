@@ -18,9 +18,13 @@ Bestiary's `state_c` carries `{ kind, aggro_radius }`. Progress only needs `{ ki
 
 The `perk.xp_gain_mul` perk (Quick Learner, +0.25 mul) needs an `xp_gain_mul` field on `stats_c` for compose. Phase 5.0 missed it; Phase 5.2 added it when implementing `compute_stats`. **Future scaffold passes should pre-read the systems they'll scaffold for and enumerate every stat-modifier field up front** — `compute_stats(base, perks, registry)` failing to typecheck because the target field doesn't exist is a friction trap that's trivially preventable.
 
-## 4. `dir_c` facing persistence pattern diverges between loot and progress
+## 4. `dir_c` facing persistence pattern diverges between loot and progress — AND movement must read live input, not `dir_c`
 
-Loot writes `{dx: 0, dy: 0}` to `dir_c` every tick when no input arrives. Progress writes to `dir_c` **only on nonzero input** — so a stationary player retains their last heading for the next melee swing. Same component, two semantics. Both are correct for their subsystem (loot has no melee; progress does). **Convention proposal: cell-step + melee subsystems use facing-persistent `dir_c`; cell-step + no-melee subsystems can write blindly.** See PROPOSED-AGENTS-UPDATES.md §2.
+Loot writes `{dx: 0, dy: 0}` to `dir_c` every tick when no input arrives. Progress writes to `dir_c` **only on nonzero input** — so a stationary player retains their last heading for the next melee swing. Same component, two semantics. Both are correct for their subsystem (loot has no melee; progress does).
+
+**Follow-up bug + fix (UX pass):** the original progress `movement_system` read `dir_c` to compute the step vector. Combined with the facing-persistence write rule above, this meant *one keypress made the player slide forever* — release WASD and `dir_c` retained its last heading, so movement kept cell-stepping every `step_every=6` ticks in that direction until the player pressed another key (or walked into a wall).
+
+Fix: `movement.ts` now reads the **live input vector** via `ctx.input.vector("move.x", "move.y")` and early-returns on `(0, 0)`. `dir_c` is unchanged (input.ts still owns facing persistence) so the Z swing still has a heading. **Convention split: `dir_c` is for ABILITY DIRECTION, NOT MOVEMENT.** Movement reads live input; abilities read `dir_c`. The subsystem-scaffold note is now part of AGENTS.md `dir_c write convention diverges by ability shape` — see `subsystems/progress/src/systems/movement.ts` (FORGE-PROMOTION-CANDIDATE header) for the canonical code shape.
 
 ## 5. Closure-held `ctx.rng.fork()` streams are NOT in the snapshot
 

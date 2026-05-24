@@ -17,9 +17,16 @@ import { camera_shake_r, hit_events_r, progress_r, type HitEventKind } from "../
 // only the flash communicates the input edge). `damage` shakes harder
 // than `kill` because being hit reads as a louder world-event than
 // landing a hit. Magnitudes stay clamped to MAX_MAGNITUDE downstream.
+//
+// REGRESSION FIX (kill 2→3, damage 4→5): the prior values produced
+// peak jitter of ±2px / ±4px against a 16px tile, which read as "no
+// shake" to the user. Arena's flat HIT_MAGNITUDE_PUSH=3 was the
+// visually-tuned baseline; the per-kind variant must stay above that
+// for kill (the most-common event) to feel right. damage stays
+// stronger than kill per the original design intent.
 const HIT_MAGNITUDE_BY_KIND: Readonly<Record<Exclude<HitEventKind, "swing">, number>> = {
-	kill: 2,
-	damage: 4,
+	kill: 3,
+	damage: 5,
 };
 const MAX_MAGNITUDE = 6;
 const DECAY = 0.85;

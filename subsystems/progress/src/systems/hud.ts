@@ -43,14 +43,6 @@ const PERK_STYLE = {
 	stroke: { color: 0x000000, width: 2 },
 } as const;
 
-const DEAD_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 14,
-	fill: 0xff4a4a,
-	stroke: { color: 0x000000, width: 3 },
-	align: "center",
-} as const;
-
 const COLOR_XP_BG = 0x202028;
 const COLOR_XP_FILL = 0x7aa2f7;
 const COLOR_XP_BORDER = 0x4a4a55;
@@ -61,7 +53,6 @@ export type HudOpts = {
 	get_hp: () => Hp | null;
 	get_perks: () => Perks | null;
 	get_registry: () => PerkRegistry | null;
-	get_dead: () => boolean;
 	camera: Camera;
 };
 
@@ -98,13 +89,6 @@ export const make_hud = (opts: HudOpts): Hud => {
 		container.addChild(t);
 		perk_lines.push(t);
 	}
-
-	// Center-screen "YOU DIED — press R" overlay. Anchored at (0.5, 0.5)
-	// so positioning is just the viewport center. Hidden when not dead.
-	const dead_text = new Text({ text: "YOU DIED\npress R", style: DEAD_STYLE, resolution: 4 });
-	dead_text.anchor.set(0.5, 0.5);
-	dead_text.visible = false;
-	container.addChild(dead_text);
 
 	const perk_name = (registry: PerkRegistry | null, perk_id: string): string => {
 		if (!registry) return perk_id;
@@ -159,18 +143,6 @@ export const make_hud = (opts: HudOpts): Hud => {
 
 		const vp = opts.camera.viewport();
 		container.position.set(vp.view.width - PANEL_W - MARGIN, MARGIN);
-
-		// Dead overlay — centered on the canvas viewport. The HUD container
-		// is positioned at the top-right, so position the dead text relative
-		// to that origin to land in the center of the screen.
-		const dead = opts.get_dead();
-		dead_text.visible = dead;
-		if (dead) {
-			dead_text.position.set(
-				-(vp.view.width - PANEL_W - MARGIN) + vp.view.width / 2,
-				-MARGIN + vp.view.height / 2,
-			);
-		}
 	};
 
 	return { container, system };

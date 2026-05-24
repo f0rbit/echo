@@ -178,7 +178,7 @@ const main = async (): Promise<void> => {
 	let detach_pointer: (() => void) | null = null;
 	if (canvas) detach_pointer = perk_ui.attach_pointer(canvas, app.camera);
 
-	const hud = make_hud({ get_stats, get_xp, get_hp, get_perks, get_registry, get_dead, camera: app.camera });
+	const hud = make_hud({ get_stats, get_xp, get_hp, get_perks, get_registry, camera: app.camera });
 	app.render.debug_overlay.addChild(hud.container);
 
 	app.schedule.add("render", perk_ui.system, { phase: 90, name: "pr.perk_choice_ui" });

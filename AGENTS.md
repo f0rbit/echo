@@ -184,10 +184,25 @@ Do not mix the two models in one subsystem. Pick one at scaffold time. See `subs
 
 Within cell-step subsystems there are two `dir_c` patterns — pick at scaffold time based on whether the subsystem ships a directional ability:
 
-- **Loot pattern** (no melee): write `{dx, dy}` every tick — `{0, 0}` when no input. `dir_c` is just last-input.
-- **Progress pattern** (cell-step + melee): write `dir_c` **only on nonzero input**. A stationary player retains their last heading so the `Z` swing has a direction. **Critical for melee subsystems** — without persistence, the swing fires in `{0, 0}` direction and hits nothing.
+- **Loot pattern** (no melee, no ranged): write `{dx, dy}` every tick — `{0, 0}` when no input. `dir_c` is just last-input.
+- **Progress pattern** (cell-step + directional ability — melee / ranged / facing-driven swing arc): write `dir_c` **only on nonzero input**. A stationary player retains their last heading so the `Z` swing / arrow shot has a direction.
 
-Document the choice in the subsystem's local notes. See progress FRICTION.md §4.
+**Critical: `dir_c` is for ABILITY DIRECTION, NOT MOVEMENT.** Cell-step movement must read the **live input vector** via `ctx.input.vector("move.x", "move.y")` and step only when the axis is nonzero. If `movement_system` reads `dir_c` under the Progress pattern, releasing all WASD/arrow keys leaves the last heading written — so the player keeps cell-stepping in that direction every `step_every` ticks forever (the "slides forever after one keypress" bug). Always:
+
+```ts
+// movement.ts — read LIVE input, not dir_c
+const [ax, ay] = ctx.input.vector("move.x", "move.y");
+const dx = sign(ax);
+const dy = sign(ay);
+if (dx === 0 && dy === 0) return;  // axis released → no step
+g.move_tile(w, id, { dx, dy }, { blocked_by });
+
+// input.ts — facing-only writes to dir_c (Progress pattern)
+if (dx === 0 && dy === 0) continue;  // preserve last heading
+w.set(id, dir_c, { dx, dy });
+```
+
+Document the choice in the subsystem's local notes. See progress FRICTION.md §4 + `subsystems/progress/src/systems/movement.ts`.
 
 ### Crisp text — `resolution: 4` per-Text, `scale: 0.5` when container scales
 

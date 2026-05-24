@@ -33,19 +33,32 @@ export type UiTextureName = "panel" | "button" | "button_transparent";
 // Specific PNG choices made by visual inspection of the Kenney pack. All
 // stems are 48×48 px 1-bit (white-outline / blue-tinted variants).
 //
-//   panel  → public/ui-borders/panel/panel-000.png
-//            Solid bordered backdrop — used as the modal background.
-//   button → public/ui-borders/border/panel-border-000.png
-//            Border-only frame — used as the perk-choice button face.
-//            (tinted in button.ts for hover/pressed; pack ships no distinct
-//             idle/hover/pressed variants.)
+// VARIANT BUMP (000 → 009 / 014) — the original 000 selections were
+// corner-bracket-only frames; the modal read as "a darkened backdrop
+// with three faint button outlines" rather than a real RPG menu. User
+// feedback: "the ui still feels a bit lack-luster, i want crisp pixel
+// art gui". Mid-range variants of the Kenney pack ship visibly fuller
+// 4-sided frames with decorative inner edges — see Kenney pack preview
+// images at https://kenney.nl/assets/fantasy-ui-borders. Choices below
+// were made by walking the panel/ + border/ folders top-to-bottom; the
+// crisp `scaleMode: "nearest"` recipe (below) renders them sharp on
+// the design canvas.
+//
+//   panel  → public/ui-borders/panel/panel-009.png
+//            Solid filled backdrop with a thicker 2-pixel decorative
+//            border. Used for the perk-choice + dead-screen modals.
+//   button → public/ui-borders/border/panel-border-014.png
+//            Fuller 4-sided button frame (vs. 000's bare outline). Used
+//            for the perk-choice button face. Tinted in button.ts for
+//            hover/pressed; pack ships no distinct idle/hover/pressed.
 //   button_transparent → public/ui-borders/transparent-border/panel-transparent-border-000.png
 //            Optional alternate button face for fixtures wanting a see-through
-//            button (debug-gui exercises it for visual variety).
+//            button (debug-gui exercises it for visual variety). Pack only
+//            ships 000+001 for this variant family — kept on 000.
 
 const URLS: Record<UiTextureName, string> = {
-	panel: "ui-borders/panel/panel-000.png",
-	button: "ui-borders/border/panel-border-000.png",
+	panel: "ui-borders/panel/panel-009.png",
+	button: "ui-borders/border/panel-border-014.png",
 	button_transparent: "ui-borders/transparent-border/panel-transparent-border-000.png",
 };
 
