@@ -37,6 +37,19 @@ export type Progress = { paused: boolean; dirty_stats: boolean; dead: boolean };
 // systems (Phase 5.4) drain `choices` and clear `pending`.
 export type LevelUpPending = { pending: boolean; choices: readonly string[] };
 
+// Melee swing window — a Z press queues a swing "active for the next N
+// ticks". Any chaser that enters chebyshev-1 range during the window dies
+// and clears the window (one kill per swing). Without the window, the
+// edge-only `just("swing")` had to land within the same tick the chaser
+// became adjacent — but contact-damage despawns the chaser on that same
+// tick (sacrifice-on-contact), so the player-perceived window was
+// effectively 0. See FRICTION.md "Edge-triggered melee vs. sacrifice-on-
+// contact contact-damage".
+//
+// `active_until_tick` is exclusive-end (swing is active while
+// `tick < active_until_tick`). `0` = no swing queued.
+export type SwingState = { active_until_tick: number };
+
 export const arena_r: ResKey<Arena> = resource<Arena>("pr.arena");
 export const run_seed_r: ResKey<RunSeed> = resource<RunSeed>("pr.run_seed");
 export const perk_registry_r: ResKey<PerkRegistry> = resource<PerkRegistry>("pr.perk_registry");
@@ -44,3 +57,4 @@ export const creature_occupancy_r: ResKey<CreatureOccupancy> = resource<Creature
 export const wall_index_r: ResKey<WallIndex> = resource<WallIndex>("pr.wall_index");
 export const progress_r: ResKey<Progress> = resource<Progress>("pr.progress");
 export const level_up_pending_r: ResKey<LevelUpPending> = resource<LevelUpPending>("pr.level_up_pending");
+export const swing_state_r: ResKey<SwingState> = resource<SwingState>("pr.swing_state");

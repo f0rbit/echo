@@ -34,6 +34,7 @@ import {
 	perk_registry_r,
 	progress_r,
 	run_seed_r,
+	swing_state_r,
 	wall_index_r,
 } from "./resources.ts";
 import { make_perk_registry } from "./data/perks.ts";
@@ -142,6 +143,7 @@ export const setup_static = (w: World, ctx: Ctx): void => {
 	ctx.res.set(wall_index_r, { cells: perimeter_keys() });
 	if (!ctx.res.get(progress_r).ok) ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	if (!ctx.res.get(level_up_pending_r).ok) ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
+	if (!ctx.res.get(swing_state_r).ok) ctx.res.set(swing_state_r, { active_until_tick: 0 });
 
 	spawn_tiles(w);
 };

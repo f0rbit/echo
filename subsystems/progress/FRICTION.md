@@ -122,3 +122,21 @@ Recommendation for the next subsystem: add a `"serve": "bun --port 4567 serve di
 Phase 2 exported `export type UiTextures = Record<UiTextureName, Texture>` from `subsystems/progress/src/systems/perk-choice-ui.ts:137` because the boot files (`main.ts`, `main-debug.ts`) were already importing the factory from there — co-locating the opt type avoided an extra import line. Functionally correct.
 
 When promoted to `@f0rbit/forge/ui` (consumer #3 lands), `UiTextures` belongs alongside `UiTextureName` + `load_ui_assets` in `src/ui/assets.ts` — that's the natural home for the texture-shape contract, separate from any particular consumer of the textures. Trivial refactor (move the type, update two import lines); not breaking. Worth a note here so the next agent moves it without re-investigating.
+
+## 24. Edge-triggered melee + sacrifice-on-contact = melee appears to do nothing
+
+User-reported bug: pressing Z in production produced no visible kill. Every chaser died on contact, costing 1 HP each.
+
+Root cause: `melee-swing.ts` fired on `ctx.input.just("swing")` — a 1-tick (~16ms) edge. `contact-damage.ts` is sacrifice-on-contact — the same tick a chaser reaches chebyshev-1 it gets despawned AND deducts 1 HP. So the only tick a Z press could land a kill was the EXACT tick the chaser closed to adjacency. One frame earlier: press wasted. One frame later: chaser already despawned by contact-damage. The 16ms window is functionally unhittable by reaction; the player perceived Z as a dead key. All 74 tests passed because the recorder choreographed Z presses with sub-tick precision and contact-damage was a relatively new addition (Phase 5.4.bugfix); the bug was invisible to the test fixture and obvious in play.
+
+Fix: replaced edge-triggered with a swing-active window. A Z press sets `swing_state_r.active_until_tick = current_tick + SWING_WINDOW_TICKS` (15 ticks ≈ 250ms). Every tick while `current_tick < active_until_tick`, the system scans for chebyshev-1 chasers; first found dies + window resets to 0 (one kill per Z press — Z is a swing, not an AoE pulse). Window naturally expires when the player misses. The swing-window resource is snapshotted so it survives mid-replay restore + disk save/load.
+
+**Pattern: action-game inputs paired with sacrifice-on-contact enemies need a swing window, not edge-triggered hits.** Edge triggers work in turn-based subsystems where the player gets a guaranteed input phase. In real-time + sacrifice-on-contact, the player input phase is asynchronous to enemy contact and the windows don't align. See `subsystems/progress/src/systems/melee-swing.ts` + commit body. PROPOSED-AGENTS-UPDATES.md candidate: surface as a global "real-time melee design pattern" rule once the boss subsystem adopts the same shape.
+
+## 25. `enemy-spawn.ts` re-forks RNG per tick (label-with-tick) instead of closure-captured fork
+
+Phase 5.6's snapshot tests pinned `MID_REPLAY_SNAP_TICK` after death to dodge the closure-held spawn-fork drift (FRICTION §5). When the swing-window fix made the player survive the recorded replay, the post-death pin no longer existed — and the closure-held fork's drift broke the "continue from restored state" assertion.
+
+Applied FRICTION §5's "real fix": `enemy-spawn.ts` now forks via `ctx.rng.fork(\`progress.spawn.${ctx.time.tick}\`)` every spawn tick — no closure state, immune to snapshot drift. The tick-suffixed label gives every spawn-eligible tick a distinct deterministic stream, so the spawn cell at tick N is identical across replays and across pre/post-restore continuations. Replay had to be re-recorded because the spawn sequence changed, but the test invariants stayed (3 picks, level 4, perks {atk, hp, def}).
+
+**Reinforces FRICTION §5: closure-held forks are a snapshot foot-gun. The label-with-tick pattern is the canonical fix** — costs one extra hash per spawn (negligible) and removes an entire class of replay-determinism bugs.

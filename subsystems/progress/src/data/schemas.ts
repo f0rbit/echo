@@ -98,6 +98,14 @@ export const level_up_pending_r_value_schema = z.object({
 	choices: z.array(z.string().min(1)),
 });
 
+// Swing window — `active_until_tick` is the exclusive end-tick of the
+// current swing's active window (0 = no swing queued). `.default(0)`
+// keeps loads tolerant of older JSON blobs that omit the field — same
+// pattern as progress_r.dirty_stats.
+export const swing_state_r_value_schema = z.object({
+	active_until_tick: z.number().int().nonnegative().default(0),
+});
+
 // NOT included (per §2 Q10):
 //   - perk_registry_r — static config, rehydrated by setup_progress
 //     (AGENTS.md "Static config NOT in snapshot").

@@ -7,6 +7,7 @@ import {
 	perk_registry_r,
 	progress_r,
 	run_seed_r,
+	swing_state_r,
 	wall_index_r,
 } from "../../src/resources.ts";
 import { g } from "../../src/grid.ts";
@@ -74,6 +75,7 @@ export const make_progress_scenario = (opts: ProgressScenarioOpts = {}): Progres
 	h.res.set(wall_index_r, { cells: new Set<number>() });
 	h.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	h.res.set(level_up_pending_r, { pending: false, choices: [] });
+	h.res.set(swing_state_r, { active_until_tick: 0 });
 
 	let player_id: Id | null = null;
 	if (opts.with_player) {

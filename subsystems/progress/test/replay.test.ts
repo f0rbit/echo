@@ -23,7 +23,7 @@ import {
 } from "../src/components.ts";
 import { g } from "../src/grid.ts";
 import { game_plugin } from "../src/plugin.ts";
-import { level_up_pending_r, progress_r } from "../src/resources.ts";
+import { level_up_pending_r, progress_r, swing_state_r } from "../src/resources.ts";
 import { make_progress_snapshotter } from "../src/snapshot.ts";
 
 const REPLAY_TIMEOUT_MS = 30000;
@@ -31,28 +31,29 @@ const replay_path = new URL("../replays/level-and-save.replay.json", import.meta
 const replay_json = readFileSync(replay_path, "utf8");
 
 // Baked end-state values (recorded by tools/record-level-and-save.ts on
-// seed=1). With contact damage active (Phase 5.4.bugfix) AND chebyshev-1
-// melee (Phase 5.4.bugfix2 — stationary-melee fix), the recorder
-// survives long enough for 2 picks before multi-chaser flank damage
-// drains HP. The replay artefact captures the partial run; tests assert
-// that partial state.
-const EXPECTED_FINAL_PERKS: readonly string[] = ["perk.atk_plus", "perk.hp_plus"];
+// seed=1). With the swing-window melee fix (Phase 5.4.bugfix3 —
+// edge-triggered melee replaced by `SWING_WINDOW_TICKS`-frame window
+// because contact-damage would always despawn the chaser on the same
+// tick a Z press would land), the recorder reliably outpaces multi-
+// chaser flank damage: all 3 picks land, player survives.
+const EXPECTED_FINAL_PERKS: readonly string[] = ["perk.atk_plus", "perk.hp_plus", "perk.def_plus"];
 // BASE stats { atk: 5, def: 2, spd: 1, max_hp: 10, xp_gain_mul: 0 } plus
-// perk.atk_plus (+3 atk) + perk.hp_plus (+5 hp):
+// perk.atk_plus (+3 atk) + perk.hp_plus (+5 hp) + perk.def_plus (+2 def):
 //   atk = 5 + 3 = 8
+//   def = 2 + 2 = 4
 //   max_hp = 10 + 5 = 15
-const EXPECTED_FINAL_STATS = { atk: 8, def: 2, spd: 1, max_hp: 15, xp_gain_mul: 0 } as const;
-const EXPECTED_FINAL_LEVEL = 3;
-// Recorder dies at tick 2134, then settles 30 ticks.
-const EXPECTED_END_TICK = 2164;
+const EXPECTED_FINAL_STATS = { atk: 8, def: 4, spd: 1, max_hp: 15, xp_gain_mul: 0 } as const;
+const EXPECTED_FINAL_LEVEL = 4;
+// Recorder reaches level 4 + 3 picks at tick 1512, then settles 30 ticks.
+const EXPECTED_END_TICK = 1542;
 // Tick after the first level-up pick (consumed on the tick after the
-// press edge at tick 462).
-const TICK_AFTER_FIRST_PICK = 463;
-// Snap tick chosen AFTER death (tick 2134) — by this point all forked
-// RNG sub-streams have advanced. The closure-held spawn fork is NOT in
-// the snapshot, but once `dead = true` gates enemy_spawn, no more spawn
-// draws fire, so the parallel-world continuation stays byte-stable.
-const MID_REPLAY_SNAP_TICK = 2150;
+// last press edge before pause).
+const TICK_AFTER_FIRST_PICK = 411;
+// Snap tick chosen during the post-pick settle window so any spawn-RNG
+// fork-draws have stabilised. enemy-spawn.ts re-forks per tick (label
+// `progress.spawn.${tick}`) so the parallel-world continuation stays
+// byte-stable across restore — no closure-held fork to drift.
+const MID_REPLAY_SNAP_TICK = 1520;
 
 type Sim = { ctx: Ctx; w: World; tick: () => void; doc: ReplayDoc; h: ReturnType<typeof harness> };
 
@@ -132,6 +133,7 @@ const world_hash = (sim: Sim): string => {
 	const pv = player_view(sim.w);
 	const prog = sim.ctx.res.get(progress_r);
 	const lvl = sim.ctx.res.get(level_up_pending_r);
+	const ss = sim.ctx.res.get(swing_state_r);
 	const ctx = sim.ctx as Ctx & { time: { tick: number } };
 	const snap = {
 		player_pos: pv
@@ -147,6 +149,7 @@ const world_hash = (sim: Sim): string => {
 		chasers: collect_chaser_cells(sim.w),
 		progress: prog.ok ? { paused: prog.value.paused, dead: prog.value.dead } : null,
 		level_up_pending: lvl.ok ? lvl.value : null,
+		swing_state: ss.ok ? ss.value : null,
 		tick: ctx.time.tick,
 	};
 	return createHash("sha256").update(canonical_stringify(snap)).digest("hex");
@@ -213,13 +216,13 @@ describe("progress replay deliverable", () => {
 	);
 
 	test(
-		"player dies before second level-up — progress_r.dead is true at end",
+		"player survives all 3 picks — progress_r.dead is false at end",
 		() => {
-			// Phase 5.4.bugfix introduced contact damage; the recorder's
-			// greedy nearest-target strategy can't kill chasers fast enough
-			// to outpace multi-chaser flank damage. Player reaches level 2,
-			// applies one perk, then dies. The replay artefact captures the
-			// death; this test asserts the final game-state gate.
+			// Phase 5.4.bugfix3 introduced the melee swing window
+			// (SWING_WINDOW_TICKS frames per Z press); the recorder's greedy
+			// nearest-target strategy now reliably outpaces multi-chaser flank
+			// damage and the player survives long enough to make all three
+			// picks. This test asserts the survive-and-pick outcome.
 			const r = replay.load(replay_json);
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
@@ -228,7 +231,7 @@ describe("progress replay deliverable", () => {
 			const prog = sim.ctx.res.get(progress_r);
 			expect(prog.ok).toBe(true);
 			if (!prog.ok) return;
-			expect(prog.value.dead).toBe(true);
+			expect(prog.value.dead).toBe(false);
 		},
 		REPLAY_TIMEOUT_MS,
 	);

@@ -16,6 +16,7 @@ import {
 	level_up_pending_r,
 	progress_r,
 	run_seed_r,
+	swing_state_r,
 } from "./resources.ts";
 import {
 	arena_r_value_schema,
@@ -29,6 +30,7 @@ import {
 	run_seed_r_value_schema,
 	state_c_value_schema,
 	stats_c_value_schema,
+	swing_state_r_value_schema,
 	visual_pos_c_value_schema,
 	xp_c_value_schema,
 } from "./data/schemas.ts";
@@ -69,4 +71,5 @@ export const make_progress_snapshotter = (): Snapshotter =>
 		.register_resource(arena_r, arena_r_value_schema)
 		.register_resource(run_seed_r, run_seed_r_value_schema)
 		.register_resource(progress_r, progress_r_value_schema)
-		.register_resource(level_up_pending_r, level_up_pending_r_value_schema);
+		.register_resource(level_up_pending_r, level_up_pending_r_value_schema)
+		.register_resource(swing_state_r, swing_state_r_value_schema);
