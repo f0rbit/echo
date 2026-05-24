@@ -60,13 +60,15 @@ export const make_contact_damage_system = (): System => (w, ctx) => {
 		if (!hp.ok) return;
 		const next = Math.max(0, hp.value.current - CONTACT_DAMAGE);
 		w.set(player_id, hp_c, { current: next, max: hp.value.max });
-		// Emit hit_event so the juice systems (flash, shake, hitstop,
-		// particles) trigger on damage taken too. Target is the player
-		// (flash tints the player red via the flash system's white tint;
-		// damage-taken vs. kill is distinguishable by HP HUD context).
-		// Particle burst at the chaser cell (where the contact happened).
+		// Emit `damage` hit_event so the juice systems route this as
+		// "took damage" (red player flash, smaller red particle burst,
+		// medium-mag shake, brief hitstop) — distinct from the kill
+		// burst that fires when YOU land a melee hit. Target is the
+		// player (flash tints the player red); particle burst is at the
+		// chaser cell where the contact happened.
 		if (events.ok) {
 			events.value.events.push({
+				kind: "damage",
 				target_id: player_id,
 				x: cp.x,
 				y: cp.y,

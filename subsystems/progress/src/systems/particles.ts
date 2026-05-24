@@ -10,14 +10,34 @@
 // convention diverges from arena: paused/dead instead of game_state.
 import type { Ctx, System } from "@f0rbit/forge";
 import type { Graphics } from "pixi.js";
-import { hit_events_r, hitstop_r, particles_r, progress_r, type Particles } from "../resources.ts";
+import {
+	hit_events_r,
+	hitstop_r,
+	particles_r,
+	progress_r,
+	type HitEventKind,
+	type Particles,
+} from "../resources.ts";
 
-const PARTICLES_PER_HIT = 16;
 const PARTICLE_SPEED_MIN = 30;
 const PARTICLE_SPEED_MAX = 80;
 const PARTICLE_TTL_TICKS = 18;
-const PARTICLE_COLOR = 0xffaa44;
 const PARTICLE_SIZE = 1;
+// Fallback color when callers of `emit_burst` don't pass one. Matches
+// the kill-burst yellow so existing callers + tests stay byte-stable.
+const PARTICLE_DEFAULT_COLOR = 0xffaa44;
+
+// Per-kind burst tables. `swing` is omitted intentionally — swing
+// flashes the player but doesn't burst particles; particles read as
+// "something died / something hit" and a whiffed swing has neither.
+const PARTICLE_COUNT_BY_KIND: Readonly<Record<Exclude<HitEventKind, "swing">, number>> = {
+	kill: 16,
+	damage: 8,
+};
+const PARTICLE_COLOR_BY_KIND: Readonly<Record<Exclude<HitEventKind, "swing">, number>> = {
+	kill: 0xffaa44,
+	damage: 0xff4040,
+};
 
 /**
  * Ring-buffer particle system. `particles_r.entries` is a
@@ -59,7 +79,7 @@ export const emit_burst = (
 	rand: () => number,
 	opts: { color?: number; size?: number; ttl?: number; speed_min?: number; speed_max?: number } = {},
 ): void => {
-	const color = opts.color ?? PARTICLE_COLOR;
+	const color = opts.color ?? PARTICLE_DEFAULT_COLOR;
 	const size = opts.size ?? PARTICLE_SIZE;
 	const ttl = opts.ttl ?? PARTICLE_TTL_TICKS;
 	const sp_min = opts.speed_min ?? PARTICLE_SPEED_MIN;
@@ -106,7 +126,10 @@ export const make_particles_emit_system = (): System => (_w, ctx) => {
 	if (!events.ok || events.value.events.length === 0) return;
 	const rand = (): number => ctx.rng.next();
 	for (const ev of events.value.events) {
-		emit_burst(p.value, ev.x, ev.y, PARTICLES_PER_HIT, rand);
+		if (ev.kind === "swing") continue;
+		emit_burst(p.value, ev.x, ev.y, PARTICLE_COUNT_BY_KIND[ev.kind], rand, {
+			color: PARTICLE_COLOR_BY_KIND[ev.kind],
+		});
 	}
 };
 

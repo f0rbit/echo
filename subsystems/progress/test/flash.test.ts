@@ -2,13 +2,14 @@ import { describe, expect, test } from "bun:test";
 import type { Id } from "@f0rbit/forge";
 import { sprite_c } from "@f0rbit/forge/pixi";
 import { flash_c } from "../src/components.ts";
-import { hit_events_r } from "../src/resources.ts";
+import { hit_events_r, type HitEventKind } from "../src/resources.ts";
 import { make_flash_system } from "../src/systems/flash.ts";
 import { make_progress_scenario } from "./fixtures/progress-scenario.ts";
 
 // Mirrors arena/test/flash semantics — per-entity tint flash, attaches
 // on hit_event, decays via ticks_remaining, restores original tint on
-// expiry. Skips entities without sprite_c.
+// expiry. Skips entities without sprite_c. Tint + tick count now
+// branch on `ev.kind` (swing | kill | damage).
 
 const make_sim = () => {
 	const scenario = make_progress_scenario({ with_player: true });
@@ -17,10 +18,14 @@ const make_sim = () => {
 	return { h, player_id: scenario.player_id! };
 };
 
-const push_event_on = (h: ReturnType<typeof make_sim>["h"], target_id: Id): void => {
+const push_event_on = (
+	h: ReturnType<typeof make_sim>["h"],
+	target_id: Id,
+	kind: HitEventKind = "kill",
+): void => {
 	const r = h.ctx.res.get(hit_events_r);
 	if (!r.ok) throw new Error("hit_events_r missing");
-	r.value.events.push({ target_id, x: 0, y: 0, damage: 1 });
+	r.value.events.push({ kind, target_id, x: 0, y: 0, damage: 1 });
 };
 
 const clear_events = (h: ReturnType<typeof make_sim>["h"]): void => {
@@ -67,6 +72,66 @@ describe("progress flash", () => {
 		tick(h);
 		const f = h.world.get(player_id, flash_c);
 		expect(f.ok).toBe(false);
+	});
+
+	test("kill kind tints white (0xffffff)", () => {
+		const { h, player_id } = make_sim();
+		h.world.set(player_id, sprite_c, {
+			texture: "dungeon",
+			frame: "knight_m_idle_anim_f0",
+			tint: 0xffffff,
+			visible: true,
+			anchor: { x: 0.5, y: 0.5 },
+			z: 3,
+		});
+		push_event_on(h, player_id, "kill");
+		tick(h);
+		const sp = h.world.get(player_id, sprite_c);
+		expect(sp.ok).toBe(true);
+		if (sp.ok) expect(sp.value.tint).toBe(0xffffff);
+	});
+
+	test("damage kind tints red (0xff4040) and lasts longer than kill", () => {
+		const { h, player_id } = make_sim();
+		h.world.set(player_id, sprite_c, {
+			texture: "dungeon",
+			frame: "knight_m_idle_anim_f0",
+			tint: 0xffffff,
+			visible: true,
+			anchor: { x: 0.5, y: 0.5 },
+			z: 3,
+		});
+		push_event_on(h, player_id, "damage");
+		tick(h);
+		const sp = h.world.get(player_id, sprite_c);
+		expect(sp.ok).toBe(true);
+		if (sp.ok) expect(sp.value.tint).toBe(0xff4040);
+		// damage = 12 ticks; advance 9 ticks (kill duration) and verify
+		// the damage flash is still active (red tint persists).
+		clear_events(h);
+		for (let i = 0; i < 9; i++) tick(h);
+		const sp2 = h.world.get(player_id, sprite_c);
+		expect(sp2.ok).toBe(true);
+		if (sp2.ok) expect(sp2.value.tint).toBe(0xff4040);
+	});
+
+	test("swing kind tints cyan-white (0xa0e0ff) for 6 ticks", () => {
+		const { h, player_id } = make_sim();
+		h.world.set(player_id, sprite_c, {
+			texture: "dungeon",
+			frame: "knight_m_idle_anim_f0",
+			tint: 0xffffff,
+			visible: true,
+			anchor: { x: 0.5, y: 0.5 },
+			z: 3,
+		});
+		push_event_on(h, player_id, "swing");
+		tick(h);
+		const sp = h.world.get(player_id, sprite_c);
+		expect(sp.ok).toBe(true);
+		if (sp.ok) expect(sp.value.tint).toBe(0xa0e0ff);
+		const f = h.world.get(player_id, flash_c);
+		expect(f.ok).toBe(true);
 	});
 
 	test("flash decays and restores original tint on expiry", () => {

@@ -44,7 +44,24 @@ export type Hitstop = { remaining: number };
 // Per-tick hit events drained by flash, hitstop, shake, particles.
 // Cleared in `pre` stage so each tick's events are fresh. NOT
 // snapshotted — transient by contract.
+//
+// `kind` discriminator routes per-event fx so the three combat moments
+// read distinctly:
+//   - "swing"  : Z pressed (with or without a victim) — cyan player
+//                flash only; NO particles / shake / hitstop.
+//   - "kill"   : melee landed a kill — white player flash + yellow
+//                particle burst at the victim cell + low-mag shake +
+//                short hitstop. Existing pre-fix behaviour.
+//   - "damage" : contact-damage from a chaser closing on the player —
+//                RED player flash (longer than kill — pain reads louder
+//                than triumph) + smaller red particle burst + medium-mag
+//                shake + short hitstop.
+// Each fx system filters by kind via module-local constant tables (per
+// AGENTS.md "Component-shape divergences resolve via module constants
+// in the consumer").
+export type HitEventKind = "swing" | "kill" | "damage";
 export type HitEvent = {
+	kind: HitEventKind;
 	target_id: Id;
 	x: number;
 	y: number;

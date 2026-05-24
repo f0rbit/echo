@@ -12,10 +12,27 @@
 import type { System } from "@f0rbit/forge";
 import { sprite_c, sprite } from "@f0rbit/forge/pixi";
 import { flash_c } from "../components.ts";
-import { hit_events_r } from "../resources.ts";
+import { hit_events_r, type HitEventKind } from "../resources.ts";
 
-const FLASH_TICKS = 9;
-const FLASH_TINT = 0xffffff;
+// Per-kind tint + tick tables (per AGENTS.md "Component-shape
+// divergences resolve via module constants in the consumer"):
+//
+//   - swing  : cyan-white — brief swish indicator; the visible "you
+//              pressed Z" signal even when no chaser is adjacent.
+//   - kill   : white — punchy triumph; existing 9-tick beat.
+//   - damage : red — longer than kill (12 ticks). Pain reads louder
+//              than triumph; the longer beat communicates "you took a
+//              hit" before the HP HUD even registers.
+const FLASH_TINT_BY_KIND: Readonly<Record<HitEventKind, number>> = {
+	swing: 0xa0e0ff,
+	kill: 0xffffff,
+	damage: 0xff4040,
+};
+const FLASH_TICKS_BY_KIND: Readonly<Record<HitEventKind, number>> = {
+	swing: 6,
+	kill: 9,
+	damage: 12,
+};
 
 /**
  * Sprite flash — on hit events this tick, attach a `flash_c` to the
@@ -39,9 +56,11 @@ export const make_flash_system = (): System => (w, ctx) => {
 			if (existing.ok) continue;
 			const sp = w.get(ev.target_id, sprite_c);
 			if (!sp.ok) continue;
-			const original_tint = sp.value.tint ?? FLASH_TINT;
-			w.set(ev.target_id, flash_c, { ticks_remaining: FLASH_TICKS, original_tint });
-			sprite.set(w, ev.target_id, { tint: FLASH_TINT });
+			const tint = FLASH_TINT_BY_KIND[ev.kind];
+			const ticks = FLASH_TICKS_BY_KIND[ev.kind];
+			const original_tint = sp.value.tint ?? tint;
+			w.set(ev.target_id, flash_c, { ticks_remaining: ticks, original_tint });
+			sprite.set(w, ev.target_id, { tint });
 		}
 	}
 

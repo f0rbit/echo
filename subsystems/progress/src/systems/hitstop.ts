@@ -16,9 +16,18 @@
 // gate on hitstop itself per arena FRICTION §1 (commit 52ba5b6) —
 // otherwise the countdown stalls and the freeze becomes permanent.
 import type { System } from "@f0rbit/forge";
-import { hit_events_r, hitstop_r, progress_r } from "../resources.ts";
+import { hit_events_r, hitstop_r, progress_r, type HitEventKind } from "../resources.ts";
 
-const HITSTOP_TICKS = 3;
+// Per-kind hitstop tick counts. `swing` is skipped (no freeze on a
+// press — only on impact). Kill and damage use distinct beats so the
+// cell-step cadence reads each moment differently: a kill is a tighter
+// hold (5 ticks ≈ 80ms — "thwack"); a damage is shorter (4 ticks ≈
+// 60ms — quick punch communicating the hit without overshadowing the
+// red flash). Mirrors the spec table in the bug-fix brief.
+const HITSTOP_TICKS_BY_KIND: Readonly<Record<Exclude<HitEventKind, "swing">, number>> = {
+	kill: 5,
+	damage: 4,
+};
 
 /**
  * Trigger (update stage, AFTER combat systems): if any new hit events
@@ -40,7 +49,17 @@ export const make_hitstop_trigger_system = (): System => (_w, ctx) => {
 	if (!hs.ok) return;
 	if (hs.value.remaining > 0) return;
 
-	hs.value.remaining = HITSTOP_TICKS;
+	// Take the LONGEST hitstop among non-swing events this tick. A
+	// simultaneous kill + damage tick (rare — would need a chaser
+	// reaching player on the same tick as your swing lands another)
+	// should hold for the loudest beat, not stack additively.
+	let ticks = 0;
+	for (const ev of events.value.events) {
+		if (ev.kind === "swing") continue;
+		ticks = Math.max(ticks, HITSTOP_TICKS_BY_KIND[ev.kind]);
+	}
+	if (ticks === 0) return;
+	hs.value.remaining = ticks;
 };
 
 /**

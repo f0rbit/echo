@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import type { Id } from "@f0rbit/forge";
 import { rng as make_rng } from "@f0rbit/forge";
-import { advance_particles, emit_burst } from "../src/systems/particles.ts";
-import type { Particles } from "../src/resources.ts";
+import {
+	advance_particles,
+	emit_burst,
+	make_particles_emit_system,
+} from "../src/systems/particles.ts";
+import { hit_events_r, particles_r, type Particles } from "../src/resources.ts";
+import { make_progress_scenario } from "./fixtures/progress-scenario.ts";
 
 // Mirrors arena/test/particles.test.ts — the ring-buffer + emit + advance
 // shape is identical (constants tuned for cell-step in particles.ts;
@@ -62,5 +68,77 @@ describe("progress particles ring buffer", () => {
 			expect(a.entries[i]!.vx).toBe(b.entries[i]!.vx);
 			expect(a.entries[i]!.vy).toBe(b.entries[i]!.vy);
 		}
+	});
+});
+
+describe("progress particles per-kind routing", () => {
+	const setup = () => {
+		const scenario = make_progress_scenario({ with_player: true });
+		const h = scenario.h;
+		h.schedule.add("update", make_particles_emit_system(), { phase: 99, name: "p.emit" });
+		return { h, player_id: scenario.player_id! };
+	};
+
+	const push = (
+		h: ReturnType<typeof setup>["h"],
+		kind: "swing" | "kill" | "damage",
+		target_id: Id,
+	): void => {
+		const r = h.ctx.res.get(hit_events_r);
+		if (!r.ok) throw new Error("hit_events_r missing");
+		r.value.events.push({ kind, target_id, x: 100, y: 100, damage: kind === "swing" ? 0 : 1 });
+	};
+
+	const alive_in_res = (h: ReturnType<typeof setup>["h"]): number => {
+		const p = h.ctx.res.get(particles_r);
+		if (!p.ok) return 0;
+		return p.value.entries.filter((e) => e.ttl > 0).length;
+	};
+
+	const tick = (h: ReturnType<typeof setup>["h"]): void => {
+		h.time.advance(1 / 60);
+		h.schedule.tick(h.world, h.ctx);
+	};
+
+	test("swing event emits NO particles", () => {
+		const { h, player_id } = setup();
+		push(h, "swing", player_id);
+		tick(h);
+		expect(alive_in_res(h)).toBe(0);
+	});
+
+	test("kill event emits 16 particles", () => {
+		const { h, player_id } = setup();
+		push(h, "kill", player_id);
+		tick(h);
+		expect(alive_in_res(h)).toBe(16);
+	});
+
+	test("damage event emits 8 particles", () => {
+		const { h, player_id } = setup();
+		push(h, "damage", player_id);
+		tick(h);
+		expect(alive_in_res(h)).toBe(8);
+	});
+
+	test("kill particles are yellow (0xffaa44); damage are red (0xff4040)", () => {
+		const { h, player_id } = setup();
+		push(h, "kill", player_id);
+		tick(h);
+		const p = h.ctx.res.get(particles_r);
+		expect(p.ok).toBe(true);
+		if (!p.ok) return;
+		const kill_colors = new Set(p.value.entries.filter((e) => e.ttl > 0).map((e) => e.color));
+		expect(kill_colors.has(0xffaa44)).toBe(true);
+
+		// Fresh sim for damage so we don't mix bursts.
+		const { h: h2, player_id: pid2 } = setup();
+		push(h2, "damage", pid2);
+		tick(h2);
+		const p2 = h2.ctx.res.get(particles_r);
+		expect(p2.ok).toBe(true);
+		if (!p2.ok) return;
+		const damage_colors = new Set(p2.value.entries.filter((e) => e.ttl > 0).map((e) => e.color));
+		expect(damage_colors.has(0xff4040)).toBe(true);
 	});
 });

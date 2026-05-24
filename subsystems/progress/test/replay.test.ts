@@ -31,24 +31,25 @@ const replay_path = new URL("../replays/level-and-save.replay.json", import.meta
 const replay_json = readFileSync(replay_path, "utf8");
 
 // Baked end-state values (recorded by tools/record-level-and-save.ts on
-// seed=1). Re-recorded after the Phase 5.4.juice port — the new
-// juice systems (particles_emit) advance `ctx.rng` via `ctx.rng.next()`
-// per hit_event, which changes the seeded perk-shuffle pre-image at
-// each level-up. End-state perks shift from {atk, hp, def} (pre-juice)
-// to {xp_gain, def, atk} (post-juice); player still survives all 3
-// picks. Hitstop also freezes gameplay for HITSTOP_TICKS per kill, so
-// the tick timeline lengthens proportional to the kill count.
-const EXPECTED_FINAL_PERKS: readonly string[] = ["perk.xp_gain", "perk.def_plus", "perk.atk_plus"];
+// seed=1). Re-recorded after the Phase 5.4.juice-kind port — the
+// HitEvent `kind` discriminator changed per-kind particle counts
+// (kill=16, damage=8) AND introduced a `swing` event per Z press (no
+// particles → no ctx.rng draws). Both factors shift the seeded perk-
+// shuffle pre-image; hitstop kill duration also lengthened from 3 to
+// 5 ticks so the end-tick stretches. Final perks reshuffle from
+// {xp_gain, def, atk} (pre-kind) to {xp_gain, atk, def} (post-kind);
+// player still survives all 3 picks.
+const EXPECTED_FINAL_PERKS: readonly string[] = ["perk.xp_gain", "perk.atk_plus", "perk.def_plus"];
 // BASE stats { atk: 5, def: 2, spd: 1, max_hp: 10, xp_gain_mul: 0 } plus
-// perk.xp_gain (+0.25 xp_gain_mul) + perk.def_plus (+2 def) +
-// perk.atk_plus (+3 atk):
+// perk.xp_gain (+0.25 xp_gain_mul) + perk.atk_plus (+3 atk) +
+// perk.def_plus (+2 def):
 //   atk = 5 + 3 = 8
 //   def = 2 + 2 = 4
 //   xp_gain_mul = 0 + 0.25 = 0.25
 const EXPECTED_FINAL_STATS = { atk: 8, def: 4, spd: 1, max_hp: 10, xp_gain_mul: 0.25 } as const;
 const EXPECTED_FINAL_LEVEL = 4;
-// Recorder reaches level 4 + 3 picks at tick 1373, then settles 30 ticks.
-const EXPECTED_END_TICK = 1403;
+// Recorder reaches level 4 + 3 picks at tick 1385, then settles 30 ticks.
+const EXPECTED_END_TICK = 1415;
 // Tick after the first level-up pick (consumed on the tick after the
 // last press edge before pause).
 const TICK_AFTER_FIRST_PICK = 322;
@@ -56,8 +57,8 @@ const TICK_AFTER_FIRST_PICK = 322;
 // fork-draws have stabilised. enemy-spawn.ts re-forks per tick (label
 // `progress.spawn.${tick}`) so the parallel-world continuation stays
 // byte-stable across restore — no closure-held fork to drift. Picked
-// after the third level-up at tick 1371 but before settle ends at 1403.
-const MID_REPLAY_SNAP_TICK = 1390;
+// after the third level-up but before settle ends at 1415.
+const MID_REPLAY_SNAP_TICK = 1400;
 
 type Sim = { ctx: Ctx; w: World; tick: () => void; doc: ReplayDoc; h: ReturnType<typeof harness> };
 

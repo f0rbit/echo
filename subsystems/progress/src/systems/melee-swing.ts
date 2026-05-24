@@ -73,7 +73,31 @@ export const make_melee_swing_system = (xp_sys: XpSystem): System => (w, ctx) =>
 	const ss = ctx.res.get(swing_state_r);
 	let active_until = ss.ok ? ss.value.active_until_tick : 0;
 
-	if (ctx.input.just("swing")) active_until = tick + SWING_WINDOW_TICKS;
+	const just_swung = ctx.input.just("swing");
+	if (just_swung) active_until = tick + SWING_WINDOW_TICKS;
+
+	const players = w.query([player_c, pos_c] as const).collect();
+	const first = players[0];
+
+	// Emit a `swing` hit_event on the press edge regardless of victim —
+	// the cyan player flash is the visible swing indicator. Without
+	// this, pressing Z with no adjacent chaser produced zero visual
+	// feedback and the window felt invisible. The flash system only
+	// branches on `kind`; particles / shake / hitstop skip "swing".
+	if (just_swung && first) {
+		const events = ctx.res.get(hit_events_r);
+		if (events.ok) {
+			const [player_id, player_pos] = first;
+			events.value.events.push({
+				kind: "swing",
+				target_id: player_id,
+				x: player_pos.x,
+				y: player_pos.y,
+				damage: 0,
+			});
+		}
+	}
+
 	if (tick >= active_until) {
 		if (ss.ok && ss.value.active_until_tick !== active_until) {
 			ctx.res.set(swing_state_r, { active_until_tick: active_until });
@@ -81,8 +105,6 @@ export const make_melee_swing_system = (xp_sys: XpSystem): System => (w, ctx) =>
 		return;
 	}
 
-	const players = w.query([player_c, pos_c] as const).collect();
-	const first = players[0];
 	if (!first) {
 		ctx.res.set(swing_state_r, { active_until_tick: active_until });
 		return;
@@ -95,16 +117,17 @@ export const make_melee_swing_system = (xp_sys: XpSystem): System => (w, ctx) =>
 		ctx.res.set(swing_state_r, { active_until_tick: active_until });
 		return;
 	}
-	// Emit hit_event on the PLAYER (not the victim) so the flash system
-	// tints the player white. The victim is despawned the same tick, so
-	// flashing them would render as a single-frame blink — pointless.
-	// Particles + shake + hitstop read hit_events_r too; the (x, y) is
-	// the victim cell so particles burst at the kill site.
+	// Emit `kill` hit_event on the PLAYER (not the victim) so the flash
+	// system tints the player white. The victim is despawned the same
+	// tick, so flashing them would render as a single-frame blink —
+	// pointless. Particles + shake + hitstop read hit_events_r too; the
+	// (x, y) is the victim cell so particles burst at the kill site.
 	const victim_pos = w.get(victim, pos_c);
 	const events = ctx.res.get(hit_events_r);
 	if (events.ok && victim_pos.ok) {
 		const first_player = first;
 		events.value.events.push({
+			kind: "kill",
 			target_id: first_player[0],
 			x: victim_pos.value.x,
 			y: victim_pos.value.y,

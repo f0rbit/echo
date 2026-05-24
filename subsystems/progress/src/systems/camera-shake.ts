@@ -11,9 +11,16 @@
 import type { System } from "@f0rbit/forge";
 import { rng as make_rng } from "@f0rbit/forge";
 import type { RenderState } from "@f0rbit/forge/pixi";
-import { camera_shake_r, hit_events_r, progress_r } from "../resources.ts";
+import { camera_shake_r, hit_events_r, progress_r, type HitEventKind } from "../resources.ts";
 
-const HIT_MAGNITUDE_PUSH = 3;
+// Per-kind shake magnitudes. `swing` is skipped (no shake on a press —
+// only the flash communicates the input edge). `damage` shakes harder
+// than `kill` because being hit reads as a louder world-event than
+// landing a hit. Magnitudes stay clamped to MAX_MAGNITUDE downstream.
+const HIT_MAGNITUDE_BY_KIND: Readonly<Record<Exclude<HitEventKind, "swing">, number>> = {
+	kill: 2,
+	damage: 4,
+};
 const MAX_MAGNITUDE = 6;
 const DECAY = 0.85;
 const STOP_THRESHOLD = 0.01;
@@ -48,7 +55,13 @@ export const make_camera_shake_push_system = (): System => (_w, ctx) => {
 	const events = ctx.res.get(hit_events_r);
 	if (!events.ok || events.value.events.length === 0) return;
 
-	const next_mag = shake.value.magnitude + HIT_MAGNITUDE_PUSH * events.value.events.length;
+	let push = 0;
+	for (const ev of events.value.events) {
+		if (ev.kind === "swing") continue;
+		push += HIT_MAGNITUDE_BY_KIND[ev.kind];
+	}
+	if (push === 0) return;
+	const next_mag = shake.value.magnitude + push;
 	shake.value.magnitude = Math.min(MAX_MAGNITUDE, next_mag);
 	shake.value.decay = DECAY;
 };
