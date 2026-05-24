@@ -220,6 +220,35 @@ Practical consequence for modal text (any place `scale.set(0.5)` is in play): **
 
 Established by commit `f1614a6` (bestiary wall-debug) for `app.render.world`; extended to `app.stage` modal overlays by arena shell screens (Phase 5.9.4); swept across loot HUDs + progress HUDs + arena debug overlay in Phase 5.9.5.
 
+#### Pixel font variant — `resolution: 1`, NO `scale.set`, integer-multiple `fontSize`
+
+The Crisp text recipe above is **WRONG for pixel fonts** (Press Start 2P, VT323, Pixelify Sans, etc.). Pixel fonts ship a baked grid; super-sampling at `resolution: 4` + downscaling at `scale.set(0.5)` re-rasterises that grid through bilinear filtering and destroys the pixel-perfect look. Result is a blurry pixel font with anti-aliased edges that defeats the whole point.
+
+Correct recipe for pixel fonts (any parent):
+
+```ts
+const PIXEL_STYLE = {
+  fontFamily: "Press Start 2P",  // or VT323, Pixelify Sans, etc.
+  fontSize: 8,                    // or integer multiple — 16, 24, 32 for PS2P's 8px grid
+  fill: 0xffffff,
+} as const;
+const t = new Text({ text, style: PIXEL_STYLE, resolution: 1 });
+// NO `t.scale.set(...)` — the source IS the display.
+```
+
+| Recipe | When to use | `resolution` | `text.scale.set(...)` | `fontSize` |
+|--------|-------------|--------------|------------------------|------------|
+| Crisp anti-aliased | system monospace, serif, sans (forge's built-in HUD font) | 4 | 0.5 if container scales > 1, else none | 2× design size (e.g. design 8 → store 16) |
+| Pixel font | Press Start 2P, VT323, Pixelify Sans | 1 | NEVER | integer multiple of font's native grid (PS2P: 8 / 16 / 24) |
+
+**Font loading.** Web fonts need an explicit fetch trigger before Pixi measures glyphs. CDN `<link href="...Press+Start+2P...">` registers the @font-face but does NOT fetch the .woff2 until something paints with it. `await document.fonts.ready` alone resolves immediately (no in-flight loads). Force the fetch with `await document.fonts.load("8px 'Press Start 2P'")` before `boot()`. Both prod + every debug fixture must do this — `debug-gui` cookbook fixtures bit the no-fetch trap during phase-6 font swap (progress FRICTION.md).
+
+**HTML wiring.** Each subsystem HTML entry adds the Google Fonts `<link>` triplet (preconnect googleapis + gstatic + the stylesheet) to the `<head>`. Avoids a CSS @import waterfall.
+
+**Effective glyph width undershoots reported width by ~1-2px** for Press Start 2P at fontSize 8 (font-metric quirk). Set `wordWrapWidth` to `BUTTON_W - 16` (8px padding each side) rather than `BUTTON_W - 6` to avoid right-edge clipping on long words like "Hardened".
+
+First consumer: progress's perk-choice modal + HUD + dead-screen (commit on `dev/progress-pixel-font`). See `subsystems/progress/src/systems/perk-choice-ui.ts` for the canonical shape and `subsystems/progress/FRICTION.md` for the font-loading-race trap.
+
 ### 9-sliced game UI panels + buttons — `NineSliceSprite` + Kenney pack
 
 Game UI (modals, panels, buttons) uses Pixi v8's `NineSliceSprite` against Kenney-style asset packs (CC0 9-slice PNGs). Convention:

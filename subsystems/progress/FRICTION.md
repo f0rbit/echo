@@ -146,3 +146,29 @@ Phase 5.6's snapshot tests pinned `MID_REPLAY_SNAP_TICK` after death to dodge th
 Applied FRICTION §5's "real fix": `enemy-spawn.ts` now forks via `ctx.rng.fork(\`progress.spawn.${ctx.time.tick}\`)` every spawn tick — no closure state, immune to snapshot drift. The tick-suffixed label gives every spawn-eligible tick a distinct deterministic stream, so the spawn cell at tick N is identical across replays and across pre/post-restore continuations. Replay had to be re-recorded because the spawn sequence changed, but the test invariants stayed (3 picks, level 4, perks {atk, hp, def}).
 
 **Reinforces FRICTION §5: closure-held forks are a snapshot foot-gun. The label-with-tick pattern is the canonical fix** — costs one extra hash per spawn (negligible) and removes an entire class of replay-determinism bugs.
+
+## 26. Pixel font loading: `document.fonts.ready` is a foot-gun — use `fonts.load(...)`
+
+User screenshot showed the perk-choice modal text was rendered in system monospace + clipped by the button border. Both fixed by Phase 6 (?) font swap to Press Start 2P (Google Fonts CDN, OFL, free) + button-size + position adjustments.
+
+**The trap:** `<link href="...?family=Press+Start+2P">` in HTML registers the @font-face but does NOT download the .woff2 until the browser paints with the font. `await document.fonts.ready` resolves immediately when there are no in-flight font loads — so calling it before any CSS rule references Press Start 2P is a no-op. Pixi's `Text` constructor then measures glyphs against the system fallback, caches that geometry, and the first frame renders with monospace fallback.
+
+Fix: `await document.fonts.load("8px 'Press Start 2P'")` BEFORE `boot()`. This explicitly triggers the .woff2 fetch + waits for it. Test with `document.fonts.check("8px 'Press Start 2P'")` — should return `true` after the load completes.
+
+The trap fired silently — `document.fonts.status === "loaded"` returned the misleading green light even though the actual font face wasn't downloaded. Caught only when a Chrome-MCP visual smoke of the `debug-gui` cookbook fixture showed serif fallback rendering. The production page + `debug` fixture happened to work because their assets prefetched some font reference accidentally; the cookbook fixture had no such accident.
+
+**Apply to every entry point** — main.ts, main-debug.ts, main-debug-gui.ts. Every entry needs its own `fonts.load(...)` because each page load is a fresh font registry.
+
+## 27. Pixel font `wordWrapWidth` needs more padding than reported glyph width suggests
+
+After font swap, "Hardened" overflowed the right edge of button 3 ("3. Hardened Hide") at `wordWrapWidth: BUTTON_W - 6`. Reduced to `BUTTON_W - 16` (8px padding each side) to fix.
+
+Press Start 2P's effective rendered glyph width at fontSize 8 is ~10px, not the naive 8px the grid suggests (default Pixi letterspacing adds inter-glyph space). The font's advance-width metrics under-report this slightly so Pixi's word-wrap algorithm puts more characters per line than visually fit. Mitigate by setting `wordWrapWidth` tighter than the visible container.
+
+Applied to perk-choice-ui NAME_STYLE + MOD_STYLE. AGENTS.md "Pixel font variant" subsection documents the rule for future consumers.
+
+## 28. Button-size budget for Press Start 2P "first.last"-style perk names
+
+Original 80×40 buttons fit "Iron Heart" (10 chars) at monospace 8px but Press Start 2P at native 8px is ~10-11px per glyph + the leading "N. " prefix (3 chars) made every long name wrap. Bumped to 100×60 design-space — fits "1.\nSharpened\nBlade\n+3 atk" on 4 lines with no clipping. `3 × 100 + 2 × 8 = 316 ≤ 320` design canvas width.
+
+**Future subsystems with pixel-font modal labels: size buttons for the expected longest perk name in 2 lines of text + 1-2 lines of modifier.** For ~12-char perk names: 100px wide is the floor; 110-128px wide gives more visual breathing room if the design canvas allows. Test updated to lock the new dimensions (`expect(r.w).toBe(100)`, `expect(r.h).toBe(60)`).

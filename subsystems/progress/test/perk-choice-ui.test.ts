@@ -18,10 +18,10 @@ describe("progress perk-choice-ui — button_rects layout", () => {
 		}
 	});
 
-	test("all buttons are 80×40", () => {
+	test("all buttons are 100×60", () => {
 		for (const r of button_rects) {
-			expect(r.w).toBe(80);
-			expect(r.h).toBe(40);
+			expect(r.w).toBe(100);
+			expect(r.h).toBe(60);
 		}
 	});
 

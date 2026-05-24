@@ -12,33 +12,34 @@ import { xp_threshold, type PerkId, type PerkRegistry } from "../data/perks.ts";
 // app.render.debug_overlay is in canvas-pixel space, so the system reads
 // the camera viewport each tick to right-align.
 //
-// Crisp text: `resolution: 4` only — parent is `app.render.debug_overlay`
-// (canvas-pixel space, no container scale). No `scale.set(0.5)` needed. See
-// AGENTS.md "Crisp text recipe" (Phase 5.9.5).
+// PIXEL FONT recipe (echo AGENTS.md "Pixel font variant"): Press Start 2P
+// at native 8px, `resolution: 1`, no scale.set. Parent is the debug overlay
+// (canvas-pixel space). Panel widened 80 → 112 to fit "A99 D99 S1.99" at
+// 8px native (~8px/char × 13 chars = 104px + padding).
 
-const PANEL_W = 80;
+const PANEL_W = 112;
 const MARGIN = 4;
-const LINE_HEIGHT = 9;
+const LINE_HEIGHT = 12;
 const XP_BAR_H = 4;
 const XP_BAR_PAD = 2;
 
 const LV_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 10,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: 0xffd24a,
 	stroke: { color: 0x000000, width: 2 },
 } as const;
 
 const LABEL_STYLE = {
-	fontFamily: "monospace",
+	fontFamily: "Press Start 2P",
 	fontSize: 8,
 	fill: 0xffffff,
 	stroke: { color: 0x000000, width: 2 },
 } as const;
 
 const PERK_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 7,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: 0xc0c0c8,
 	stroke: { color: 0x000000, width: 2 },
 } as const;
@@ -66,7 +67,7 @@ export const make_hud = (opts: HudOpts): Hud => {
 	container.label = "pr.hud";
 	container.zIndex = 9999;
 
-	const lv_text = new Text({ text: "LV 1", style: LV_STYLE, resolution: 4 });
+	const lv_text = new Text({ text: "LV 1", style: LV_STYLE, resolution: 1 });
 	lv_text.position.set(0, 0);
 	container.addChild(lv_text);
 
@@ -74,18 +75,18 @@ export const make_hud = (opts: HudOpts): Hud => {
 	xp_bar.label = "pr.hud.xp_bar";
 	container.addChild(xp_bar);
 
-	const hp_text = new Text({ text: "HP 0/0", style: LABEL_STYLE, resolution: 4 });
+	const hp_text = new Text({ text: "HP 0/0", style: LABEL_STYLE, resolution: 1 });
 	container.addChild(hp_text);
 
-	const stats_text = new Text({ text: "", style: LABEL_STYLE, resolution: 4 });
+	const stats_text = new Text({ text: "", style: LABEL_STYLE, resolution: 1 });
 	container.addChild(stats_text);
 
-	const perks_label = new Text({ text: "Perks:", style: LABEL_STYLE, resolution: 4 });
+	const perks_label = new Text({ text: "Perks:", style: LABEL_STYLE, resolution: 1 });
 	container.addChild(perks_label);
 
 	const perk_lines: Text[] = [];
 	for (let i = 0; i < 6; i++) {
-		const t = new Text({ text: "", style: PERK_STYLE, resolution: 4 });
+		const t = new Text({ text: "", style: PERK_STYLE, resolution: 1 });
 		container.addChild(t);
 		perk_lines.push(t);
 	}
