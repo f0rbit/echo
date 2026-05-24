@@ -61,6 +61,18 @@ Three copies exist as of progress (bestiary, progress; boss-to-come is the fourt
 - `bun test` — runs every subsystem's replay-as-test fixture from the root
 - Push to `main` triggers `.github/workflows/pages.yml` which builds, aggregates to `_site/` (flat), and deploys to GitHub Pages
 
+### Local visual smoke — `bun run serve`
+
+Every subsystem + hub exposes a `serve` script that statically serves its built `dist/` on `http://localhost:4567/` via `tools/serve-dist.ts` (~50 LOC, native `Bun.serve()`, no extra deps). Workflow:
+
+```sh
+cd subsystems/<sub> && bun run build && bun run serve
+# or from the repo root:
+bun run serve:<sub>     # e.g. serve:progress, serve:arena, serve:hub
+```
+
+Root has `serve:hub`, `serve:arena`, `serve:bestiary`, `serve:dungeon-walk`, `serve:loot`, `serve:progress`. Pick a free port via `bun ../../tools/serve-dist.ts dist <port>` if 4567 is taken. This is the canonical path for any non-sandboxed verification coder to self-smoke a production build (vs. `bun run dev`, which is for source-watching). See progress FRICTION.md §22 for why `bunx serve` + `python3 -m http.server` were rejected as sandbox-blocked alternatives.
+
 ### `bunx serve` (and stale ports generally) silently reuse the previous process — verify with `curl`
 
 Any static server (`bunx serve`, `python -m http.server`, our `serve-dist.ts`) bound to an already-occupied port will silently fall through to the **previous process** serving that port — Chrome DevTools then screenshots stale content, which the agent reads as "the change didn't apply".

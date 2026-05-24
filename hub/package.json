@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "serve": "bun ../tools/serve-dist.ts dist 4567",
     "typecheck": "astro check",
     "astro": "astro"
   },

@@ -11,6 +11,12 @@
     "subsystems:build": "for d in subsystems/*/; do [ -f \"$d/package.json\" ] && (cd \"$d\" && bun run build); done; true",
     "main:build": "if [ -f main/package.json ]; then cd main && bun run build; fi",
     "build:all": "bun run hub:build && bun run subsystems:build && bun run main:build",
+    "serve:hub": "cd hub && bun run serve",
+    "serve:arena": "cd subsystems/arena && bun run serve",
+    "serve:bestiary": "cd subsystems/bestiary && bun run serve",
+    "serve:dungeon-walk": "cd subsystems/dungeon-walk && bun run serve",
+    "serve:loot": "cd subsystems/loot && bun run serve",
+    "serve:progress": "cd subsystems/progress && bun run serve",
     "test": "bun test",
     "typecheck": "bun run hub:typecheck"
   },

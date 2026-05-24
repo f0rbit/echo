@@ -9,6 +9,7 @@
 		"build": "bun build src/main.ts --outdir dist --target browser && bun build src/main-debug.ts --outdir dist/debug --target browser && mv dist/debug/main-debug.js dist/debug/main.js && bun build src/main-debug-gui.ts --outdir dist/debug-gui --target browser && mv dist/debug-gui/main-debug-gui.js dist/debug-gui/main.js && cp index.html dist/ && cp debug.html dist/debug/index.html && cp debug-gui.html dist/debug-gui/index.html && cp -r public/* dist/ && cp -r public/* dist/debug/ && cp -r public/* dist/debug-gui/",
 		"build:debug": "bun build src/main-debug.ts --outdir dist/debug --target browser && mv dist/debug/main-debug.js dist/debug/main.js && cp debug.html dist/debug/index.html && cp -r public/* dist/debug/",
 		"build:debug-gui": "bun build src/main-debug-gui.ts --outdir dist/debug-gui --target browser && mv dist/debug-gui/main-debug-gui.js dist/debug-gui/main.js && cp debug-gui.html dist/debug-gui/index.html && cp -r public/* dist/debug-gui/",
+		"serve": "bun ../../tools/serve-dist.ts dist 4567",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit"
 	},
