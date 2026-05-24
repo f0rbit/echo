@@ -204,11 +204,12 @@ const main = async (): Promise<void> => {
 		return lvl.ok ? lvl.value.choices : [];
 	};
 
-	// Perk-choice modal — a Container on app.stage (sibling of surface_sprite,
+	// Modals — two Containers on app.stage (siblings of surface_sprite,
 	// below palette_overlay) per echo AGENTS.md. Mirror the surface_sprite
 	// scale + offset every resize so design-coord hit-tests from
-	// event_to_world line up with the rendered buttons. Apply once at boot
-	// AND on every resize callback — NOT per-tick.
+	// event_to_world line up with the rendered buttons.
+
+	// Perk-choice modal
 	const perk_ui = make_perk_choice_ui({
 		on_pick: perks_sys.queue_perk_pick,
 		get_visible,
@@ -216,8 +217,22 @@ const main = async (): Promise<void> => {
 		get_registry,
 		get_ui_textures: () => ui_textures,
 	});
+
+	// Dead-screen modal — visible iff progress_r.dead. The Restart button
+	// injects a synthetic `restart` press into the live input layer; the
+	// existing `pr.restart` system (which gates on
+	// `ctx.input.just("restart")`) handles the rest. R-key restart
+	// continues to work unchanged because both keyboard + click feed the
+	// same `restart` action.
+	const dead_ui = make_dead_screen_ui({
+		on_restart: () => app.input.inject_actions([{ kind: "press", action: "restart" }]),
+		get_dead,
+		get_ui_textures: () => ui_textures,
+	});
+
 	const palette_idx = app.app.stage.getChildIndex(app.render.palette_overlay);
 	app.app.stage.addChildAt(perk_ui.container, palette_idx);
+	app.app.stage.addChildAt(dead_ui.container, palette_idx);
 
 	const apply_modal_viewport = (): void => {
 		const vp = app.camera.viewport();
@@ -230,21 +245,6 @@ const main = async (): Promise<void> => {
 		dead_ui.container.position.set(vp.offset.x, vp.offset.y);
 	};
 	apply_modal_viewport();
-
-	// Dead-screen modal — same app.stage sibling depth as perk-choice
-	// (echo AGENTS.md "Game UI overlays — app.stage sibling, mirror
-	// surface_sprite"). Visible iff progress_r.dead. The Restart button
-	// injects a synthetic `restart` press into the live input layer; the
-	// existing `pr.restart` system (which gates on
-	// `ctx.input.just("restart")`) handles the rest. R-key restart
-	// continues to work unchanged because both keyboard + click feed the
-	// same `restart` action.
-	const dead_ui = make_dead_screen_ui({
-		on_restart: () => app.input.inject_actions([{ kind: "press", action: "restart" }]),
-		get_dead,
-		get_ui_textures: () => ui_textures,
-	});
-	app.app.stage.addChildAt(dead_ui.container, palette_idx);
 
 	// Pointerdown → event_to_world → button_at → perks_sys.queue_perk_pick.
 	// Teardown stashed for tab-away / unmount cleanliness.
