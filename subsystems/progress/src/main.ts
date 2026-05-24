@@ -20,7 +20,8 @@ import { game_plugin } from "./plugin.ts";
 import { level_up_pending_r, perk_registry_r, progress_r } from "./resources.ts";
 import type { PerkRegistry } from "./data/perks.ts";
 import { make_hud } from "./systems/hud.ts";
-import { make_perk_choice_ui } from "./systems/perk-choice-ui.ts";
+import { make_perk_choice_ui, type UiTextures } from "./systems/perk-choice-ui.ts";
+import { load_ui_assets } from "./ui/assets.ts";
 import { setup_static } from "./arena-gen.ts";
 import { disk_load } from "./disk-save.ts";
 import { make_palette_cmds } from "./palette-cmds.ts";
@@ -38,6 +39,11 @@ import { make_auto_save_system } from "./systems/auto-save.ts";
 const design = { width: g.cols * g.tile, height: g.rows * g.tile };
 
 const main = async (): Promise<void> => {
+	// Pre-boot: prime Pixi's Assets cache with the ui-borders PNGs so the
+	// NineSliceSprite-backed perk-choice modal has decoded textures on first
+	// render. Option B per src/ui/assets.ts header.
+	const ui_textures: UiTextures = await load_ui_assets();
+
 	const r = await boot({
 		mount: "#root",
 		window: { width: globalThis.innerWidth, height: globalThis.innerHeight },
@@ -167,6 +173,7 @@ const main = async (): Promise<void> => {
 		get_visible,
 		get_choices,
 		get_registry,
+		get_ui_textures: () => ui_textures,
 	});
 	const palette_idx = app.app.stage.getChildIndex(app.render.palette_overlay);
 	app.app.stage.addChildAt(perk_ui.container, palette_idx);

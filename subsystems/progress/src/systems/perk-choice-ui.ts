@@ -1,19 +1,41 @@
 import type { System } from "@f0rbit/forge";
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Text, type Texture } from "pixi.js";
 import { event_to_world, type Camera } from "@f0rbit/forge/pixi";
 import type { PerkDef, PerkId, PerkRegistry } from "../data/perks.ts";
 import { g } from "../grid.ts";
+import { make_panel, DEFAULT_PANEL_INSETS } from "../ui/panel.ts";
+import { make_button, type Button } from "../ui/button.ts";
+import type { UiTextureName } from "../ui/assets.ts";
 
 // perk-choice-ui.ts — modal level-up overlay on app.stage (sibling of
 // surface_sprite, below palette_overlay) per echo AGENTS.md "Game UI
 // overlays — app.stage sibling, mirror surface_sprite". Visible iff
 // progress_r.paused && level_up_pending_r.pending.
 //
+// PHASE 2 REWRITE — Graphics.rect internals swapped for Panel + Button[]
+// (.plans/progress-gui-overhaul.md §6 Phase 2.2). Public surface is
+// byte-stable: BUTTON_COUNT/W/H/GAP constants, ButtonRect, button_rects,
+// button_at, PerkChoiceUI, PerkChoiceUIOpts (gains required get_ui_textures),
+// make_perk_choice_ui factory — all unchanged in shape and (where applicable)
+// numeric values. test/perk-choice-ui.test.ts stays green without amendment.
+//
 // 3 horizontal buttons centered on the design canvas. Each button shows the
 // perk name + modifier text. Click (via event_to_world hit-test) or
 // keyboard 1/2/3 (handled by input.ts → perks_sys.queue_perk_pick) routes
-// to the same closure-local queue. Per .plans/progress.md §5 Phase 5.4
-// and §2 Q4 / Q15.
+// to the same closure-local queue.
+//
+// PRESSED STATE NOT WIRED. Plan §6 §2.2 risk note: the modal closes
+// immediately on pick, so a pressed-state transition would be invisible.
+// redraw() only ever calls Button.set_state("idle"). If a future consumer
+// wants visual click feedback, wire a 100ms "pressed → idle" transition in
+// attach_pointer before opts.on_pick fires. Tracked in
+// UI-PROPOSED-AGENTS-UPDATES.md (Phase 3.2) as future work.
+//
+// PANEL TINT — darkened to 0x303040 with alpha 0.95. The chosen white-outline
+// panel asset renders ~invisible on a light backdrop; the production modal
+// replaces the prior 60%-opaque black Graphics.rect backdrop, so the panel
+// itself must darken the scene behind it for the white-text title + buttons
+// to stay legible (Phase 1 visual note).
 //
 // Hit-test math (button_rects + button_at) is pure and unit-tested in
 // test/perk-choice-ui.test.ts. NEVER reimplement fit_scale — event_to_world
@@ -34,11 +56,9 @@ const GRID_W = BUTTON_COUNT * BUTTON_W + (BUTTON_COUNT - 1) * BUTTON_GAP;
 const GRID_X = Math.round((DESIGN_W - GRID_W) / 2);
 const GRID_Y = Math.round((DESIGN_H - BUTTON_H) / 2);
 
-const COLOR_BACKDROP = 0x000000;
-const BACKDROP_ALPHA = 0.6;
-const COLOR_BUTTON_FILL = 0x202028;
-const COLOR_BORDER = 0x4a4a55;
 const COLOR_TEXT = 0xffffff;
+const PANEL_TINT = 0x303040;
+const PANEL_ALPHA = 0.95;
 
 // fontSize + wordWrapWidth doubled vs. design because Text gets
 // `scale.set(0.5)` — crisp-text recipe renders the glyph cache at 4× DPI
@@ -114,11 +134,14 @@ const crisp_text = (text: string, style: Record<string, unknown>): Text => {
 	return t;
 };
 
+export type UiTextures = Record<UiTextureName, Texture>;
+
 export type PerkChoiceUIOpts = {
 	on_pick: (idx: number) => void;
 	get_visible: () => boolean;
 	get_choices: () => readonly string[];
 	get_registry: () => PerkRegistry | null;
+	get_ui_textures: () => UiTextures;
 };
 
 export type PerkChoiceUI = {
@@ -128,17 +151,41 @@ export type PerkChoiceUI = {
 };
 
 export const make_perk_choice_ui = (opts: PerkChoiceUIOpts): PerkChoiceUI => {
+	const textures = opts.get_ui_textures();
+
 	const container = new Container();
 	container.label = "pr.perk_choice_ui";
 	container.visible = false;
 
-	const backdrop = new Graphics();
-	backdrop.label = "pr.perk_choice_ui.backdrop";
-	container.addChild(backdrop);
+	// 9-slice panel backdrop — fills the design canvas, darkened so white
+	// text + button outlines stay legible against arbitrary scene content.
+	const panel = make_panel({
+		texture: textures.panel,
+		width: DESIGN_W,
+		height: DESIGN_H,
+		insets: DEFAULT_PANEL_INSETS,
+	});
+	panel.container.label = "pr.perk_choice_ui.backdrop";
+	panel.container.tint = PANEL_TINT;
+	panel.container.alpha = PANEL_ALPHA;
+	container.addChild(panel.container);
 
-	const button_layer = new Graphics();
-	button_layer.label = "pr.perk_choice_ui.buttons";
-	container.addChild(button_layer);
+	// 3 Button instances — positioned once at construction; redraw() only
+	// updates state + per-button label text content.
+	const buttons: Button[] = [];
+	for (let i = 0; i < BUTTON_COUNT; i++) {
+		const r = button_rects[i]!;
+		const btn = make_button({
+			idle_tex: textures.button,
+			width: BUTTON_W,
+			height: BUTTON_H,
+		});
+		btn.container.label = `pr.perk_choice_ui.button.${i}`;
+		btn.container.position.set(r.x, r.y);
+		btn.set_state("idle");
+		container.addChild(btn.container);
+		buttons.push(btn);
+	}
 
 	const title = crisp_text("Choose a perk (1/2/3 or click)", TITLE_STYLE);
 	title.anchor.set(0.5, 0);
@@ -170,15 +217,8 @@ export const make_perk_choice_ui = (opts: PerkChoiceUIOpts): PerkChoiceUI => {
 		const choices = opts.get_choices();
 		const registry = opts.get_registry();
 
-		backdrop.clear();
-		backdrop.rect(0, 0, DESIGN_W, DESIGN_H).fill({ color: COLOR_BACKDROP, alpha: BACKDROP_ALPHA });
-
-		button_layer.clear();
 		for (let i = 0; i < BUTTON_COUNT; i++) {
-			const r = button_rects[i]!;
-			button_layer.rect(r.x, r.y, r.w, r.h).fill({ color: COLOR_BUTTON_FILL });
-			button_layer.rect(r.x, r.y, r.w, r.h).stroke({ color: COLOR_BORDER, width: 1 });
-
+			buttons[i]!.set_state("idle");
 			const perk_id = choices[i] ?? null;
 			const def = def_for(registry, perk_id);
 			name_texts[i]!.text = def ? `${i + 1}. ${def.name}` : `${i + 1}.`;
