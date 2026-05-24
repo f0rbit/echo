@@ -16,13 +16,15 @@ import { pos_c } from "@f0rbit/forge";
 import type { Cell } from "@f0rbit/forge/grid";
 import { chaser_c, dir_c, path_c, player_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { progress_r, wall_index_r } from "../resources.ts";
+import { hitstop_r, progress_r, wall_index_r } from "../resources.ts";
 
 const sign = (n: number): -1 | 0 | 1 => (n > 0 ? 1 : n < 0 ? -1 : 0);
 
 export const path_step_system: System = (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
 	if (prog.ok && prog.value.paused) return;
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
 
 	const wi = ctx.res.get(wall_index_r);
 	if (!wi.ok) return;

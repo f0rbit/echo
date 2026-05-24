@@ -34,7 +34,7 @@
 import { pos_c, type System } from "@f0rbit/forge";
 import { chaser_c, hp_c, player_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { progress_r } from "../resources.ts";
+import { hit_events_r, hitstop_r, progress_r } from "../resources.ts";
 
 const CONTACT_DAMAGE = 1;
 const CONTACT_RANGE = 1;
@@ -43,6 +43,8 @@ export const make_contact_damage_system = (): System => (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
 	if (!prog.ok) return;
 	if (prog.value.paused || prog.value.dead) return;
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
 
 	const players = w.query([player_c, pos_c, hp_c] as const).collect();
 	const first = players[0];
@@ -50,6 +52,7 @@ export const make_contact_damage_system = (): System => (w, ctx) => {
 	const [player_id, player_pos] = first;
 	const player_cell = g.world_to_cell(player_pos.x, player_pos.y);
 
+	const events = ctx.res.get(hit_events_r);
 	for (const [chaser_id, cp] of w.query([chaser_c, pos_c] as const).collect()) {
 		const cc = g.world_to_cell(cp.x, cp.y);
 		if (g.chebyshev(cc, player_cell) > CONTACT_RANGE) continue;
@@ -57,6 +60,19 @@ export const make_contact_damage_system = (): System => (w, ctx) => {
 		if (!hp.ok) return;
 		const next = Math.max(0, hp.value.current - CONTACT_DAMAGE);
 		w.set(player_id, hp_c, { current: next, max: hp.value.max });
+		// Emit hit_event so the juice systems (flash, shake, hitstop,
+		// particles) trigger on damage taken too. Target is the player
+		// (flash tints the player red via the flash system's white tint;
+		// damage-taken vs. kill is distinguishable by HP HUD context).
+		// Particle burst at the chaser cell (where the contact happened).
+		if (events.ok) {
+			events.value.events.push({
+				target_id: player_id,
+				x: cp.x,
+				y: cp.y,
+				damage: CONTACT_DAMAGE,
+			});
+		}
 		w.despawn(chaser_id);
 		if (next <= 0) {
 			ctx.res.set(progress_r, { ...prog.value, dead: true });

@@ -2,8 +2,12 @@ import { harness, pos_c, type Harness, type Id } from "@f0rbit/forge";
 import { game_bindings } from "../../src/bindings.ts";
 import {
 	arena_r,
+	camera_shake_r,
 	creature_occupancy_r,
+	hit_events_r,
+	hitstop_r,
 	level_up_pending_r,
+	particles_r,
 	perk_registry_r,
 	progress_r,
 	run_seed_r,
@@ -76,6 +80,20 @@ export const make_progress_scenario = (opts: ProgressScenarioOpts = {}): Progres
 	h.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	h.res.set(level_up_pending_r, { pending: false, choices: [] });
 	h.res.set(swing_state_r, { active_until_tick: 0 });
+	// Juice resources (port from arena, Phase 5.4.juice). Mirrors
+	// arena-gen.ts's setup_static defaults so tests see the same world
+	// shape as a fresh production boot.
+	h.res.set(hitstop_r, { remaining: 0 });
+	h.res.set(camera_shake_r, { magnitude: 0, decay: 0 });
+	h.res.set(hit_events_r, { events: [] });
+	const PARTICLE_CAPACITY = 256;
+	h.res.set(particles_r, {
+		entries: Array.from({ length: PARTICLE_CAPACITY }, () => ({
+			x: 0, y: 0, vx: 0, vy: 0, ttl: 0, max_ttl: 0, color: 0, size: 0,
+		})),
+		head: 0,
+		capacity: PARTICLE_CAPACITY,
+	});
 
 	let player_id: Id | null = null;
 	if (opts.with_player) {

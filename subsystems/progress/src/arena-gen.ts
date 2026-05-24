@@ -29,8 +29,12 @@ import {
 import { g } from "./grid.ts";
 import {
 	arena_r,
+	camera_shake_r,
 	creature_occupancy_r,
+	hit_events_r,
+	hitstop_r,
 	level_up_pending_r,
+	particles_r,
 	perk_registry_r,
 	progress_r,
 	run_seed_r,
@@ -144,9 +148,27 @@ export const setup_static = (w: World, ctx: Ctx): void => {
 	if (!ctx.res.get(progress_r).ok) ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	if (!ctx.res.get(level_up_pending_r).ok) ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
 	if (!ctx.res.get(swing_state_r).ok) ctx.res.set(swing_state_r, { active_until_tick: 0 });
+	// Juice resources (port from arena, Phase 5.4.juice). Each is
+	// idempotent on overwrite — particles is rebuilt on every setup so a
+	// restart wipes any in-flight burst; camera_shake / hit_events / hitstop
+	// reset to zero. `hitstop_r` IS snapshotted so guard on prior presence
+	// (mirrors progress_r) — restoring a save mid-hitstop preserves the
+	// freeze; a fresh boot starts at remaining=0.
+	if (!ctx.res.get(hitstop_r).ok) ctx.res.set(hitstop_r, { remaining: 0 });
+	ctx.res.set(camera_shake_r, { magnitude: 0, decay: 0 });
+	ctx.res.set(hit_events_r, { events: [] });
+	ctx.res.set(particles_r, {
+		entries: Array.from({ length: PARTICLE_CAPACITY }, () => ({
+			x: 0, y: 0, vx: 0, vy: 0, ttl: 0, max_ttl: 0, color: 0, size: 0,
+		})),
+		head: 0,
+		capacity: PARTICLE_CAPACITY,
+	});
 
 	spawn_tiles(w);
 };
+
+const PARTICLE_CAPACITY = 256;
 
 // setup_dynamic — player spawn. NOT idempotent: re-running spawns a
 // duplicate player. Must NOT be called after disk-restore (the snapshot

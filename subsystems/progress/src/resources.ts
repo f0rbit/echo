@@ -1,4 +1,4 @@
-import { resource, type ResKey } from "@f0rbit/forge";
+import { resource, type ResKey, type Id } from "@f0rbit/forge";
 
 export type Arena = {
 	cols: number;
@@ -6,6 +6,51 @@ export type Arena = {
 	width: number;
 	height: number;
 };
+
+// Camera shake — render-only mutation of `surface_sprite.position` via
+// forge's `render.set_screen_offset`. NOT snapshotted — visuals only,
+// world-hash never observes the offset. Mirrors arena's resource.
+export type CameraShake = {
+	magnitude: number;
+	decay: number;
+};
+
+// Ring-buffer particle pool. Capacity is fixed at boot. NOT snapshotted
+// — render-only juice (particles re-emit naturally on the next hit
+// event after restore). Mirrors arena's resource.
+export type ParticleEntry = {
+	x: number;
+	y: number;
+	vx: number;
+	vy: number;
+	ttl: number;
+	max_ttl: number;
+	color: number;
+	size: number;
+};
+export type Particles = {
+	entries: ParticleEntry[];
+	head: number;
+	capacity: number;
+};
+
+// Hitstop gate — `remaining > 0` freezes gameplay systems for that many
+// ticks. Snapshotted per arena's pattern: the freeze is gameplay-visible
+// (affects tick→frame timing) so it must survive restore. Decremented
+// by the `pre`-stage release system, which MUST NOT gate on itself
+// (echo AGENTS.md "Game-state gates, NOT time.scale = 0").
+export type Hitstop = { remaining: number };
+
+// Per-tick hit events drained by flash, hitstop, shake, particles.
+// Cleared in `pre` stage so each tick's events are fresh. NOT
+// snapshotted — transient by contract.
+export type HitEvent = {
+	target_id: Id;
+	x: number;
+	y: number;
+	damage: number;
+};
+export type HitEvents = { events: HitEvent[] };
 
 export type RunSeed = { base: number; restart_count: number };
 
@@ -58,3 +103,7 @@ export const wall_index_r: ResKey<WallIndex> = resource<WallIndex>("pr.wall_inde
 export const progress_r: ResKey<Progress> = resource<Progress>("pr.progress");
 export const level_up_pending_r: ResKey<LevelUpPending> = resource<LevelUpPending>("pr.level_up_pending");
 export const swing_state_r: ResKey<SwingState> = resource<SwingState>("pr.swing_state");
+export const camera_shake_r: ResKey<CameraShake> = resource<CameraShake>("pr.camera_shake");
+export const particles_r: ResKey<Particles> = resource<Particles>("pr.particles");
+export const hitstop_r: ResKey<Hitstop> = resource<Hitstop>("pr.hitstop");
+export const hit_events_r: ResKey<HitEvents> = resource<HitEvents>("pr.hit_events");

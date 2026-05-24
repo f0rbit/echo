@@ -19,6 +19,7 @@ import { g } from "./grid.ts";
 import { debug_plugin } from "./debug-plugin.ts";
 import { level_up_pending_r, perk_registry_r, progress_r } from "./resources.ts";
 import type { PerkRegistry } from "./data/perks.ts";
+import { make_camera_shake_apply_system } from "./systems/camera-shake.ts";
 import { make_hud } from "./systems/hud.ts";
 import { make_perk_choice_ui, type UiTextures } from "./systems/perk-choice-ui.ts";
 import { load_ui_assets } from "./ui/assets.ts";
@@ -88,7 +89,18 @@ const main = async (): Promise<void> => {
 	entity_graphics.zIndex = 0;
 	app.render.world.addChild(entity_graphics);
 
-	const { perks_sys } = debug_plugin(app.world, app.schedule, { entity_graphics });
+	// Particles overlay — mirror main.ts.
+	const particles_overlay = new Graphics();
+	particles_overlay.label = "pr.particles_overlay";
+	particles_overlay.zIndex = 100;
+	app.render.world.addChild(particles_overlay);
+
+	const { perks_sys } = debug_plugin(app.world, app.schedule, { entity_graphics, particles_overlay });
+
+	app.schedule.add("render", make_camera_shake_apply_system(app.render), {
+		phase: 100,
+		name: "pr.debug.camera_shake_apply",
+	});
 
 	app.schedule.add("post", make_eye_follow_system(light, g, visual_pos_c, player_c), { name: "pr.debug.light_eye_follow" });
 	app.schedule.add("render", (_w, ctx) => {

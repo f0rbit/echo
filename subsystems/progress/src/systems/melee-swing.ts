@@ -45,7 +45,7 @@ import type { Id, System, World } from "@f0rbit/forge";
 import { pos_c } from "@f0rbit/forge";
 import { chaser_c, player_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { progress_r, swing_state_r } from "../resources.ts";
+import { hit_events_r, hitstop_r, progress_r, swing_state_r } from "../resources.ts";
 import { XP_BASE_PER_KILL, type XpSystem } from "./xp.ts";
 
 const MELEE_RANGE = 1;
@@ -66,6 +66,8 @@ const find_adjacent_chaser = (w: World, player_cell: { x: number; y: number }): 
 export const make_melee_swing_system = (xp_sys: XpSystem): System => (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
 	if (prog.ok && (prog.value.paused || prog.value.dead)) return;
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
 
 	const tick = ctx.time.tick;
 	const ss = ctx.res.get(swing_state_r);
@@ -92,6 +94,22 @@ export const make_melee_swing_system = (xp_sys: XpSystem): System => (w, ctx) =>
 	if (victim === null) {
 		ctx.res.set(swing_state_r, { active_until_tick: active_until });
 		return;
+	}
+	// Emit hit_event on the PLAYER (not the victim) so the flash system
+	// tints the player white. The victim is despawned the same tick, so
+	// flashing them would render as a single-frame blink — pointless.
+	// Particles + shake + hitstop read hit_events_r too; the (x, y) is
+	// the victim cell so particles burst at the kill site.
+	const victim_pos = w.get(victim, pos_c);
+	const events = ctx.res.get(hit_events_r);
+	if (events.ok && victim_pos.ok) {
+		const first_player = first;
+		events.value.events.push({
+			target_id: first_player[0],
+			x: victim_pos.value.x,
+			y: victim_pos.value.y,
+			damage: 1,
+		});
 	}
 	w.despawn(victim);
 	xp_sys.emit_xp_gain(XP_BASE_PER_KILL);

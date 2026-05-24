@@ -19,8 +19,12 @@ import {
 import { g } from "./grid.ts";
 import {
 	arena_r,
+	camera_shake_r,
 	creature_occupancy_r,
+	hit_events_r,
+	hitstop_r,
 	level_up_pending_r,
+	particles_r,
 	perk_registry_r,
 	progress_r,
 	run_seed_r,
@@ -28,11 +32,19 @@ import {
 } from "./resources.ts";
 import { make_perk_registry } from "./data/perks.ts";
 import { chaser_think_system } from "./systems/ai-chaser.ts";
+import { make_camera_shake_push_system } from "./systems/camera-shake.ts";
 import { make_contact_damage_system } from "./systems/contact-damage.ts";
 import { creature_occupancy_system } from "./systems/creature-occupancy.ts";
 import { make_entity_render_system } from "./systems/entity-render.ts";
+import { make_flash_system } from "./systems/flash.ts";
+import { make_hitstop_release_system, make_hitstop_trigger_system } from "./systems/hitstop.ts";
 import { make_melee_swing_system } from "./systems/melee-swing.ts";
 import { movement_system, step_every } from "./systems/movement.ts";
+import {
+	make_particles_advance_system,
+	make_particles_emit_system,
+	make_particles_render_system,
+} from "./systems/particles.ts";
 import { path_step_system } from "./systems/path-step.ts";
 import { make_perks_system, type PerksSystem } from "./systems/perks.ts";
 import { sprite_attach_system } from "./systems/sprite-attach.ts";
@@ -72,6 +84,7 @@ import { disk_save } from "./disk-save.ts";
 
 export type DebugPluginOpts = {
 	entity_graphics?: Graphics;
+	particles_overlay?: Graphics;
 	xp_system?: XpSystem;
 	perks_system?: PerksSystem;
 };
@@ -113,6 +126,20 @@ const debug_setup_progress = (w: World, ctx: Ctx): void => {
 	ctx.res.set(wall_index_r, { cells: walls });
 	ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
+	// Juice resources (port from arena, Phase 5.4.juice). Mirror
+	// production setup_static defaults so the debug fixture exercises the
+	// same world shape as the playable build.
+	ctx.res.set(hitstop_r, { remaining: 0 });
+	ctx.res.set(camera_shake_r, { magnitude: 0, decay: 0 });
+	ctx.res.set(hit_events_r, { events: [] });
+	const PARTICLE_CAPACITY = 256;
+	ctx.res.set(particles_r, {
+		entries: Array.from({ length: PARTICLE_CAPACITY }, () => ({
+			x: 0, y: 0, vx: 0, vy: 0, ttl: 0, max_ttl: 0, color: 0, size: 0,
+		})),
+		head: 0,
+		capacity: PARTICLE_CAPACITY,
+	});
 
 	for (let cy = 0; cy < g.rows; cy++) {
 		for (let cx = 0; cx < g.cols; cx++) {
@@ -215,7 +242,12 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	sch.add("startup", (w, ctx) => debug_setup_progress(w, ctx), "pr.debug.setup");
 	sch.add("startup", make_wall_autotile_system({ wall_c, texture: "walls", grid: g }), { name: "pr.debug.wall_autotile" });
 
-	sch.add("pre", creature_occupancy_system, { name: "pr.creature_occupancy" });
+	sch.add("pre", creature_occupancy_system, { phase: 2, name: "pr.creature_occupancy" });
+	sch.add("pre", (_w, ctx) => {
+		const r = ctx.res.get(hit_events_r);
+		if (r.ok) r.value.events = [];
+	}, { phase: 3, name: "pr.hit_events_clear" });
+	sch.add("pre", make_hitstop_release_system(), { phase: 4, name: "pr.hitstop_release" });
 
 	sch.add("update", make_debug_auto_action_system({ xp_sys, perks_sys, snapper }), { phase: 0, name: "pr.debug_auto_action" });
 	sch.add("update", movement_system, { every: step_every, phase: 1, name: "pr.movement" });
@@ -228,11 +260,21 @@ export const debug_plugin = (_w: World, sch: Schedule, opts: DebugPluginOpts = {
 	sch.add("update", make_synthetic_perk_pick_system(perks_sys.queue_perk_pick), { phase: 7.5, name: "pr.synthetic_perk_pick" });
 	sch.add("update", perks_sys.system, { phase: 8, name: "pr.perks" });
 	sch.add("update", make_stats_recompute_system(), { phase: 9, name: "pr.stats_recompute" });
+	// Juice — mirror plugin.ts wiring so the debug fixture exercises the
+	// same visual pipeline as the playable build.
+	sch.add("update", make_camera_shake_push_system(), { phase: 20, name: "pr.camera_shake_push" });
+	sch.add("update", make_hitstop_trigger_system(), { phase: 21, name: "pr.hitstop_trigger" });
+	sch.add("update", make_particles_advance_system(), { phase: 22, name: "pr.particles_advance" });
+	sch.add("update", make_particles_emit_system(), { phase: 23, name: "pr.particles_emit" });
+	sch.add("update", make_flash_system(), { phase: 24, name: "pr.flash" });
 
 	sch.add("post", sprite_attach_system, { phase: 0, name: "pr.sprite_attach" });
 
 	if (opts.entity_graphics) {
 		sch.add("render", make_entity_render_system(opts.entity_graphics), { phase: 10, name: "pr.entity_render" });
+	}
+	if (opts.particles_overlay) {
+		sch.add("post", make_particles_render_system(opts.particles_overlay), { phase: 50, name: "pr.particles_render" });
 	}
 
 	return { xp_sys, perks_sys, snapper };

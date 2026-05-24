@@ -27,6 +27,7 @@ import { disk_load } from "./disk-save.ts";
 import { make_palette_cmds } from "./palette-cmds.ts";
 import { make_progress_snapshotter } from "./snapshot.ts";
 import { make_auto_save_system } from "./systems/auto-save.ts";
+import { make_camera_shake_apply_system } from "./systems/camera-shake.ts";
 
 // main.ts — Phase 5.4 boot. Adds perk-choice modal overlay + XP/level HUD on
 // top of Phase 5.3's entity-render wiring. Mirrors loot/src/main.ts's
@@ -98,7 +99,24 @@ const main = async (): Promise<void> => {
 	entity_graphics.zIndex = 0;
 	app.render.world.addChild(entity_graphics);
 
-	const { perks_sys, xp_sys } = game_plugin(app.world, app.schedule, { entity_graphics });
+	// Particles overlay — drawn ABOVE all sprites in the world container.
+	// Inside `app.render.world` (filtered by lighting) intentionally — the
+	// burst should be subject to the moon_cavern darkness so a kill in a
+	// dim spot reads as a punch of light rather than full-brightness sparks.
+	const particles_overlay = new Graphics();
+	particles_overlay.label = "pr.particles_overlay";
+	particles_overlay.zIndex = 100;
+	app.render.world.addChild(particles_overlay);
+
+	const { perks_sys, xp_sys } = game_plugin(app.world, app.schedule, { entity_graphics, particles_overlay });
+
+	// Camera shake apply — render-stage, AFTER forge.render so the world
+	// has been drawn for the tick before the offset mutates the
+	// surface_sprite.position. Mirrors arena's wiring.
+	app.schedule.add("render", make_camera_shake_apply_system(app.render), {
+		phase: 100,
+		name: "pr.camera_shake_apply",
+	});
 
 	app.schedule.add("post", make_eye_follow_system(light, g, visual_pos_c, player_c), { name: "pr.light_eye_follow" });
 	app.schedule.add("render", (_w, ctx) => {

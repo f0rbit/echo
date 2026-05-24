@@ -15,6 +15,16 @@ export type Stats = {
 	xp_gain_mul: number;
 };
 
+// Per-entity sprite-tint flash. Decays over `ticks_remaining`; the
+// `original_tint` field captures the sprite's pre-flash tint so the
+// system can restore it on expiry. Mirrors arena's flash_c shape. NOT
+// snapshotted — render-only juice; values are fully derivable from the
+// next hit_event after restore.
+export type Flash = {
+	ticks_remaining: number;
+	original_tint: number;
+};
+
 // Chaser AI states (mirrors bestiary's AiState kinds; "swinging"/"dying" reserved
 // for the player-side melee + death transitions added in Phase 5.3+).
 export type State = { kind: "idle" | "chasing" | "swinging" | "dying" };
@@ -35,3 +45,4 @@ export const state_c: Component<State> = component<State>("pr.state");
 export const path_c: Component<Path> = component<Path>("pr.path");
 export const dir_c: Component<Dir> = component<Dir>("pr.dir");
 export const visual_pos_c: Component<Vec2> = component<Vec2>("pr.visual_pos");
+export const flash_c: Component<Flash> = component<Flash>("pr.flash");

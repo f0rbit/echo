@@ -13,6 +13,7 @@ import {
 } from "./components.ts";
 import {
 	arena_r,
+	hitstop_r,
 	level_up_pending_r,
 	progress_r,
 	run_seed_r,
@@ -21,6 +22,7 @@ import {
 import {
 	arena_r_value_schema,
 	dir_c_value_schema,
+	hitstop_r_value_schema,
 	hp_c_value_schema,
 	level_up_pending_r_value_schema,
 	path_c_value_schema,
@@ -72,4 +74,11 @@ export const make_progress_snapshotter = (): Snapshotter =>
 		.register_resource(run_seed_r, run_seed_r_value_schema)
 		.register_resource(progress_r, progress_r_value_schema)
 		.register_resource(level_up_pending_r, level_up_pending_r_value_schema)
-		.register_resource(swing_state_r, swing_state_r_value_schema);
+		.register_resource(swing_state_r, swing_state_r_value_schema)
+		.register_resource(hitstop_r, hitstop_r_value_schema);
+//
+// NOT registered (render-only juice, ported from arena):
+//   camera_shake_r — `surface_sprite.position` mutation; world-hash never reads it.
+//   particles_r    — ring-buffer particle pool; re-emits on next hit_event.
+//   hit_events_r   — cleared each tick in `pre`; transient by contract.
+//   flash_c        — per-entity tint flash; expires in ~6 ticks; cosmetic.

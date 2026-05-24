@@ -9,7 +9,7 @@
 // from any stuck state, including a stuck pause.
 import type { System } from "@f0rbit/forge";
 import { setup_arena } from "../arena-gen.ts";
-import { level_up_pending_r, progress_r, run_seed_r } from "../resources.ts";
+import { hitstop_r, level_up_pending_r, progress_r, run_seed_r } from "../resources.ts";
 
 export const make_restart_system = (): System => (w, ctx) => {
 	if (!ctx.input.just("restart")) return;
@@ -20,5 +20,9 @@ export const make_restart_system = (): System => (w, ctx) => {
 	ctx.res.set(run_seed_r, { base, restart_count });
 	ctx.res.set(progress_r, { paused: false, dirty_stats: false, dead: false });
 	ctx.res.set(level_up_pending_r, { pending: false, choices: [] });
+	// Reset hitstop on restart so a save-mid-freeze doesn't persist into
+	// the fresh run. camera_shake / hit_events / particles are reset
+	// inside setup_arena's setup_static.
+	ctx.res.set(hitstop_r, { remaining: 0 });
 	setup_arena(w, ctx);
 };

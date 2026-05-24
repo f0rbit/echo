@@ -106,6 +106,16 @@ export const swing_state_r_value_schema = z.object({
 	active_until_tick: z.number().int().nonnegative().default(0),
 });
 
+// Hitstop gate (juice port from arena, Phase 5.4.juice). Snapshotted
+// because the freeze is gameplay-visible: it affects which ticks the
+// gameplay-stage systems advance state vs. early-return, and replay
+// determinism requires the gate state to round-trip. `.default(0)`
+// keeps loads tolerant of older JSON blobs (saved before the juice
+// port) that omit the field — same pattern as swing_state_r.
+export const hitstop_r_value_schema = z.object({
+	remaining: z.number().int().nonnegative().default(0),
+});
+
 // NOT included (per §2 Q10):
 //   - perk_registry_r — static config, rehydrated by setup_progress
 //     (AGENTS.md "Static config NOT in snapshot").

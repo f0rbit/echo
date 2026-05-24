@@ -51,12 +51,22 @@ const URLS: Record<UiTextureName, string> = {
 
 export const ui_texture_urls = (): readonly string[] => Object.values(URLS);
 
+// SCALE MODE — nearest-neighbor sampling per-texture.
+//
+// Pixi v8 defaults `TextureSource.scaleMode` to "linear" — bilinear interp
+// blurs pixel art when stretched. The 48x48 ui-borders get stretched to
+// 80x40 buttons + 320x176 panel + the viewport scale (~3x), and bilinear
+// at that magnification produces visible smear on the corner brackets.
+// Setting per-texture (not globally) keeps the dungeon atlas untouched —
+// forge's atlas loader already does the right thing for that path.
 export const load_ui_assets = async (): Promise<Record<UiTextureName, Texture>> => {
 	const entries = Object.entries(URLS) as ReadonlyArray<[UiTextureName, string]>;
 	await Assets.load(entries.map(([, url]) => url));
 	const out = {} as Record<UiTextureName, Texture>;
 	for (const [name, url] of entries) {
-		out[name] = await Assets.load(url);
+		const tex = await Assets.load(url);
+		tex.source.scaleMode = "nearest";
+		out[name] = tex;
 	}
 	return out;
 };

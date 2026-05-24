@@ -13,13 +13,15 @@ import { ticks_per_step } from "@f0rbit/forge/grid";
 import type { Cell } from "@f0rbit/forge/grid";
 import { dir_c, player_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { creature_occupancy_r, progress_r, wall_index_r } from "../resources.ts";
+import { creature_occupancy_r, hitstop_r, progress_r, wall_index_r } from "../resources.ts";
 
 export const step_every = ticks_per_step(6, 1 / 60);
 
 export const movement_system: System = (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
 	if (prog.ok && (prog.value.paused || prog.value.dead)) return;
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
 
 	const wi = ctx.res.get(wall_index_r);
 	const walls = wi.ok ? wi.value.cells : new Set<number>();

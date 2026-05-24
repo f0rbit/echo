@@ -23,13 +23,15 @@ import type { Cell } from "@f0rbit/forge/grid";
 import { astar } from "../astar.ts";
 import { chaser_c, path_c, player_c, state_c } from "../components.ts";
 import { g } from "../grid.ts";
-import { creature_occupancy_r, progress_r, wall_index_r } from "../resources.ts";
+import { creature_occupancy_r, hitstop_r, progress_r, wall_index_r } from "../resources.ts";
 
 export const AGGRO_RADIUS = 8;
 
 export const chaser_think_system: System = (w, ctx) => {
 	const prog = ctx.res.get(progress_r);
 	if (prog.ok && prog.value.paused) return;
+	const hs = ctx.res.get(hitstop_r);
+	if (hs.ok && hs.value.remaining > 0) return;
 
 	const wi = ctx.res.get(wall_index_r);
 	if (!wi.ok) return;
