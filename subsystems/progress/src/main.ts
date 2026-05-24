@@ -48,6 +48,16 @@ const main = async (): Promise<void> => {
 	// render. Option B per src/ui/assets.ts header.
 	const ui_textures: UiTextures = await load_ui_assets();
 
+	// Wait for web fonts (Press Start 2P) to load before boot — Pixi v8
+	// `Text` measures glyphs on construction, and a not-yet-loaded font
+	// falls back to system monospace for the first frame. NB:
+	// `document.fonts.ready` alone resolves immediately when no CSS rule
+	// has referenced the font yet (Google Fonts `<link>` registers the
+	// face but doesn't fetch the .woff2 until something paints with it).
+	// `fonts.load(...)` explicitly forces the fetch + await. See echo
+	// AGENTS.md "Pixel font variant" + progress FRICTION.md.
+	await document.fonts.load("8px 'Press Start 2P'");
+
 	const r = await boot({
 		mount: "#root",
 		window: { width: globalThis.innerWidth, height: globalThis.innerHeight },

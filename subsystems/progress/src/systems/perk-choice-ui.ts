@@ -41,14 +41,25 @@ import type { UiTextureName } from "../ui/assets.ts";
 // test/perk-choice-ui.test.ts. NEVER reimplement fit_scale — event_to_world
 // covers DPR + RenderTexture math (echo AGENTS.md "Canvas → world coords").
 //
-// Crisp text: `resolution: 4` + `text.scale.set(0.5)` — parent is `app.stage`
-// modal mirroring `surface_sprite`. See AGENTS.md "Crisp text recipe".
+// PIXEL FONT recipe (echo AGENTS.md "Pixel font variant"): Press Start 2P
+// at integer-multiple fontSize (8 / 16 / 24), `resolution: 1`, NO
+// `scale.set(...)`. Super-sampling + downscale would re-rasterise the
+// font's baked grid through bilinear filtering and destroy the pixel-
+// perfect look — different from the existing crisp-text recipe for
+// anti-aliased system fonts. main.ts awaits `document.fonts.ready`
+// before boot so glyphs are decoded on first frame.
 
 const DESIGN_W = g.cols * g.tile;
 const DESIGN_H = g.rows * g.tile;
 
-const BUTTON_W = 80;
-const BUTTON_H = 40;
+// Enlarged 80×40 → 100×60 to fit "1. Sharpened Blade"-class titles at
+// Press Start 2P. PS2P's effective glyph width with default letterspacing
+// is ~10px at fontSize 8 (not the naive 8px the grid suggests), so
+// `wordWrapWidth: 94` yields ~9 chars/line — long names ("Sharpened
+// Blade", "Hardened Hide") wrap onto 2 lines, leaving room beneath for
+// the 1-2 line modifier text. 3 × 100 + 2 × 8 = 316 ≤ 320 design width.
+const BUTTON_W = 100;
+const BUTTON_H = 60;
 const BUTTON_GAP = 8;
 const BUTTON_COUNT = 3;
 
@@ -60,33 +71,35 @@ const COLOR_TEXT = 0xffffff;
 const PANEL_TINT = 0x303040;
 const PANEL_ALPHA = 0.95;
 
-// fontSize + wordWrapWidth doubled vs. design because Text gets
-// `scale.set(0.5)` — crisp-text recipe renders the glyph cache at 4× DPI
-// then halves display. Visible size = stored × 0.5 = original design value.
-// wordWrap works in the pre-scale source space, so wordWrapWidth doubles
-// alongside fontSize to keep the same effective wrap width on screen.
+// Press Start 2P at native 8px — pixel-perfect, no super-sample, no
+// scale. `wordWrapWidth` lives in design space (no doubling, since
+// resolution: 1 + no scale.set means the source IS the display).
 const TITLE_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 16,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: COLOR_TEXT,
-	stroke: { color: 0x000000, width: 4 },
+	stroke: { color: 0x000000, width: 2 },
 } as const;
 
+// wordWrapWidth tighter than BUTTON_W because Press Start 2P's reported
+// glyph advance width undershoots actual rendered width by ~1-2px per
+// glyph (font-metric quirk). 16px total padding (8 each side) keeps
+// long words like "Hardened" comfortably inside the 9-slice border.
 const NAME_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 16,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: COLOR_TEXT,
 	wordWrap: true,
-	wordWrapWidth: (BUTTON_W - 6) * 2,
+	wordWrapWidth: BUTTON_W - 16,
 	align: "center" as const,
 } as const;
 
 const MOD_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 14,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: 0xc0c0c8,
 	wordWrap: true,
-	wordWrapWidth: (BUTTON_W - 6) * 2,
+	wordWrapWidth: BUTTON_W - 16,
 	align: "center" as const,
 } as const;
 
@@ -128,10 +141,9 @@ const def_for = (registry: PerkRegistry | null, perk_id: string | null): PerkDef
 	return registry.perks.get(perk_id as PerkId) ?? null;
 };
 
-const crisp_text = (text: string, style: Record<string, unknown>): Text => {
-	const t = new Text({ text, style, resolution: 4 });
-	t.scale.set(0.5);
-	return t;
+const pixel_text = (text: string, style: Record<string, unknown>): Text => {
+	// resolution: 1 + no scale.set — see "PIXEL FONT recipe" header note.
+	return new Text({ text, style, resolution: 1 });
 };
 
 export type UiTextures = Record<UiTextureName, Texture>;
@@ -187,7 +199,7 @@ export const make_perk_choice_ui = (opts: PerkChoiceUIOpts): PerkChoiceUI => {
 		buttons.push(btn);
 	}
 
-	const title = crisp_text("Choose a perk (1/2/3 or click)", TITLE_STYLE);
+	const title = pixel_text("Choose a perk (1/2/3 or click)", TITLE_STYLE);
 	title.anchor.set(0.5, 0);
 	title.position.set(DESIGN_W / 2, GRID_Y - 20);
 	container.addChild(title);
@@ -196,15 +208,20 @@ export const make_perk_choice_ui = (opts: PerkChoiceUIOpts): PerkChoiceUI => {
 	const mod_texts: Text[] = [];
 	for (let i = 0; i < BUTTON_COUNT; i++) {
 		const r = button_rects[i]!;
-		const name = crisp_text("", NAME_STYLE);
+		// Name at r.y + 6 keeps glyph cap clear of the 9-slice top border.
+		// Modifier at r.y + 36 sits below 2-line wrapped names (16px line
+		// height × 2 lines = 32px). For 1-line names the modifier sits
+		// with extra breathing room above — acceptable for the smaller
+		// font; tight pixel-perfect alignment isn't load-bearing.
+		const name = pixel_text("", NAME_STYLE);
 		name.anchor.set(0.5, 0);
-		name.position.set(r.x + r.w / 2, r.y + 4);
+		name.position.set(r.x + r.w / 2, r.y + 6);
 		container.addChild(name);
 		name_texts.push(name);
 
-		const mod = crisp_text("", MOD_STYLE);
+		const mod = pixel_text("", MOD_STYLE);
 		mod.anchor.set(0.5, 0);
-		mod.position.set(r.x + r.w / 2, r.y + 20);
+		mod.position.set(r.x + r.w / 2, r.y + 36);
 		container.addChild(mod);
 		mod_texts.push(mod);
 	}

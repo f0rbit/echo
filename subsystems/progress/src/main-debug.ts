@@ -41,6 +41,12 @@ const main = async (): Promise<void> => {
 	// per src/ui/assets.ts header (mirrors main.ts).
 	const ui_textures: UiTextures = await load_ui_assets();
 
+	// Wait for web fonts (Press Start 2P) before boot — `fonts.load(...)`
+	// (not just `fonts.ready`) is needed to actually fetch the .woff2 from
+	// the Google Fonts CDN. See main.ts header note + echo AGENTS.md
+	// "Pixel font variant".
+	await document.fonts.load("8px 'Press Start 2P'");
+
 	const r = await boot({
 		mount: "#root",
 		window: { width: globalThis.innerWidth, height: globalThis.innerHeight },

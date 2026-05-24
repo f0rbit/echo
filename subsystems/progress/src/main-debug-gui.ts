@@ -23,8 +23,9 @@ import { g } from "./grid.ts";
 // one debug fixture per visual concern. This is SEPARATE from /debug/
 // (which validates the level-up + save state machine).
 //
-// Crisp text: `resolution: 4` + `text.scale.set(0.5)` — modal mirrors
-// surface_sprite (AGENTS.md "Crisp text recipe").
+// Pixel text: Press Start 2P, `resolution: 1`, no scale.set — see echo
+// AGENTS.md "Pixel font variant". main awaits document.fonts.ready
+// before boot so glyphs are decoded on first frame.
 
 const design = { width: g.cols * g.tile, height: g.rows * g.tile };
 
@@ -40,22 +41,20 @@ const BTN_ROW_W = 3 * BTN_W + 2 * BTN_GAP;
 const BTN_X0 = Math.round((design.width - BTN_ROW_W) / 2);
 const BTN_Y = PANEL_Y + 56;
 
-const crisp_text = (text: string, style: Record<string, unknown>): Text => {
-	const t = new Text({ text, style, resolution: 4 });
-	t.scale.set(0.5);
-	return t;
+const pixel_text = (text: string, style: Record<string, unknown>): Text => {
+	return new Text({ text, style, resolution: 1 });
 };
 
 const TITLE_STYLE = {
-	fontFamily: "monospace",
+	fontFamily: "Press Start 2P",
 	fontSize: 16,
 	fill: 0xffffff,
-	stroke: { color: 0x000000, width: 4 },
+	stroke: { color: 0x000000, width: 3 },
 } as const;
 
 const LABEL_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 12,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: 0xc0c0c8,
 } as const;
 
@@ -63,6 +62,12 @@ const main = async (): Promise<void> => {
 	// Pre-boot: prime Pixi's Assets cache so NineSliceSprite has decoded
 	// textures on first tick. Option B per assets.ts header.
 	const ui = await load_ui_assets();
+
+	// Wait for web fonts (Press Start 2P) before boot — `fonts.load(...)`
+	// (not just `fonts.ready`) is needed to actually fetch the .woff2 from
+	// the Google Fonts CDN. See main.ts header note + echo AGENTS.md
+	// "Pixel font variant".
+	await document.fonts.load("8px 'Press Start 2P'");
 
 	const r = await boot({
 		mount: "#root",
@@ -104,7 +109,7 @@ const main = async (): Promise<void> => {
 	overlay.addChild(panel.container);
 
 	// Title text.
-	const title = crisp_text("Panel sample", TITLE_STYLE);
+	const title = pixel_text("Panel sample", TITLE_STYLE);
 	title.anchor.set(0.5, 0);
 	title.position.set(design.width / 2, PANEL_Y + 12);
 	overlay.addChild(title);
@@ -119,14 +124,14 @@ const main = async (): Promise<void> => {
 		overlay.addChild(btn.container);
 		buttons.push(btn);
 
-		const label = crisp_text(states[i]!, LABEL_STYLE);
+		const label = pixel_text(states[i]!, LABEL_STYLE);
 		label.anchor.set(0.5, 0);
 		label.position.set(BTN_X0 + i * (BTN_W + BTN_GAP) + BTN_W / 2, BTN_Y + BTN_H + 4);
 		overlay.addChild(label);
 	}
 
 	// Footer label.
-	const footer = crisp_text("3 buttons: idle / hover / pressed", LABEL_STYLE);
+	const footer = pixel_text("3 buttons: idle / hover / pressed", LABEL_STYLE);
 	footer.anchor.set(0.5, 0);
 	footer.position.set(design.width / 2, PANEL_Y + PANEL_H - 16);
 	overlay.addChild(footer);

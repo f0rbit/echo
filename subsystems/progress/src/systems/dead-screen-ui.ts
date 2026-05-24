@@ -9,9 +9,10 @@
 // the container so design-coord layout + event_to_world hit-tests line
 // up with the rendered geometry.
 //
-// CRISP TEXT — `resolution: 4` + `text.scale.set(0.5)` since the parent
-// is an app.stage sibling mirroring surface_sprite (per AGENTS.md
-// "Crisp text recipe"). Identical recipe to perk-choice-ui.ts.
+// PIXEL FONT — Press Start 2P at integer-multiple fontSize (16 title,
+// 8 subtitle/button), `resolution: 1`, NO `scale.set`. See echo AGENTS.md
+// "Pixel font variant". main.ts awaits `document.fonts.ready` before
+// boot so the glyphs are decoded on first frame.
 //
 // VISIBILITY — driven entirely by `opts.get_dead()`. The R-key restart
 // is handled by the existing `restart.ts` system (no new bindings).
@@ -54,29 +55,29 @@ const BACKDROP_ALPHA = 0.95;
 const PANEL_TINT = 0xffffff;
 const PANEL_ALPHA = 1;
 
-// fontSize + wordWrapWidth doubled vs. design because Text gets
-// `scale.set(0.5)` (crisp-text recipe). Visible size = stored × 0.5.
+// Press Start 2P at integer-multiple sizes (16 / 8 / 8). resolution: 1,
+// no scale.set — see PIXEL FONT header note.
 const TITLE_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 28,
+	fontFamily: "Press Start 2P",
+	fontSize: 16,
 	fill: COLOR_TITLE,
-	stroke: { color: 0x000000, width: 5 },
+	stroke: { color: 0x000000, width: 3 },
 	align: "center" as const,
 } as const;
 
 const SUBTITLE_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 14,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: COLOR_TEXT,
-	stroke: { color: 0x000000, width: 3 },
+	stroke: { color: 0x000000, width: 2 },
 	align: "center" as const,
 } as const;
 
 const BUTTON_LABEL_STYLE = {
-	fontFamily: "monospace",
-	fontSize: 14,
+	fontFamily: "Press Start 2P",
+	fontSize: 8,
 	fill: COLOR_TEXT,
-	stroke: { color: 0x000000, width: 3 },
+	stroke: { color: 0x000000, width: 2 },
 	align: "center" as const,
 } as const;
 
@@ -94,10 +95,8 @@ export const dead_screen_button_hit = (x: number, y: number): boolean => {
 	return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 };
 
-const crisp_text = (text: string, style: Record<string, unknown>): Text => {
-	const t = new Text({ text, style, resolution: 4 });
-	t.scale.set(0.5);
-	return t;
+const pixel_text = (text: string, style: Record<string, unknown>): Text => {
+	return new Text({ text, style, resolution: 1 });
 };
 
 export type UiTextures = Record<UiTextureName, Texture>;
@@ -150,12 +149,12 @@ export const make_dead_screen_ui = (opts: DeadScreenUIOpts): DeadScreenUI => {
 	panel.container.alpha = PANEL_ALPHA;
 	container.addChild(panel.container);
 
-	const title = crisp_text("YOU DIED", TITLE_STYLE);
+	const title = pixel_text("YOU DIED", TITLE_STYLE);
 	title.anchor.set(0.5, 0);
 	title.position.set(DESIGN_W / 2, PANEL_Y + 8);
 	container.addChild(title);
 
-	const subtitle = crisp_text("press R to restart", SUBTITLE_STYLE);
+	const subtitle = pixel_text("press R to restart", SUBTITLE_STYLE);
 	subtitle.anchor.set(0.5, 0);
 	subtitle.position.set(DESIGN_W / 2, PANEL_Y + 32);
 	container.addChild(subtitle);
@@ -170,7 +169,7 @@ export const make_dead_screen_ui = (opts: DeadScreenUIOpts): DeadScreenUI => {
 	restart_button.set_state("idle");
 	container.addChild(restart_button.container);
 
-	const button_label = crisp_text("Restart", BUTTON_LABEL_STYLE);
+	const button_label = pixel_text("Restart", BUTTON_LABEL_STYLE);
 	button_label.anchor.set(0.5, 0.5);
 	button_label.position.set(BUTTON_X + BUTTON_W / 2, BUTTON_Y + BUTTON_H / 2);
 	container.addChild(button_label);
