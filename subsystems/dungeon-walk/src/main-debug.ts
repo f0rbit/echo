@@ -1,4 +1,5 @@
 import { boot } from "@f0rbit/forge/pixi";
+import { is_dev } from "@f0rbit/forge/debug";
 import { game_bindings } from "./bindings.ts";
 import { visual_pos_c } from "./components.ts";
 import { debug_plugin } from "./debug-plugin.ts";
@@ -20,6 +21,8 @@ const main = async (): Promise<void> => {
 			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
 			{ kind: "atlas", alias: "walls", url: "walls-autotile.json" },
 		],
+		debug: true,
+		app_id: "dungeon-walk-debug",
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

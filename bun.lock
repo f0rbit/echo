@@ -26,7 +26,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@f0rbit/corpus": "^0.3.5",
-        "@f0rbit/forge": "^0.5.0",
+        "@f0rbit/forge": "^0.5.4",
         "pixi.js": "^8",
         "zod": "^3.25.0",
       },
@@ -40,7 +40,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@f0rbit/corpus": "^0.3.5",
-        "@f0rbit/forge": "^0.5.0",
+        "@f0rbit/forge": "^0.5.4",
         "pixi.js": "^8",
         "zod": "^3.25.0",
       },
@@ -54,7 +54,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@f0rbit/corpus": "^0.3.5",
-        "@f0rbit/forge": "^0.5.0",
+        "@f0rbit/forge": "^0.5.4",
         "pixi.js": "^8",
         "zod": "^3.25.0",
       },
@@ -68,7 +68,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@f0rbit/corpus": "^0.3.5",
-        "@f0rbit/forge": "^0.5.0",
+        "@f0rbit/forge": "^0.5.4",
         "pixi.js": "^8",
         "zod": "^3.25.0",
       },
@@ -82,7 +82,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@f0rbit/corpus": "^0.3.5",
-        "@f0rbit/forge": "^0.5.0",
+        "@f0rbit/forge": "^0.5.4",
         "pixi.js": "^8",
         "zod": "^3.25.0",
       },
@@ -191,7 +191,7 @@
 
     "@f0rbit/corpus": ["@f0rbit/corpus@0.3.5", "", { "dependencies": { "drizzle-orm": "^0.44.7" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }, "sha512-G7bg9VroEiGnuyrZPOPQ51sTWx1ryyOXrHwN8sC43NraTY5xeUfaR11CSoOB43UJGFTwGovMulRxssMhcWznxw=="],
 
-    "@f0rbit/forge": ["@f0rbit/forge@0.5.0", "", { "dependencies": { "@f0rbit/corpus": "^0.3.5", "zod": "^3.25.0" }, "peerDependencies": { "pixi.js": "^8" }, "optionalPeers": ["pixi.js"] }, "sha512-48DpcozmJONXHt8+kRN3jEYBrcnJOkzG4zF7JKAUHwgEdvXYkgZi7m4GpSVX3BTsIp5mRRoEtPo6UqX7o9natQ=="],
+    "@f0rbit/forge": ["@f0rbit/forge@0.5.4", "", { "dependencies": { "@f0rbit/corpus": "^0.3.5", "zod": "^3.25.0" }, "peerDependencies": { "pixi.js": "^8" }, "optionalPeers": ["pixi.js"] }, "sha512-c7xj9sXheJLxdAh1ru8agFFdexrR15CNQ395mjHG37rBuOXX3xlx1yxa1jQ8YlIufSuS8UVCJpD880xgAQf+Ug=="],
 
     "@f0rbit/ui": ["@f0rbit/ui@0.1.9", "", { "peerDependencies": { "solid-js": "^1.8.0" } }, "sha512-A8Nn7c0vQ6tC23OtnCwNmnF3Z0V7PCPvgFveoqozFiSjLMEt7wPrfX8oiwIZE6xS6sskKkiZ4LUKIJD6v1Ql4Q=="],
 

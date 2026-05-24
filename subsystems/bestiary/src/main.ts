@@ -1,4 +1,5 @@
 import { boot } from "@f0rbit/forge/pixi";
+import { is_dev } from "@f0rbit/forge/debug";
 import { Container, Rectangle } from "pixi.js";
 import { brazier_cells } from "./arena-gen.ts";
 import { game_bindings } from "./bindings.ts";
@@ -27,6 +28,8 @@ const main = async (): Promise<void> => {
 			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
 			{ kind: "atlas", alias: "walls", url: "walls-autotile.json" },
 		],
+		debug: is_dev(),
+		app_id: "bestiary",
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

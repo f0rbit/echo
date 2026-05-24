@@ -1,5 +1,6 @@
 import { boot } from "@f0rbit/forge/pixi";
 import { pos_c } from "@f0rbit/forge";
+import { is_dev } from "@f0rbit/forge/debug";
 import { make_light_system, presets } from "@f0rbit/forge/light";
 import { Graphics, Rectangle } from "pixi.js";
 import { game_bindings } from "./bindings.ts";
@@ -31,6 +32,8 @@ const main = async (): Promise<void> => {
 			{ kind: "atlas", alias: "dungeon", url: "dungeon-atlas.json" },
 			{ kind: "atlas", alias: "walls", url: "walls-autotile.json" },
 		],
+		debug: is_dev(),
+		app_id: "arena",
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

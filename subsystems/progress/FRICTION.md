@@ -117,6 +117,8 @@ Phase 2's verification coder could not visually smoke from the sandbox: `bun --p
 
 Recommendation for the next subsystem: add a `"serve": "bun --port 4567 serve dist"` script (or equivalent) to each subsystem's `package.json` so the verification coder has an in-bounds path to local HTTP. Worth a follow-up; not blocking Phase 3. See the Phase 2 commit body (`e983c26`) for the original workaround note.
 
+**Update (forge v0.5.4):** the screenshot side of this trap is now resolved by forge's debug surface — calling `window.__forge.app.screenshot()` from the DevTools console (or via Chrome-MCP `evaluate_script`) returns a `Blob` extracted from the live Pixi canvas, so a verification coder no longer needs synthetic keyboard events or `canvas.toDataURL()` fallbacks to grab a frame. The HTTP-server requirement still applies — the page itself must be served over HTTP for the ES-module entry to load at all — but once the page is up, every debug-build boot exposes `__forge` and the screenshot recipe works without any in-page wiring on the consumer side. See AGENTS.md "Forge debug surface" subsection for the canonical MCP recipes.
+
 ## 23. `UiTextures` exported from `perk-choice-ui.ts`, should live in `src/ui/assets.ts`
 
 Phase 2 exported `export type UiTextures = Record<UiTextureName, Texture>` from `subsystems/progress/src/systems/perk-choice-ui.ts:137` because the boot files (`main.ts`, `main-debug.ts`) were already importing the factory from there — co-locating the opt type avoided an extra import line. Functionally correct.

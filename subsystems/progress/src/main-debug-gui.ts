@@ -73,6 +73,8 @@ const main = async (): Promise<void> => {
 			min: design,
 			pixel_perfect: true,
 		},
+		debug: true,
+		app_id: "progress-debug-gui",
 	});
 	if (!r.ok) {
 		console.error("boot failed", r.error);

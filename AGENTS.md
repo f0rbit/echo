@@ -73,6 +73,29 @@ bun run serve:<sub>     # e.g. serve:progress, serve:arena, serve:hub
 
 Root has `serve:hub`, `serve:arena`, `serve:bestiary`, `serve:dungeon-walk`, `serve:loot`, `serve:progress`. Pick a free port via `bun ../../tools/serve-dist.ts dist <port>` if 4567 is taken. This is the canonical path for any non-sandboxed verification coder to self-smoke a production build (vs. `bun run dev`, which is for source-watching). See progress FRICTION.md §22 for why `bunx serve` + `python3 -m http.server` were rejected as sandbox-blocked alternatives.
 
+### Forge debug surface — `window.__forge` + `app.screenshot()` + palette MCP recipes
+
+Every subsystem boots forge v0.5.4+ with `debug: is_dev()` and an `app_id: "<subsystem>"` (debug fixtures hard-code `debug: true`). When the debug surface is on, forge attaches `window.__forge = { app, world, res, schedule, time, rng, palette, screenshot }` and registers a set of builtin palette commands (`/screenshot`, `/dump-state`, `/pause`, `/resume`, `/step [n]`, `/slowmo <f>`, `/normal`). `App.screenshot()` is always callable — it just no-ops to an empty `Blob` when `debug: false`.
+
+`is_dev()` lives at `@f0rbit/forge/debug` and auto-detects via `__DEV__` global + `NODE_ENV`. Don't roll your own dev/prod guard — defer to forge so the dev/prod policy stays in one place.
+
+Chrome-DevTools-MCP recipes (preferred over synthetic-keyboard / `canvas.toDataURL()` workarounds — see progress FRICTION.md §22):
+
+```js
+// pretty-printed world + resources dump (returns a string ready for read-back)
+await window.__forge.palette.run("dump-state")
+
+// imperative screenshot — returns a Blob extracted from the live Pixi canvas
+await window.__forge.app.screenshot()
+
+// step exactly N ticks while paused (deterministic frame-by-frame stepping)
+await window.__forge.palette.run("pause")
+await window.__forge.palette.run("step 5")
+await window.__forge.palette.run("resume")
+```
+
+`__forge.palette.run(line)` returns a `Promise<string>` (the line of output the palette would have printed), so a verification coder can `evaluate_script` the call and read the textual reply back through DevTools console — no DOM event synthesis needed. Use `app_id` to disambiguate when more than one debug-enabled tab is open in the same browser profile (forge namespaces `__forge` per app id internally).
+
 ### `bunx serve` (and stale ports generally) silently reuse the previous process — verify with `curl`
 
 Any static server (`bunx serve`, `python -m http.server`, our `serve-dist.ts`) bound to an already-occupied port will silently fall through to the **previous process** serving that port — Chrome DevTools then screenshots stale content, which the agent reads as "the change didn't apply".
