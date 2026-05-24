@@ -61,6 +61,18 @@ Three copies exist as of progress (bestiary, progress; boss-to-come is the fourt
 - `bun test` — runs every subsystem's replay-as-test fixture from the root
 - Push to `main` triggers `.github/workflows/pages.yml` which builds, aggregates to `_site/` (flat), and deploys to GitHub Pages
 
+### `bunx serve` (and stale ports generally) silently reuse the previous process — verify with `curl`
+
+Any static server (`bunx serve`, `python -m http.server`, our `serve-dist.ts`) bound to an already-occupied port will silently fall through to the **previous process** serving that port — Chrome DevTools then screenshots stale content, which the agent reads as "the change didn't apply".
+
+Before trusting a visual screenshot, verify the live response:
+
+```sh
+curl -s http://localhost:<port>/ | head -5
+```
+
+Confirm the response matches the current `dist/index.html`. If it doesn't, kill stale processes (`lsof -i :<port>` → `kill -9 <pid>`) and re-serve. Bit phase 5.9.3 (progress visual smoke). Trivially preventable.
+
 ### Replay-as-test timeouts
 
 `bun test` defaults to a 5 s per-test timeout. Replay-driven tests run the full recorded fixture (e.g. arena's `wave-clear.replay.json` is 2812 frames ≈ 30 s of fixed-dt simulation in the harness), which trips the default with a useless abort. Pass the timeout as the third arg to `test()`:
@@ -142,6 +154,48 @@ Within cell-step subsystems there are two `dir_c` patterns — pick at scaffold 
 
 Document the choice in the subsystem's local notes. See progress FRICTION.md §4.
 
+### Crisp text — `resolution: 4` per-Text, `scale: 0.5` when container scales
+
+All `pixi.Text` constructors get `resolution: 4`. The follow-up `text.scale.set(0.5)` depends on the parent container:
+
+| Parent | `resolution` | `text.scale.set(...)` |
+|--------|--------------|------------------------|
+| `app.render.world` (lighting-filtered) | 4 | 0.5 |
+| `app.render.debug_overlay` (canvas-pixel space) | 4 | — (no scale) |
+| `app.stage` modal mirroring `surface_sprite` (loot inventory, progress perks, arena shell screens) | 4 | 0.5 |
+
+The 4× super-sample renders the glyph cache at higher DPI; the 0.5 scale takes the displayed Text back to design-space dimensions. **Net effective on-screen DPI: 2× the design canvas.** Without this, Pixi v8 samples the cached glyph texture inappropriately when the container scales > 1 — text looks aliased + blurry.
+
+Practical consequence for modal text (any place `scale.set(0.5)` is in play): **double the stored `fontSize` and `wordWrapWidth`** so the visible size + wrap behaviour match the original design. E.g. a design-space 8 px label with `wordWrapWidth: 78` becomes `fontSize: 16` + `wordWrapWidth: 156` after the recipe; on-screen result is 8 px visible at 4× DPI cache.
+
+Established by commit `f1614a6` (bestiary wall-debug) for `app.render.world`; extended to `app.stage` modal overlays by arena shell screens (Phase 5.9.4); swept across loot HUDs + progress HUDs + arena debug overlay in Phase 5.9.5.
+
+### 9-sliced game UI panels + buttons — `NineSliceSprite` + Kenney pack
+
+Game UI (modals, panels, buttons) uses Pixi v8's `NineSliceSprite` against Kenney-style asset packs (CC0 9-slice PNGs). Convention:
+
+- **Raw PNGs, no atlas.** Until a subsystem has ≥12 distinct UI assets the atlas-packing overhead isn't justified — `NineSliceSprite` accepts a `Texture` directly. The dungeon + walls atlases stay the precedent for ≥40-tile sheets; UI is a different scale.
+- **Slice insets as module-level constants** in the wrapper file (`DEFAULT_PANEL_INSETS = { left: 8, top: 8, right: 8, bottom: 8 }` for Kenney's 48×48 borders). Document the source filename in a header comment — a future asset swap forces a fresh visual-inspection pass + its own constants.
+- **Asset loading — Option B (pre-boot `Assets.load`).** Wire UI texture URLs into a helper like `subsystems/<sub>/src/ui/assets.ts:load_ui_assets()` and `await` it BEFORE forge's `boot()`. Lazy `Texture.from()` inside the wrappers risks a blank first frame on slow connections — visible flicker exactly when the modal pops. Pixi's `Assets` cache is process-global so later `Texture.from(url)` lookups stay synchronous once loaded.
+- **Modal placement.** Per existing "Game UI overlays — `app.stage` sibling, mirror `surface_sprite`" recipe. NineSlice modals go on `app.stage`, NOT `app.render.world` (lighting filter would darken them in unseen areas).
+- **Folder hygiene.** Kenney's pack ships subfolders with spaces — rename to kebab-case on disk so URLs are clean (`transparent-border/` not `Transparent%20border/`) per the repo's kebab-case filename convention.
+
+First consumer: progress's perk-choice modal. See `subsystems/progress/src/ui/{assets,panel,button}.ts` for the canonical shapes and `subsystems/progress/FRICTION.md` §17–§19.
+
+### Tiled floors + perimeter walls — every subsystem
+
+All subsystems with a 20×11 single-room arena render:
+- A `floor_c` entity in **every** cell (sprite `floor_1`, z=1).
+- A `wall_c` entity in every **perimeter** cell (sprite via `wall_autotile_system` from `@f0rbit/forge/autotile`, z=2).
+
+Game entities (player, enemies, projectiles, pickups) sit at z=3. The 0x72 floor frames have full opaque coverage; the 0x72 wall frames have transparent edges (designed to show floor through them) — hence floor + wall **co-spawn at the same perimeter cell**, with explicit z-order resolving stacking.
+
+Spawn reservations (player spawn, pickup placement, enemy spawn) MUST exclude wall cells. Visual walls are **NOT collision-blocking** — existing `g.in_bounds` clamping (arena) or cell-step move guards (loot, progress) prevent the player from leaving the playable area.
+
+Per "No `@echo/shared`" above — `walls-autotile.{png,json}` is **duplicated per subsystem** under `public/`. Forge ships no binaries; duplication is the cost of the per-subsystem-asset rule.
+
+Established as standard in Phase 5.9.0–5.9.3 of the polish pass.
+
 ### Debug fixture pattern
 
 For any visual system that's non-trivial (autotiling, lighting, particles, post-processing), ship a `subsystems/<sub>/debug/` companion page alongside the playable one. Pattern (see `dungeon-walk/src/main-debug.ts` + `dungeon-walk/src/debug-plugin.ts` + `dungeon-walk/src/systems/debug-arena-gen.ts`):
@@ -154,6 +208,15 @@ For any visual system that's non-trivial (autotiling, lighting, particles, post-
 - Deployed at `/echo/<sub>/debug/`
 
 Visual fixtures unlock fast iteration (and let agents verify autonomously via Chrome DevTools screenshots) without procedural-dungeon noise + lighting interference.
+
+#### One debug fixture per visual concern
+
+When a subsystem ships multiple debug fixtures, each fixture validates exactly one concern. Don't conflate a UI cookbook with a gameplay-state fixture. Example: progress ships two —
+
+- `/echo/progress/debug/` (`src/main-debug.ts`) — validates the level-up state machine + persistence via choreographed XP grants. Real save/restore round-trip, real perk picks, no UI variation exercised.
+- `/echo/progress/debug-gui/` (`src/main-debug-gui.ts`) — validates the visual primitives. Every panel + button state on one screen, no gameplay, no input wiring beyond pointer-hover. Title text + idle/hover/pressed buttons rendered as a static cookbook.
+
+Conflating them muddles each fixture's responsibility — a regression in one concern shouldn't require investigating the other. Each fixture gets its own boot, its own (optionally stripped) plugin, its own HTML shell, and its own build-script entry per the "Debug build pipeline rename" recipe. The deploy step's `cp -r dist/. _site/.../<sub>/` picks all fixtures up automatically — no `pages.yml` change needed when adding a new one.
 
 #### Debug build pipeline rename
 
@@ -194,6 +257,15 @@ Startup systems that read or initialise resources need the `ctx` parameter — `
 
 Spawn as `world.spawn([pos_c, p], [vel_c, v])` — pass each component-value pair as a separate argument. Do NOT wrap the pairs in an outer array (`world.spawn([[pos_c, p], [vel_c, v]])` is wrong and will silently spawn an empty entity).
 
+### `make_eye_follow_system` accepts any `Component<{x, y}>` position (positive finding)
+
+Forge's `make_eye_follow_system` (eye / pupil tracking) is generic over the position component shape — it accepts any `Component<{x, y}>`. Confirmed working for:
+
+- `pos_c` (continuous-motion: arena) — integer-snapped per tick
+- `visual_pos_c` (cell-step + tween: loot, progress, bestiary) — lerped per tick
+
+Future subsystems don't need to worry about the position-component shape matching — just pass whichever one the player's eyes should track. Surfaced in Phase 5.9.1 (arena visual parity).
+
 ## Architecture patterns
 
 ### Game-state gates, NOT `time.scale = 0`
@@ -207,6 +279,50 @@ Correct pattern: a gate resource (e.g. `hitstop_r.remaining > 0`, `paused_r.valu
 Anything in the resource bag is contracted into the snapshot surface. Click queues, animation pending-flags, network in-flight requests, DOM event buffers — anything that must NOT survive snapshot/restore — belongs in a factory closure, not a resource.
 
 Pattern: `make_<system>(): { system: System; <imperative_setter>(): void }`. The returned system is registered; the imperative setters are called by DOM handlers / replay bridges / etc. The closure-captured state never enters the snapshot surface. Loot's inventory click queue is the canonical example: `make_inventory_system(): { system, queue_click }`. See `subsystems/loot/src/systems/inventory.ts` and loot FRICTION.md §4.
+
+### Reusable UI primitives — game-side until 3rd consumer
+
+UI primitives (panel, button, future modal/list/dialog) live under `subsystems/<sub>/src/ui/` until 3+ subsystems consume them — at which point they promote to `@f0rbit/forge/ui`. Same 3-consumer gate as the chaser-AI bundle (see "Convention for duplicating bestiary's chaser AI" above), applied to UI.
+
+Canonical shape (from `subsystems/progress/src/ui/`):
+
+- **`assets.ts`** — `UiTextureName` string-literal union, name → URL map, `load_ui_assets(): Promise<Record<UiTextureName, Texture>>` helper that resolves before forge's `boot()`.
+- **`panel.ts`** — `make_panel({ texture, width, height, insets? }): { container }`. Returns `{ container }` (not the `NineSliceSprite` directly) so callers can `addChild` text / siblings on top without slice math leaking into the public API.
+- **`button.ts`** — `make_button({ idle_tex, hover_tex?, pressed_tex?, width, height, label?, insets? }): { container, set_state, get_bounds }`. `set_state("idle" | "hover" | "pressed")` swaps layered NineSlice children OR modulates `idle.tint` when only `idle_tex` is supplied. `get_bounds()` returns `{x, y, w, h}` so pure-function hit-test helpers stay load-bearing.
+
+Header convention: each file carries a `// FORGE-PROMOTION-CANDIDATE` header listing all known consumers + the planned promotion phase (currently Phase 8 `main`). Reuses the same comment shape as the chaser-AI bundle. Density of promotion-candidate headers across the repo is the signal future agents look for when scoping forge bumps.
+
+Current count: 1/3 consumers (progress only). See "Forge promotion candidates (deferred)" table below.
+
+### Game shell — resource-driven FSM with copied bestiary `fsm.ts`
+
+Subsystems that ship landing / win / lost screens use a `game_state_r` resource keyed by `"menu" | "playing" | "won" | "lost"`. Every update-stage gameplay system early-returns when `state !== "playing"`. Render-stage systems keep running so overlays (menu, win banner, lost banner) continue to display + animate at full `time.scale = 1`.
+
+Transitions live in a single `game-state.ts` system at `pre` phase 0 — it inspects health, wave state, and input actions, calls a tiny FSM helper (`fsm.ts`, ~12 LOC, copied byte-identical from bestiary's), and on the transition into `playing` re-runs `setup_arena` (idempotent).
+
+Boot flow: `main.ts` wires the three overlay screens as siblings of `surface_sprite` via `addChildAt(palette_idx)` (per the "Sibling z-order in `app.stage`" recipe), mirrors viewport scale + offset on resize, and does **NOT** call `setup_arena` at boot — the FSM owns the spawn step.
+
+Per "Game-state gates, NOT `time.scale = 0`" above — gate via resource early-return, never via `time.scale`. The menu screen runs at full `time.scale = 1` so overlay animations are smooth.
+
+Canonical implementation: `subsystems/arena/` (Phase 5.9.4). Apply to other subsystems only after a third consumer materialises — until then, `fsm.ts` stays a copied-not-shared 12-LOC helper (bestiary AI + arena shell are the two current consumers, and their state shapes differ).
+
+### Restart sweep when changing startup spawn timing
+
+If a system depends on entities spawned at startup, and startup gets deferred to a `pre`-stage system (e.g. game-state FSM owning `setup_arena` instead of running it at boot), the dependent system **must also move to pre-stage** — and it must be idempotent (because `pre` runs every tick while spawn only happens once per FSM transition).
+
+Symptom if you forget: the dependent system runs once at `update` on tick 0 against an empty world, then never re-checks. State (e.g. wave timer, spawn point reservation) is silently broken for the rest of the run.
+
+Pattern: any system that reads entities-spawned-by-the-startup-flow gets a fast bail-out (`if (already_initialized) return`) and moves to pre-stage alongside the FSM. Bit phase 5.9.4 (arena shell).
+
+### Input-driven systems need state gates when adding a game-state FSM
+
+Adding a `game_state_r` FSM to a previously-stateless subsystem requires a sweep across **every input-driven system** — not just gameplay ones. Examples:
+
+- Restart action (R) — should reset to `menu`, not just respawn
+- Pause toggle (Esc) — should be gated on `state === "playing"`
+- Debug toggles (Tab, etc.) — usually fine to leave ungated, but think it through
+
+The first FSM-conversion of a subsystem is the only time this matters; after that, future additions just follow the existing pattern. Bit phase 5.9.4 (arena shell) — restart action was firing during `menu` state, causing instant-respawn-on-menu-press-R.
 
 ## Snapshot / persistence
 
@@ -239,6 +355,19 @@ Two fixes:
 
 **Symptom if you ignore this:** mid-replay snap-and-restore appears byte-stable for one tick, then diverges several ticks later as the next fork-draw happens at different counts in source vs. restored sim. See progress FRICTION.md §5.
 
+### Re-record replay fixtures when changing rng-consuming setup
+
+Adding or reordering any rng-consuming step in startup or pre-stage breaks existing recorded replays. Examples that require a fresh recording + new expected hash:
+
+- Pickup placement order or count
+- Enemy spawn slot reservation (changes the draw count before player spawn)
+- Perk choice shuffle (changes which 3 of N perks appear at LV-up)
+- Anything calling `ctx.rng.fork()` or `ctx.rng.next_*()` at startup
+
+Even visually-identical changes (e.g. spawning a wall + floor entity alongside the player) do NOT require re-record IF those entities don't enter the world-hash projection AND they don't consume from `ctx.rng`. arena Phase 5.9.1 (walls + floors, no game-state shell) needed NO re-record because the projection is `{ player_pos, wave_state, health, particles }` and floor/wall spawn doesn't roll dice. arena Phase 5.9.4 (game shell with deferred `setup_arena`) **did** need re-record because the rng-draw sequence shifted by one tick.
+
+Workflow: record at `f0rbit.github.io/echo/<sub>/` via the in-page recorder → save the JSON → update `expected_hash` in `test/replay.test.ts` → confirm replay-as-test passes.
+
 ### Disk-save key shared between production and debug fixture is intentional
 
 Progress's debug fixture writes to `echo:progress:save:slot-1` — the same key as the production page. Intentional: running the debug fixture then reloading the production page surfaces the restored state visually, with zero manual input needed.
@@ -262,6 +391,11 @@ Tracker for helpers / systems duplicated across subsystems that meet the `PLAN.m
 | `localstorage_store()` (browser persistence backend mirroring corpus `create_file_backend`) | progress | hub (Phase 7 — settings, run-list, recent-saves) | end of Phase 7, forge v0.4.x patch | `forge/src/storage/` |
 | `compose_modifiers()` (additive + multiplicative stat composition over a sources list) | loot, progress | main (Phase 8 composes equipment + perks against the same `Stats` shape) | Phase 8 `main` | `forge/src/composition/modifiers.ts` |
 | A* + chaser AI bundle (`astar.ts` + `ai-chaser.ts` + `path-step.ts` + `creature-occupancy.ts`) | bestiary, progress | boss (Phase 6) → three copies by end of Phase 6 | end of Phase 8 `main` (after composition stabilises the shape) | `forge/src/ai/` |
+| `forge.ui` (panel + button `NineSliceSprite` wrappers) | progress | boss likely #2, hub or main likely #3 | end of Phase 8 `main` | `forge/src/ui/` |
+
+**`forge.ui` promotion shape:** generalise `UiTextureName` from a fixed string-literal union to a string-keyed `Record<string, Texture>` — the wrapper API shouldn't constrain consumer-specific asset names. `panel.ts` + `button.ts` already accept `Texture` (not URL strings) so the consumer controls loading; only `assets.ts`'s name-typing needs to relax at promotion time.
+
+Note: `wall_autotile` shipped in `@f0rbit/forge/autotile` v0.5.0 (Phase 5.9.0) and is no longer deferred — consumed by bestiary, dungeon-walk, arena, loot, and progress.
 
 **`compose_modifiers()` signature sketch:**
 
