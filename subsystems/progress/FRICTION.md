@@ -78,3 +78,47 @@ Plan suggested auto-swing + auto-chase choreography. Production debug fixture in
 ## 16. AGENTS.md "Forge API gotchas" still earned its keep
 
 Same lesson as loot FRICTION.md §14: `world.despawn` (not `delete`), `world.spawn(...)` variadic-tuple, `ctx.res` not `world.res`, marker components elided from query tuples — all four bit again during sanity checks across phases 5.2 / 5.3 / 5.5. Reading the section before each new file beats trusting recall. Reinforces the rule's value.
+
+## 17. `NineSliceSprite` + lighting filter + RenderTexture pipeline
+
+The Phase 1 cookbook fixture confirmed it visually + Phase 2's production modal reconfirmed: the modal lives on `app.stage` as a sibling of `surface_sprite`, so the `app.render.world` lighting filter does NOT touch it. The 9-slice panel + buttons render at full brightness regardless of the player's eye-light reach — which is what we want for a top-most modal.
+
+If a future consumer puts a `NineSliceSprite` INSIDE `app.render.world` (don't), the filter applies and the slice corner regions get darkened in unseen areas — even though the modal is "above" gameplay logically. Use `app.render.debug_overlay` (unfiltered) for HUDs / debug markers or an `app.stage` sibling for game UI that wants consistent brightness. See `subsystems/progress/src/main-debug-gui.ts` for the cookbook precedent and `subsystems/progress/src/systems/perk-choice-ui.ts:153-171` for the production wiring.
+
+## 18. Option B asset wiring chosen over lazy `Texture.from()`
+
+Phase 1 picked Option B (pre-boot `Assets.load([...urls])` via `subsystems/progress/src/ui/assets.ts:load_ui_assets()`). Reasoning: (a) it mirrors the established forge pattern for atlases (`boot({ assets: [{ kind: "atlas", ... }] })`), and (b) `NineSliceSprite` rendered with a not-yet-decoded `Texture` shows a blank frame for ~1 tick — visible flicker on slow connections, exactly the moment the user opens the level-up modal.
+
+Option A (lazy `Texture.from(url)` inside `panel.ts` / `button.ts`) was rejected. Pixi's `Assets` cache is process-global, so once `load_ui_assets()` resolves the textures stay hot for `Texture.from(url)` synchronous lookups elsewhere if a future consumer wants the lazy ergonomics anyway.
+
+Boot wiring: `main.ts` + `main-debug.ts` both `await load_ui_assets()` before forge's `boot()` and pass the loaded `Record<UiTextureName, Texture>` into `make_perk_choice_ui` via the required `get_ui_textures` opt.
+
+## 19. Slice-inset derivation by visual inspection
+
+Kenney's pack ships 48×48 panel + border PNGs with a visually ~8 px outer frame on `panel-000.png` + `panel-border-000.png` (the chosen assets). Phase 1 set `DEFAULT_PANEL_INSETS = { left: 8, top: 8, right: 8, bottom: 8 }` in `subsystems/progress/src/ui/panel.ts:34` after visual smoke at the cookbook fixture — the slice corners render cleanly without bleeding the bracket art, and the centre region tiles without visible seams.
+
+The exact pixel inset is sprite-specific and not documented in the Kenney pack. Derive once per sprite by opening the PNG in an image editor, measuring the border thickness, then setting the inset slightly tighter than the visible edge. Module-level constants in `panel.ts` document the choice with the source filename so a future asset swap forces a fresh derivation pass + its own constants.
+
+## 20. `/debug-gui/` is a SEPARATE fixture from `/debug/`
+
+Conflating "UI cookbook" with the existing "level-up loop" fixture would muddle the responsibility of each. `/debug/` (`src/main-debug.ts`) exists to validate the gameplay state machine + persistence — direct XP grants at choreographed ticks, real save/restore round-trip; see FRICTION.md §13–§14. `/debug-gui/` (`src/main-debug-gui.ts`) exists to validate visual primitives — every panel + button state on one screen, no gameplay, no input wiring beyond pointer-hover.
+
+Separate boot, separate plugin (or none), separate HTML. Pattern: one debug fixture per visual concern. The deploy step `cp -r dist/. _site/.../<sub>/` picks both up automatically — no `pages.yml` change needed when adding a new fixture.
+
+## 21. Hover not wired in production despite `Button.set_state("hover")` shape
+
+The `make_button` factory (`subsystems/progress/src/ui/button.ts:64-120`) exposes `set_state("idle" | "hover" | "pressed")` because the cookbook fixture needs all three for visual regression. Production `perk-choice-ui.ts:redraw()` only ever calls `set_state("idle")` — the primary input is keyboard 1/2/3 (no pointer position), and pointer hover adds animation timing complexity (hover-on / hover-off, fade durations) that doesn't justify itself for a 3-button modal that closes immediately on pick.
+
+If a future consumer with many buttons wants hover, opt in at the call site (wire `pointermove` → `set_state("hover")`). The factory shape stays the same. Same goes for pressed-state: a 100 ms "pressed → idle" transition wired before `opts.on_pick` is trivial to add when game-design lands the call — documented as future work in `UI-PROPOSED-AGENTS-UPDATES.md`.
+
+## 22. Local visual smoke needs HTTP — `file://` + ES modules hit CORS
+
+Phase 2's verification coder could not visually smoke from the sandbox: `bun --port N serve` + `python3 -m http.server` were both denied, and opening `dist/index.html` directly via `file://` hit a CORS error on the ES-module `dist/main.js`. The orchestrator worked around it by running `python3 -m http.server 4567` in an unsandboxed shell and screenshotting via Chrome DevTools MCP — fine for orchestrator-driven smoke, but the verification coder couldn't self-validate.
+
+Recommendation for the next subsystem: add a `"serve": "bun --port 4567 serve dist"` script (or equivalent) to each subsystem's `package.json` so the verification coder has an in-bounds path to local HTTP. Worth a follow-up; not blocking Phase 3. See the Phase 2 commit body (`e983c26`) for the original workaround note.
+
+## 23. `UiTextures` exported from `perk-choice-ui.ts`, should live in `src/ui/assets.ts`
+
+Phase 2 exported `export type UiTextures = Record<UiTextureName, Texture>` from `subsystems/progress/src/systems/perk-choice-ui.ts:137` because the boot files (`main.ts`, `main-debug.ts`) were already importing the factory from there — co-locating the opt type avoided an extra import line. Functionally correct.
+
+When promoted to `@f0rbit/forge/ui` (consumer #3 lands), `UiTextures` belongs alongside `UiTextureName` + `load_ui_assets` in `src/ui/assets.ts` — that's the natural home for the texture-shape contract, separate from any particular consumer of the textures. Trivial refactor (move the type, update two import lines); not breaking. Worth a note here so the next agent moves it without re-investigating.
