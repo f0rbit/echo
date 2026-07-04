@@ -1,5 +1,7 @@
 # progress — friction notes
 
+> Note (2026-07-04): `PROPOSED-AGENTS-UPDATES.md` references below point at a retired staging file — everything in it was merged into the repo-root `AGENTS.md` + `docs/`. Current conventions live in `docs/`.
+
 ## Status
 
 Progress subsystem complete (v0.0.1 against forge 0.4.3). Cell-step player + 1-tile melee + bestiary-style chasers in a 320×180 single-room arena; XP-driven levelling with a pause-and-pick 5-perk pool; auto-save on every kill / level-up via a localStorage-backed `disk_save`; mid-replay snapshot round-trip AND disk-format round-trip are byte-stable; debug fixture page bypasses real combat to verify the level-up + save loop autonomously. Live at https://f0rbit.github.io/echo/progress/ + /progress/debug/. 75 tests across 8 files.

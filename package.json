@@ -18,7 +18,10 @@
     "serve:loot": "cd subsystems/loot && bun run serve",
     "serve:progress": "cd subsystems/progress && bun run serve",
     "test": "bun test",
-    "typecheck": "bun run hub:typecheck"
+    "typecheck": "bun run hub:typecheck",
+    "subsystems:typecheck": "for d in subsystems/*/; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run typecheck) || exit 1; done",
+    "typecheck:all": "bun run typecheck && bun run subsystems:typecheck",
+    "verify": "bun run typecheck:all && bun test && bun run build:all"
   },
   "devDependencies": {
     "@types/bun": "^1.3.0",

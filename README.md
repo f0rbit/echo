@@ -2,7 +2,7 @@
 
 An infinite dungeon crawler, built on [`@f0rbit/forge`](https://www.npmjs.com/package/@f0rbit/forge). The repo is a `bun` workspaces monorepo of seven small playable subsystems plus the composed final game — each subsystem stress-tests a different forge surface, then their proven patterns compose into `main`.
 
-See [`PLAN.md`](./PLAN.md) for the full scoping document.
+See [`PLAN.md`](./PLAN.md) for the full scoping document. Contributors (human or agent): start at [`AGENTS.md`](./AGENTS.md) — it routes to the task-specific playbooks in [`docs/`](./docs/).
 
 ## Live URLs (post-deploy)
 
