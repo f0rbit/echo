@@ -1,6 +1,6 @@
 # loot — subsystem plan
 
-> Status: **shipped (2026-05-17)**. All 8 phases landed on `main` in commits `b235c96` → `5f6f63d` plus this docs commit. See "Deviations from plan" at the bottom for corrections made during implementation. FRICTION.md is the working-notes companion.
+> Status: **shipped (2026-05-17)**. All 8 phases landed on `main` in commits `b235c96` → `5f6f63d` plus this docs commit. See "Deviations from plan" at the bottom for corrections made during implementation. FRICTION.md is the working-notes companion. (`PROPOSED-AGENTS-UPDATES.md` references: retired 2026-07-04, fully merged into the repo-root `AGENTS.md` + `docs/`.)
 >
 > Commit chain: `b235c96` (4.0 scaffold) → `7496eac` (4.1 items + Zod) → `c66b114` (4.2 inventory + equipment + stats) → `f089988` (4.3 pickups + arena-gen + plugin) → `410b074` (4.4 inventory UI + stat HUD) → `5a16434` (4.5 snapshot + replay) → `5f6f63d` (4.6 debug fixture) → this commit (4.7 docs).
 >

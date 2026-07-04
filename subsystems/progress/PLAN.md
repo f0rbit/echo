@@ -1,6 +1,6 @@
 # progress — subsystem plan (Phase 5)
 
-> Status: **shipped (2026-05-18).** All 9 phases landed on `main` in commits `a952109` → `48574fe` plus this docs commit. Sequel to `loot` (Phase 4, shipped 2026-05-17). FRICTION.md is the working-notes companion; PROPOSED-AGENTS-UPDATES.md collects un-merged conventions.
+> Status: **shipped (2026-05-18).** All 9 phases landed on `main` in commits `a952109` → `48574fe` plus this docs commit. Sequel to `loot` (Phase 4, shipped 2026-05-17). FRICTION.md is the working-notes companion; PROPOSED-AGENTS-UPDATES.md collected un-merged conventions (retired 2026-07-04 — fully merged into the repo-root `AGENTS.md` + `docs/`).
 >
 > Commit chain: `a952109` (5.0 scaffold) → `369d037` (5.1 perks + Zod) → `a2efc72` (5.2 xp + perks + stats) → `9b6759c` (5.3 chasers + melee) → `d37a97d` (5.4 perk-choice UI + HUD) → `2583c53` (5.5 disk save/load) → `8944f0e` (5.6 replay + disk round-trip tests) → `48574fe` (5.7 debug fixture) → this commit (5.8 docs).
 >
