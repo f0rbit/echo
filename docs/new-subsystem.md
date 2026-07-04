@@ -14,6 +14,7 @@ Write the answers into the subsystem's `PLAN.md` (or FRICTION.md §0) before any
 
 | Decision | Options | Canonical example |
 |----------|---------|-------------------|
+| Visual identity | none — palette / fonts / mood / shell / HUD / juice are fixed by contract | `docs/design-language.md` |
 | Movement model | cell-step vs continuous — **never mix** | cell-step: `progress`; continuous: `arena` |
 | `dir_c` write pattern (cell-step only) | every-tick (no directional ability) vs nonzero-only (melee/ranged/facing) | loot vs progress — see `docs/architecture.md` |
 | Game shell? | menu/won/lost FSM or bare | `arena` (FSM), copy its `fsm.ts` + `game-state.ts` |

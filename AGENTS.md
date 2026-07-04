@@ -45,7 +45,7 @@ Match your task against this table and read the listed docs **in full, before wr
 |---|---|
 | Scaffolding `boss` / `hub` subsystem / `main`, or any new package | `docs/new-subsystem.md` (it chains the others) |
 | Gameplay systems: movement, AI, combat, XP, pause, FSM, input | `docs/architecture.md` |
-| Anything visual: sprites, text, HUD, modals, lighting, camera, debug fixtures | `docs/rendering.md` |
+| Anything visual: sprites, text, HUD, modals, lighting, camera, juice, debug fixtures | `docs/design-language.md` (the contract — palette, fonts, moods, shell, HUD, juice bar) then `docs/rendering.md` (the recipes) |
 | Saves, snapshots, RNG, replays, `bindings.ts`, anything in `test/` | `docs/persistence-replay.md` |
 | Any forge ECS code at all (queries, spawn/despawn, resources) | `docs/forge.md` "API gotchas" (2 min, always) |
 | Verifying / committing / finishing a task | `docs/verification.md` |

@@ -1,0 +1,2590 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Plan: design-language</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --todo: #6e7681;
+        --doing: #d29922;
+        --done: #2ea043;
+        --blocked: #f85149;
+        --decision: #db61a2;
+      }
+      html, body {
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 2rem;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      h1, h2, h3 {
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3em;
+      }
+      h1 { font-size: 1.8rem; }
+      h2 { font-size: 1.4rem; margin-top: 2.5rem; }
+      h3 { font-size: 1.1rem; border: none; padding: 0; margin-top: 1.5rem; }
+      h4 {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin: 0 0 0.3em 0;
+      }
+      code, pre {
+        font-family: "SF Mono", Menlo, monospace;
+        font-size: 0.9em;
+      }
+      code {
+        background: var(--panel);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        background: var(--panel);
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge.todo { background: var(--todo); color: #fff; }
+      .badge.doing { background: var(--doing); color: #000; }
+      .badge.done { background: var(--done); color: #fff; }
+      .badge.blocked { background: var(--blocked); color: #fff; }
+      .badge.decision { background: var(--decision); color: #fff; }
+      .badge.recommended { background: var(--accent); color: #000; }
+      .root-cause {
+        background: var(--panel);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1rem 0;
+      }
+      .root-cause p {
+        margin: 0.4em 0;
+      }
+      .option {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        opacity: 0.85;
+      }
+      .option.recommended {
+        opacity: 1;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+      .option > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .option h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .option h4 {
+        margin-top: 0.9rem;
+      }
+      .philosophy-score th:first-child,
+      .philosophy-score td:first-child {
+        width: 35%;
+      }
+      .philosophy-score td:nth-child(2) {
+        font-family: "SF Mono", Menlo, monospace;
+        font-weight: 600;
+        width: 60px;
+        text-align: center;
+      }
+      .recommendation {
+        background: rgba(88, 166, 255, 0.08);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1.5rem 0;
+      }
+      .recommendation h3 {
+        margin-top: 0;
+        border: none;
+        padding: 0;
+      }
+      .task {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+      }
+      .task > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+      .task h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.4em 1em;
+        font-size: 0.85em;
+        color: var(--muted);
+        margin: 0 0 0.75rem 0;
+      }
+      .meta dt {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .meta dd {
+        margin: 0;
+      }
+      .task section {
+        margin-top: 0.75rem;
+      }
+      .proof {
+        background: rgba(46, 160, 67, 0.08);
+        border-left: 3px solid var(--done);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .empty-proof {
+        background: rgba(110, 118, 129, 0.08);
+        border-left: 3px solid var(--todo);
+        padding: 0.5rem 0.75rem;
+        color: var(--muted);
+        font-style: italic;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary {
+        background: rgba(219, 97, 162, 0.08);
+        border-left: 3px solid var(--decision);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary ul {
+        margin: 0.3em 0;
+        padding-left: 1.5em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+      }
+      th, td {
+        padding: 0.5em 0.75em;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+      }
+      a { color: var(--accent); }
+      .phase {
+        margin: 2rem 0;
+        padding-left: 1rem;
+        border-left: 3px solid var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Plan: design-language — unification + polish pass (echo + forge)</h1>
+        <span class="badge todo">todo</span>
+        <p>Unify the visual + interaction design language across echo's five playable subsystems and the hub, fix the P0 debug-surface-in-production leak at its root (forge), bring every game to a written quality floor (font, shell screens, HUD, juice, lighting), make new-subsystem setup a copy of a living verified template, and finish with a docs-tightening pass. Companion forge workstream is small, docs-heavy, and ships exactly one behaviour change (debug gate) as v0.6.0. Audit findings from the completed code + screenshot tour are treated as ground truth. All LOC estimates below already include the repo's empirical 2.75x multiplier over naive budgets (AGENTS.md "LOC budgets understate by ~3x").</p>
+      </header>
+
+      <section id="root-cause">
+        <h2>Root cause</h2>
+        <div class="root-cause">
+          <p><strong>Stated goal:</strong> make the five games look/feel coherent and polished, sanity-check forge's API, make new games fast to scaffold, and keep docs aggressively simple.</p>
+          <p><strong>Underlying need:</strong> echo's per-subsystem quality is re-negotiated from scratch each phase because the design language lives in scattered FRICTION entries and one exemplar subsystem (progress), not in a contract. Phase 6 (boss), Phase 7 (hub subsystem) and Phase 8 (main) will each re-diverge unless the language is (a) written down in one page, (b) embodied in a living, CI-verified template, and (c) enforced at the engine boundary where policy belongs (debug gate in forge, not five build scripts). The games are also forge's public demo surface — a deployed debug HUD undermines every other polish item at once.</p>
+          <p><strong>Why this matters:</strong> polishing pixels without codifying the contract means this exact audit repeats after the next subsystem lands. Fixing the debug leak per-subsystem instead of in forge leaves the footgun armed for every future forge consumer (coin-collector already ships it). The root fix is: one contract page + one live template + one engine-side policy point.</p>
+        </div>
+      </section>
+
+      <section id="alternatives">
+        <h2>Alternatives considered</h2>
+        <p>Two decision areas warrant full option analysis: the P0 debug-in-prod fix (decision A) and the scaffold-speed approach (decision B). The remaining workstream items (pixel-font unification, shell sweep, HUD contract, juice floor, modal fixes, hub thumbnails, docs pass) are direct executions of audit findings with an established in-repo precedent each — no architectural alternatives evaluated for those; the precedent (progress's pixel recipe, arena's shell FSM, progress's ui kit) is cited per task. Market examples below are drawn from primary sources (tool docs, engineering blogs) per the explorer quality bar.</p>
+
+        <h3>Decision A — killing the debug-surface-in-production leak</h3>
+        <p>Ground truth: <code>is_dev()</code> in <code>forge/src/debug/debug.ts</code> resolves <code>proc?.env?.NODE_ENV !== "production"</code>; in a <code>bun build --target browser</code> bundle there is no <code>process</code>, so it returns <code>true</code> and every deployed echo page ships <code>window.__forge</code>, the palette, and the tick/fps HUD.</p>
+
+        <article class="option" id="option-a1">
+          <header>
+            <h3>Option A1: per-subsystem <code>--define</code> flags in build scripts</h3>
+          </header>
+          <p>Add <code>--define __DEV__=false</code> to every production <code>bun build</code> invocation (5 subsystems x 2-3 entry points each) and <code>--define __DEV__=true</code> to every <code>dev</code> script. No forge change; ships today.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>React</strong> — dev-only code is guarded by <code>process.env.NODE_ENV</code> and eliminated by the consumer's bundler define; React explicitly documents that the app's build config, not the library, is responsible for setting it. <a href="https://react.dev/learn/build-a-react-app-from-scratch">source</a></li>
+            <li><strong>esbuild</strong> — the <code>--define</code> mechanism bun build inherits; documented as the canonical way to burn build-time constants into bundles. <a href="https://esbuild.github.io/api/#define">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Zero forge release needed; echo-only change, mergeable in one small PR.</li>
+            <li>Dead-code elimination: debug paths tree-shake out of prod bundles entirely.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>~12 build invocations across 5 package.json files must each carry the flag, forever — progress's build script alone chains 3 <code>bun build</code> calls. One missed flag re-arms the footgun silently.</li>
+            <li>The scaffold template and docs/new-subsystem.md must both teach the flag; drift re-introduces the leak in subsystem #6.</li>
+            <li>Does nothing for other forge consumers (coin-collector is live with the leak).</li>
+            <li>No cheap <code>?debug=1</code> prod opt-in — the surface is compiled out.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>1/5</td>
+                <td>The dev/prod policy is duplicated into ~12 build strings; docs/forge.md already says "don't roll your own dev/prod guard — defer to forge so the policy stays in one place".</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>3/5</td>
+                <td>Neutral — build flags are untyped strings; no type surface either way.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>2/5</td>
+                <td>A missing flag is invisible to tsc and to bun test; only a live-page screenshot catches it — exactly how the current leak shipped.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>3/5</td>
+                <td>Neutral.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>2/5</td>
+                <td>Gate behaviour becomes untestable per-build-script; there is no unit that can assert "prod build has debug off".</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option recommended" id="option-a2">
+          <header>
+            <h3>Option A2: forge-side safe default — explicit-signal resolution + <code>?debug=1</code> opt-in</h3>
+            <span class="badge recommended">recommended</span>
+          </header>
+          <p>Rewrite forge's dev-mode resolution as a pure function over explicit signals with precedence: <code>?debug=1|0</code> query param &gt; <code>__DEV__</code> define &gt; <code>NODE_ENV === "development"</code> &gt; localhost/127.0.0.1 hostname heuristic &gt; <strong>default false</strong>. <code>is_dev()</code> becomes a thin wrapper reading real globals; the pure resolver is unit-tested with in-memory signal objects. Ships as forge v0.6.0; echo's only change is a version bump. Local dev (<code>bun run serve</code> on localhost) stays debug-on with zero config; deployed GitHub Pages goes debug-off; <code>?debug=1</code> re-enables the full surface on the live site for agent verification.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Vite</strong> — <code>import.meta.env.DEV/PROD</code> are owned by the tool, not by each app; consumers get one canonical signal and cannot mis-wire it per-project. <a href="https://vite.dev/guide/env-and-mode">source</a></li>
+            <li><strong>Sentry SDK</strong> — <code>debug: false</code> by default in all SDKs; diagnostic surfaces are explicit opt-in because SDK authors, not app authors, own the safe default. <a href="https://docs.sentry.io/platforms/javascript/configuration/options/#debug">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Policy lives in exactly one place (forge) — matches the already-documented convention in docs/forge.md; echo, coin-collector, and every future consumer inherit the fix via one bump.</li>
+            <li><code>?debug=1</code> keeps the audit's requirement: prod debug surface reachable via explicit opt-in, which also keeps the __forge screenshot verification recipes working against live pages.</li>
+            <li>localhost heuristic preserves the existing agent workflow (serve-dist + screenshot) with no build-script changes anywhere.</li>
+            <li>Pure resolver is trivially unit-testable — the failure mode that shipped this leak becomes a compile-adjacent test.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Behaviour change requires a forge release (v0.6.0) before echo can consume it — echo phase 3 blocks on npm publish.</li>
+            <li>No dead-code elimination: debug code stays in prod bundles (gated off at runtime). Bundle-size cost is tolerable for game pages; BootOpts docs already claim tree-shake-out only when <code>debug: false</code> is passed explicitly, which no echo subsystem does today anyway.</li>
+            <li>BREAKING for consumers relying on implicit debug-on in browser bundles — which is precisely the bug.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>5/5</td>
+                <td>One resolver in forge/src/debug; zero per-consumer configuration; docs/forge.md convention becomes literally true.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>4/5</td>
+                <td>Signals object is a closed, explicit type (<code>{ define, node_env, hostname, search }</code>); precedence is exhaustive over it.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>4/5</td>
+                <td>Resolution matrix is a pure total function under test; a regression is a red test, not a live-page discovery.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>4/5</td>
+                <td><code>is_dev(): boolean</code> unchanged at the boundary; internals inferred.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Pure resolver takes an in-memory signals value — the exact Provider-style split (real globals in the wrapper, fake signals in tests).</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-a3">
+          <header>
+            <h3>Option A3: belt-and-braces — forge safe default AND per-subsystem defines</h3>
+          </header>
+          <p>Do A2, and additionally add <code>--define __DEV__=false</code> to every prod build so debug code is also dead-code-eliminated from bundles.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>React profiling builds</strong> — dual mechanism: library-side capability plus consumer-side bundler alias (<code>react-dom/profiling</code>); documented as the cost of wanting both runtime gating and DCE. <a href="https://legacy.reactjs.org/docs/optimizing-performance.html#profiling-components-with-the-devtools-profiler">source</a></li>
+            <li><strong>Redux / Immer</strong> — centralised <code>process.env.NODE_ENV</code> dev checks in-library, with docs telling consumers to also configure their bundler define for DCE. <a href="https://redux.js.org/style-guide/#use-the-redux-devtools-extension-during-development">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Smallest prod bundles; gate defence-in-depth.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Two sources of truth for one policy; the define silently disables the <code>?debug=1</code> live-page opt-in the audit explicitly wants kept (code is compiled out).</li>
+            <li>All of A1's per-build-script maintenance cost, on top of A2's release cost.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>2/5</td>
+                <td>Policy split across forge resolver + 12 build strings; the two can disagree (define off, query param on → dead code wins, confusing).</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>3/5</td>
+                <td>Same as A2 for the resolver; defines untyped.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>3/5</td>
+                <td>Resolver tested, but define/resolver disagreement is invisible to tests.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>4/5</td>
+                <td>Same as A2.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>3/5</td>
+                <td>Resolver testable, but the composed behaviour (define x runtime) only observable in built artifacts.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-a4">
+          <header>
+            <h3>Option A4: runtime deployment config (meta tag / debug.json per deploy)</h3>
+          </header>
+          <p>Forge reads a <code>&lt;meta name="forge-debug"&gt;</code> tag or fetches a <code>debug.json</code> next to the page; each deployment declares its own debug posture as data.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Django</strong> — <code>DEBUG</code> as runtime deployment settings; famously the most-shipped-to-prod footgun in its ecosystem, to the point the deployment checklist's first item is "set DEBUG = False". A cautionary precedent, not an endorsement. <a href="https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/">source</a></li>
+            <li><strong>Rails</strong> — per-environment config files (<code>config/environments/production.rb</code>) selected by <code>RAILS_ENV</code>; works because Rails owns a server-side deploy pipeline, which static GitHub Pages does not have. <a href="https://guides.rubyonrails.org/configuring.html">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Debug posture changeable post-deploy without rebuild.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Static Pages has no per-environment injection step — the meta tag would be authored into each subsystem's index.html, recreating A1's per-file duplication as HTML instead of build flags.</li>
+            <li>Default-on vs default-off still has to be decided in forge anyway; this just adds a config fetch/parse surface (async boot ordering, 404 handling) for zero gain over a query param.</li>
+            <li>Django's history shows deployment-data debug flags get left on.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>2/5</td>
+                <td>Posture duplicated per index.html; 8 HTML entry points across the repo.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>2/5</td>
+                <td>Stringly-typed HTML attribute parsed at runtime.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>1/5</td>
+                <td>Nothing type-checks HTML meta tags; typo = silent default.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>3/5</td>
+                <td>Neutral.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>3/5</td>
+                <td>Parseable in tests but the per-page authoring isn't.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <section class="recommendation">
+          <h3>Recommendation (A): Option A2 — forge-side safe default + <code>?debug=1</code></h3>
+          <p>A2 averages 4.4/5 against the philosophy vs 2.2 (A1), 3.0 (A3), 2.2 (A4), and is the only option consistent with the convention echo's own docs already state ("defer to forge so the dev/prod policy stays in one place"). The deciding pros: one bump fixes every consumer including coin-collector, the pure resolver makes the original failure mode a unit test, and <code>?debug=1</code> preserves the live-page agent-verification recipes. The bundle-size con is accepted; DCE via defines (A3) can be revisited at forge v1.0 if page weight ever matters.</p>
+        </section>
+
+        <h3>Decision B — scaffold speed for new subsystems</h3>
+        <p>Ground truth: docs/new-subsystem.md is a good but manual 6-step playbook ("copy from subsystems/progress and adjust"); the audit's constraint is that whatever we build must not drift from the real subsystems (single source of truth).</p>
+
+        <article class="option" id="option-b1">
+          <header>
+            <h3>Option B1: generator that copies a live subsystem (progress) + strip list</h3>
+          </header>
+          <p><code>tools/new-subsystem.ts</code> copies <code>subsystems/progress/</code> wholesale, renames identifiers, and deletes game-specific files from a maintained strip list (perks, xp, melee...). The "template" is the shipped game itself.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>degit</strong> — Rich Harris's scaffolder copies real repos with no templating engine; rationale: "making copies of git repositories" beats maintaining parallel template code. <a href="https://github.com/Rich-Harris/degit">source</a></li>
+            <li><strong>create-next-app --example</strong> — stamps from the real, CI-maintained examples directory of the Next.js repo rather than synthetic templates. <a href="https://nextjs.org/docs/app/api-reference/cli/create-next-app">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Source can never drift from a real subsystem — it IS one.</li>
+            <li>No new package to maintain.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>The strip list drifts instead: every new progress system (or renamed file) breaks the generator silently until someone scaffolds. progress is also the LARGEST subsystem — stripping 25 systems down to a stub is more code than the stub.</li>
+            <li>Scaffolds inherit progress's incidental choices (cell-step movement, XP resources) that a continuous-motion game must then rip out — the playbook's scaffold-time decision table stops being a decision.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>3/5</td>
+                <td>Game source is real, but the strip list is a second artifact that must track progress's file tree by hand.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>3/5</td>
+                <td>Generator is typed, but its output correctness depends on string-based file lists.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>2/5</td>
+                <td>A stale strip list produces a scaffold that fails typecheck only at scaffold time — CI never exercises the path.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>3/5</td>
+                <td>Neutral.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>3/5</td>
+                <td>Generator testable against a temp dir, but "does the stripped game still make sense" isn't assertable.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-b2">
+          <header>
+            <h3>Option B2: checked-in placeholder template directory + stamp script</h3>
+          </header>
+          <p>A <code>templates/subsystem/</code> tree with <code>{{name}}</code> tokens, stamped by a small CLI — the create-vite model. Optionally a CI job stamps a scratch copy and typechecks it.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>create-vite</strong> — <code>packages/create-vite/template-*</code> directories stamped by a tiny CLI; each template is exercised by CI so it can't rot. <a href="https://github.com/vitejs/vite/tree/main/packages/create-vite">source</a></li>
+            <li><strong>cargo-generate</strong> — community-standard Rust scaffolding from checked-in template trees with liquid placeholders. <a href="https://github.com/cargo-generate/cargo-generate">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Templates are explicit and minimal; stamping is mechanical.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Placeholder files don't compile as-is (<code>{{name}}</code> tokens), so tsc/bun test can't run on the template itself — CI must stamp-then-check, which is extra machinery echo doesn't have (and the repo's verify pipeline can't see the template without it).</li>
+            <li>A second, parallel implementation of "a subsystem" that humans forget to update when conventions change — exactly the drift the user flagged.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>2/5</td>
+                <td>Template duplicates conventions that also live in real subsystems + docs; three copies of truth.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>2/5</td>
+                <td>Tokenised files are not valid TS; the strictest compiler sees them never.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>2/5</td>
+                <td>Only via bespoke stamp-then-typecheck CI, which is new bespoke machinery.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>3/5</td>
+                <td>Neutral.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>3/5</td>
+                <td>Stamp logic testable; template content only testable post-stamp.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-b3">
+          <header>
+            <h3>Option B3: docs playbook only (improve docs/new-subsystem.md, no code)</h3>
+          </header>
+          <p>Keep "copy progress and adjust", tighten the playbook with the new design-language contract, add a checklist. Zero new code.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>echo itself</strong> — docs/new-subsystem.md is the incumbent and got five subsystems shipped; every step encodes a trap that fired once. <a href="docs/new-subsystem.md">source</a></li>
+            <li><strong>Software Engineering at Google (Winters et al.)</strong> — documents why playbook-driven repetition degrades as team/agent count grows and codified automation ("paved paths") replaces it; the book's argument is the case against stopping here. <a href="https://abseil.io/resources/swe-book">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Zero maintenance surface; the playbook is already good.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Scaffolding stays a ~2-3k-LOC judgement-heavy copy job per subsystem; the audit's goal is "easy AND fast".</li>
+            <li>Every convention added by THIS plan (shell contract, HUD contract, juice floor, pixel font, debug gate) widens the checklist — playbook length is already the friction.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>3/5</td>
+                <td>No new artifact, but the "truth" stays smeared across prose + five diverging exemplars.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>3/5</td>
+                <td>Neutral — nothing typed either way.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>1/5</td>
+                <td>Prose is never compiled; every trap fires at scaffold time, again.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>3/5</td>
+                <td>Neutral.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>3/5</td>
+                <td>Neutral.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option recommended" id="option-b4">
+          <header>
+            <h3>Option B4: living template — <code>subsystems/_template/</code> as a real, verified workspace member + thin copy script</h3>
+            <span class="badge recommended">recommended</span>
+          </header>
+          <p>Ship a minimal playable stub game as a first-class workspace package: player + tiled floor + perimeter walls, cell-step movement, shell FSM (menu/playing), pixel-font HUD, one flash+particle juice hook, a scenario test (seed-helper based — deliberately NOT a recorded replay, to avoid re-record maintenance), and one debug fixture. It typechecks, tests, and builds under the existing <code>bun run verify</code> on every commit — the template cannot drift silently because it is live code. It is excluded from Pages deploy and the hub listing (underscore-prefix skip). A ~80-LOC <code>tools/new-subsystem.ts</code> does the mechanical part: copy, rename identifiers/app_id/package name, add the root <code>serve:&lt;name&gt;</code> script. The template is the executable form of docs/design-language.md; the playbook shrinks to "run the script, then make the scaffold-time decisions".</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Backstage Software Templates (Spotify)</strong> — "golden path" skeletons are real, maintained, CI-exercised projects stamped by the scaffolder; Spotify's engineering blog documents choosing golden paths precisely to stop per-team convention drift. <a href="https://engineering.atspotify.com/2020/08/how-we-use-golden-paths-to-solve-fragmentation-in-our-software-ecosystem/">source</a></li>
+            <li><strong>create-vite templates in CI</strong> — Vite's templates are runnable apps smoke-tested in the monorepo's CI, which is the property doing the work here (the stamped artifact is continuously verified). <a href="https://github.com/vitejs/vite/tree/main/packages/create-vite">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Single source of truth with teeth: when a convention changes (e.g. this plan's HUD contract), the template FAILS typecheck/test/review until updated — drift is a red CI, not a stale doc.</li>
+            <li>Fastest path to a new game: working, convention-complete stub in one command; scaffold-time decisions (movement model, dir_c pattern, shell states) remain explicit deletions/edits documented in the playbook.</li>
+            <li>The copy script is trivial (no templating engine — bun workspace glob <code>subsystems/*</code> picks the copy up automatically).</li>
+            <li>Doubles as the canonical minimal reading example for forge onboarding — serves the docs-clarity goal.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>One more package in verify (~+2s typecheck, ~+1 test); one more thing to update per convention change — but that update being FORCED is the feature.</li>
+            <li>pages.yml and the hub listing need explicit underscore-exclusion (small, one-time).</li>
+            <li>Template models only the cell-step movement family; a continuous-motion game still swaps the movement layer by hand (documented in the playbook decision table).</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>5/5</td>
+                <td>The template is the design language, executable; docs point at it instead of restating it.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>5/5</td>
+                <td>Full strict tsc on the template every commit — placeholder tokens never exist.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>5/5</td>
+                <td>Convention drift = compile/test failure in the same PR that changed the convention.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>4/5</td>
+                <td>Copy-then-rename keeps inference intact; renames are mechanical identifier swaps.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Template ships the scenario-test seed-helper pattern (harness + in-memory world), teaching the testing philosophy by example.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <section class="recommendation">
+          <h3>Recommendation (B): Option B4 — living template + thin copy script</h3>
+          <p>B4 averages 4.8/5 vs 2.8 (B1), 2.4 (B2), 2.6 (B3). It is the only option where the compiler enforces template freshness — the exact drift risk the user called out — and it directly serves goals 4 (fast setup) and 5 (docs shrink to pointing at live code). The added-package maintenance con is the mechanism working as intended. Scheduled late (phase 10) so the template snapshots the post-polish conventions rather than pre-polish ones.</p>
+        </section>
+
+        <p><strong>Page-vs-integrate gate:</strong> this plan adds NO net-new top-level page or nav item. Hub thumbnails + pixel-accent integrate into the existing landing card grid (aggregation of existing games belongs on the page users already visit); shell screens and debug fixtures are in-game states / existing fixture patterns, not site pages. Gate answer: integrate everywhere.</p>
+      </section>
+
+      <section id="affected-areas">
+        <h2>Affected areas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>echo: docs/design-language.md</code></td>
+              <td>new — one-page design contract (palette, fonts, lighting moods, shell/HUD contracts, juice floor, debug policy)</td>
+            </tr>
+            <tr>
+              <td><code>forge: src/debug/debug.ts, src/debug/index.ts, test/debug/*</code></td>
+              <td>modify — pure dev-mode resolver, default-off, query-param + localhost signals, tests</td>
+            </tr>
+            <tr>
+              <td><code>forge: src/pixi/debug-pixi.ts</code></td>
+              <td>modify — debug stats HUD anchors bottom-left (frees top-left for game HUDs)</td>
+            </tr>
+            <tr>
+              <td><code>forge: src/*.ts public factories, docs/, README.md, CHANGELOG.md</code></td>
+              <td>modify — JSDoc sweep, naming-convention doc, BootOpts tier docs, Result explainer; release v0.6.0</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/*/package.json</code></td>
+              <td>modify — forge ^0.6.0 bump (5 packages)</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/{arena,loot,bestiary,dungeon-walk}/src/systems/* + index.html + entry points</code></td>
+              <td>modify — pixel font sweep + HUD contract; bestiary gains timer/HP HUD</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/progress/src/systems/{hud,perk-choice-ui,flash}.ts, src/main-debug-gui.ts</code></td>
+              <td>modify — HUD placement, perk modal re-fit, tint decay fix, cookbook re-fit</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/arena/src/main.ts (light config)</code></td>
+              <td>modify — vignette normalisation to progress baseline</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/loot/src/ui/ (new, copied), systems/inventory-ui.ts, systems/pickups.ts</code></td>
+              <td>new/modify — 9-slice inventory modal (ui-kit consumer #2), pickup juice</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/bestiary/src/systems/{flash,particles}.ts (new, copied)</code></td>
+              <td>new — juice floor</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/{bestiary,dungeon-walk,loot,progress}/src/{fsm.ts,systems/game-state.ts,screens}</code></td>
+              <td>new — shell FSM sweep (rng-shifting; replay re-records batched per subsystem)</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/{arena,progress,bestiary} spawn timing</code></td>
+              <td>modify — spawn grace / delayed first wave (rng-shifting; batched with shells)</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/*/replays/*.replay.json + test expected_hash</code></td>
+              <td>modify — 5 fixtures re-recorded exactly once each (phases 7-8)</td>
+            </tr>
+            <tr>
+              <td><code>echo: hub/src/{pages/index.astro,components/DemoCard.astro}, hub/public/thumbs/</code></td>
+              <td>modify/new — per-game thumbnails + restrained pixel-font accent</td>
+            </tr>
+            <tr>
+              <td><code>echo: subsystems/_template/ (new), tools/new-subsystem.ts (new), .github/workflows/pages.yml, package.json</code></td>
+              <td>new/modify — living template + copy script + underscore deploy-exclusion</td>
+            </tr>
+            <tr>
+              <td><code>echo: AGENTS.md, docs/*.md</code></td>
+              <td>modify — final docs-tightening pass (no restructure)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="architecture-decisions">
+        <h2>Architecture decisions</h2>
+        <ul>
+          <li><strong>Debug-gate precedence</strong> (decision A): <code>?debug=1|0</code> &gt; <code>__DEV__</code> define &gt; <code>NODE_ENV === "development"</code> &gt; localhost/127.0.0.1 &gt; default false. The query param carries an explicit off-state (<code>?debug=0</code>) so localhost prod-posture can be smoke-checked locally. Debug fixtures keep hard-coding <code>debug: true</code> in <code>boot()</code> — the BootOpts flag continues to override <code>is_dev()</code> entirely.</li>
+          <li><strong>Forge version: v0.6.0, single release.</strong> The is_dev behaviour flip is a semantics change → minor bump (pre-1.0), and the phase-2 docs/JSDoc/HUD-anchor work rides the same release to avoid two npm publishes. No API renames in this release — naming strays are documented now, renamed at the Phase-8 v0.6-alignment per the audit's no-breaking-changes-pre-Phase-8 constraint (the debug default is a behaviour change, sanctioned explicitly by the audit's "safer default story").</li>
+          <li><strong>Forge debug stats HUD moves to bottom-left</strong> — resolves the progress HUD collision globally (SSoT: fix once in forge, not N per-game offsets). Dev-only surface, so not a player-facing break.</li>
+          <li><strong>HUD placement contract</strong>: top-left = player vitals (HP, XP), top-right = goal/timer/counters, bottom-left = reserved for forge debug stats (dev only), bottom-right = reserved. Player-facing text is Press Start 2P at 8px grid multiples (pixel recipe); debug overlays keep the crisp mono recipe.</li>
+          <li><strong>Juice must not consume <code>ctx.rng</code>.</strong> Flash/particle systems added in phase 6 use a decorative RNG seeded from <code>time.tick</code> (module-local, never snapshotted) and spawn entities excluded from every world-hash projection — so replays stay green with NO re-record. Adversary checklists enforce this. If a coder finds this impossible for a given effect, the effect moves to that subsystem's rng-batched phase (7/8) instead of being hacked in.</li>
+          <li><strong>rng-batching:</strong> each subsystem's rng-shifting changes (shell FSM deferring setup, spawn grace, menu-over-scene) land in exactly one phase so its replay fixture is re-recorded exactly once: bestiary/dungeon-walk/loot in phase 7, arena/progress in phase 8. Arena's menu-over-scene (spawning the arena behind the menu) shifts rng timing, so it is deliberately pulled OUT of the phase-5 visual sweep and into phase 8.</li>
+          <li><strong>Shell contract scope per game</strong>: menu state is mandatory everywhere (title + controls + start prompt); won/lost states only where a win/loss condition exists (arena: has both; bestiary: survive-60s won / death lost; progress: dead-screen becomes lost + gains menu; dungeon-walk and loot: menu only, no fabricated win state).</li>
+          <li><strong>Perk button labels</strong>: drop the "N. " text prefix from the label string; render the keycap hint as a separate small Text under/beside the button. Fixes the "2." orphan-line wrap without fighting wordWrap.</li>
+          <li><strong>Template ships a scenario test, not a recorded replay</strong> — recorded fixtures would need re-recording on every convention change, defeating the living-template point. Seed-helper scenario tests (per docs/persistence-replay.md patterns) assert determinism without a recording.</li>
+          <li><strong>Underscore exclusion convention</strong>: directories matching <code>subsystems/_*</code> build + test + typecheck normally but are skipped by the Pages aggregation step and never listed on the hub.</li>
+          <li><strong>fps-counter anomaly is an investigation task, not a promised fix</strong> — all subsystems sit on the same forge ^0.5.4, so "version drift" is unlikely; if the root cause is forge-side (uncapped ticker vs counter mis-measure), the fix lands in the forge backlog (out-of-scope here) rather than blocking this pass.</li>
+          <li><strong>Page-vs-integrate gate</strong>: no net-new pages/nav anywhere in this plan (see alternatives section). Hub changes integrate into the existing landing.</li>
+        </ul>
+      </section>
+
+      <section id="phases">
+        <h2>Phases</h2>
+        <p>Twelve small phases, each one PR, strictly sequential. Forge phases (1-2) run in <code>/Users/tom/dev/forge</code>; all others in <code>/Users/tom/dev/echo</code>. Echo phase 3 blocks on the forge v0.6.0 npm publish; echo phases 4-6 have no forge dependency and may be reordered ahead of 3 by the orchestrator if the publish stalls. Value ordering: contract first, P0 leak second, non-rng visual wins third, rng-batched shells fourth, hub/template/docs last.</p>
+        <svg viewBox="0 0 1060 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phase dependency graph">
+          <style>
+            .n { fill: #161b22; stroke: #58a6ff; rx: 6; }
+            .f { fill: #161b22; stroke: #db61a2; rx: 6; }
+            .t { fill: #c9d1d9; font: 11px monospace; }
+            .e { stroke: #8b949e; fill: none; marker-end: url(#arr); }
+          </style>
+          <defs>
+            <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="none" stroke="#8b949e"/>
+            </marker>
+          </defs>
+          <rect class="n" x="10" y="20" width="90" height="34"/>
+          <text class="t" x="20" y="41">P0 contract</text>
+          <rect class="f" x="120" y="20" width="100" height="34"/>
+          <text class="t" x="128" y="41">P1 forge gate</text>
+          <rect class="f" x="240" y="20" width="120" height="34"/>
+          <text class="t" x="248" y="41">P2 forge docs+rel</text>
+          <rect class="n" x="380" y="20" width="90" height="34"/>
+          <text class="t" x="388" y="41">P3 bump</text>
+          <rect class="n" x="490" y="20" width="110" height="34"/>
+          <text class="t" x="498" y="41">P4 font+HUD x5</text>
+          <rect class="n" x="620" y="20" width="110" height="34"/>
+          <text class="t" x="628" y="41">P5 modal/light</text>
+          <rect class="n" x="750" y="20" width="110" height="34"/>
+          <text class="t" x="758" y="41">P6 ui-kit+juice</text>
+          <rect class="n" x="490" y="120" width="130" height="34"/>
+          <text class="t" x="498" y="141">P7 shells b/dw/l</text>
+          <rect class="n" x="640" y="120" width="130" height="34"/>
+          <text class="t" x="648" y="141">P8 arena+progress</text>
+          <rect class="n" x="790" y="120" width="80" height="34"/>
+          <text class="t" x="798" y="141">P9 hub</text>
+          <rect class="n" x="890" y="120" width="80" height="34"/>
+          <text class="t" x="896" y="141">P10 tmpl</text>
+          <rect class="n" x="970" y="120" width="80" height="34"/>
+          <text class="t" x="978" y="141">P11 docs</text>
+          <path class="e" d="M100,37 L118,37"/>
+          <path class="e" d="M220,37 L238,37"/>
+          <path class="e" d="M360,37 L378,37"/>
+          <path class="e" d="M470,37 L488,37"/>
+          <path class="e" d="M600,37 L618,37"/>
+          <path class="e" d="M730,37 L748,37"/>
+          <path class="e" d="M805,54 L560,118"/>
+          <path class="e" d="M620,137 L638,137"/>
+          <path class="e" d="M770,137 L788,137"/>
+          <path class="e" d="M870,137 L888,137"/>
+          <path class="e" d="M970,137 L968,137"/>
+        </svg>
+
+        <section class="phase" id="phase-0">
+          <h3>Phase 0 (echo): design-language contract</h3>
+          <p>Write the one-page contract every later phase executes against. Docs-only; lands first so parallel coders in phases 4-8 can cite it as their spec.</p>
+
+          <article class="task" id="task-0-1">
+            <header>
+              <h3>Task 0.1: write docs/design-language.md + wire routing</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>docs/design-language.md</code> (new), <code>AGENTS.md</code>, <code>docs/new-subsystem.md</code>, <code>docs/rendering.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150 (doc) + ~15 (routing links)</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none (single-task phase)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo: /Users/tom/dev/echo. docs/ has 7 files routed from AGENTS.md; this adds an 8th, aggressively concise (one page, tables over prose). The audit found accidental palette convergence worth codifying, a font split (progress on Press Start 2P; others on system mono), two lighting presets in use (moon_cavern on arena/bestiary/progress; warm_torch on loot/dungeon-walk), only arena shipping shell screens, inconsistent HUDs, and a juice cliff (progress 5/5 → bestiary/dungeon-walk 1/5). The contract must be prescriptive enough that a coder-fast agent can execute against it without judgement calls.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <p>Create <code>docs/design-language.md</code> with exactly these sections:</p>
+              <ul>
+                <li><strong>Palette tokens</strong> (table, hex + meaning + usage): <code>#ffd24a</code> gold = primary/accent/pickups; <code>#ff4a4a</code> + <code>#f7768e</code> red = damage/death; <code>#9ece6a</code> green = go/heal/confirm; <code>#7aa2f7</code> blue = xp/info. State these are THE tokens — new colors need a contract edit, not an inline hex.</li>
+                <li><strong>Font rules</strong>: all player-facing text = Press Start 2P via the pixel recipe (resolution 1, no scale.set, fontSize 8/16/24 — link docs/rendering.md table); debug overlays keep crisp mono recipe; every entry point does <code>await document.fonts.load("8px 'Press Start 2P'")</code> pre-boot; HTML ships the Google Fonts link triplet.</li>
+                <li><strong>Lighting moods</strong>: cold <code>moon_cavern</code> = combat subsystems; warm <code>warm_torch</code> = exploration subsystems. Include the numeric visibility baseline (to be filled by task 5.2's findings: eye-light radius_cells / falloff / intensity that keep the playfield readable with vignette only at edges).</li>
+                <li><strong>Shell-screen contract</strong>: states <code>menu | playing | won | lost</code> via game_state_r resource FSM (arena's fsm.ts copy convention); menu mandatory (game title, 1-3 control lines, "Enter/Space to start"); won/lost only where win/loss exists, each with outcome line + one run stat + restart hint; update-stage gameplay systems early-return unless <code>playing</code>; render systems never gate; FSM owns setup (never called at boot).</li>
+                <li><strong>HUD placement contract</strong>: top-left = vitals (HP/XP), top-right = goal/timer/counters, bottom-left = reserved forge debug stats (dev-only), bottom-right = reserved. Minimum content per game: HP where damage exists, timer where timed, goal counter where counted.</li>
+                <li><strong>Minimum juice bar</strong>: any kill/hit → screen-flash + particle burst; any pickup → flash/pop. Decorative rng must be tick-seeded, never <code>ctx.rng</code>; juice entities stay out of world-hash projections (no replay re-record).</li>
+                <li><strong>Debug-surface policy</strong>: prod = off by default; <code>?debug=1</code> opt-in; localhost auto-on; fixtures hard-code <code>debug: true</code> (forward-reference forge v0.6.0 — mark as "lands in phase 3").</li>
+              </ul>
+              <p>Then add one routing line to AGENTS.md ("Read docs/design-language.md before any visual/UI/juice task") and one-line pointers in docs/new-subsystem.md (step 1 table) and docs/rendering.md (top).</p>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>wc -l docs/design-language.md   # target &lt;= ~160 lines
+bun run verify                   # docs-only change; stays green</pre>
+              <p>Expected: file exists, under ~160 lines, verify green (no code touched).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Contract contradicts nothing in docs/rendering.md (pixel recipe values match exactly).</li>
+                  <li>No vague language ("should look nice") — every rule is checkable by a reviewer with a screenshot.</li>
+                  <li>Palette hexes match the audit's four token groups; no invented colors.</li>
+                  <li>Shell contract does not fabricate won/lost states for loot/dungeon-walk.</li>
+                  <li>Page stays one page — no restructure of the existing 7 docs.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li><code>docs/design-language.md</code> created — 70 lines (target ≤ ~160; user asked ≤ ~80). All 7 required sections present as tables: palette tokens, font rules, lighting moods (numeric baseline slot marked TBD for task 5.2), shell screens, HUD placement, juice bar, debug surface (marked "lands with forge 0.6 bump in phase 3").</li>
+                <li>Routing wired: AGENTS.md "Anything visual" row now points to <code>docs/design-language.md</code> (contract) then <code>docs/rendering.md</code> (recipes); AGENTS.md at 102 lines (&lt; 150 cap). One-line pointers added to <code>docs/new-subsystem.md</code> step-1 table (Visual identity row) and <code>docs/rendering.md</code> top blockquote.</li>
+                <li><code>bun run verify</code> green: typecheck 0 errors; <code>262 pass, 0 fail</code> across 44 files; all subsystem + hub builds completed. Docs-only change, no code touched.</li>
+                <li>Adversary checklist: pixel-recipe values referenced (not duplicated) from docs/rendering.md — no contradiction; every rule screenshot-checkable; palette hexes = audit's four token groups + grounded background/HUD colors (#0a0a10, 0xffffff/0xc0c0c8 from progress hud.ts + index.html — no invented colors); shell table states won/lost "only where win/loss genuinely exists — never fabricated"; single page, no restructure of the existing 7 docs.</li>
+                <li>Commit: <code>docs: design-language contract (phase 0)</code> on <code>dev/design-language-docs</code> (second commit of the phase-0 PR, after the docs-restructure commit <code>38274a2</code>).</li>
+              </ul>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-1">
+          <h3>Phase 1 (forge): debug-gate safe default</h3>
+          <p>Repo: /Users/tom/dev/forge. The one behaviour change of the forge workstream. Not published yet — release rides with phase 2.</p>
+
+          <article class="task" id="task-1-1">
+            <header>
+              <h3>Task 1.1: pure dev-mode resolver, default-off, ?debug= + localhost signals</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>forge: src/debug/debug.ts</code>, <code>src/debug/index.ts</code>, <code>test/debug/dev-mode.test.ts</code> (new), <code>docs/</code> debug page, <code>CHANGELOG.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~250 (core ~70, tests ~120, docs ~60)</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none (single-task phase)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Current bug: <code>src/debug/debug.ts</code> computes <code>const DEV = __DEV__ ?? (process.env.NODE_ENV !== "production")</code> — in browser bundles <code>process</code> is undefined, so <code>undefined !== "production"</code> → true → every deployed forge consumer ships window.__forge, the palette, and the stats HUD (verified live at f0rbit.github.io/echo/progress/). <code>is_dev()</code> is exported from <code>@f0rbit/forge/debug</code> and consumed by all five echo subsystems as <code>boot({ debug: is_dev() })</code>. BootOpts.debug (src/pixi/index.ts:89) continues to override everything — debug fixtures hard-code <code>debug: true</code> and must keep working. Forge style: functional, corpus Result at fallible boundaries (this is infallible — plain boolean), strict TS, bun test.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Add a pure resolver in src/debug/debug.ts:<br/><code>export type DevSignals = { define: boolean | undefined; node_env: string | undefined; hostname: string | undefined; search: string | undefined };</code><br/><code>export const resolve_dev_mode = (s: DevSignals): boolean</code> — precedence: <code>?debug=1</code>→true / <code>?debug=0</code>→false (parse via URLSearchParams) &gt; <code>define</code> (when boolean) &gt; <code>node_env === "development"</code> &gt; hostname ∈ {localhost, 127.0.0.1, [::1]} &gt; <strong>false</strong>.</li>
+                <li>Replace the module-level <code>DEV</code> IIFE: read real globals (<code>globalThis.__DEV__</code>, <code>process?.env?.NODE_ENV</code>, <code>globalThis.location?.hostname/search</code>) into DevSignals, call the resolver. <code>is_dev()</code> keeps its exact signature. Delete the old logic — no compat shim.</li>
+                <li>Note: keep <code>node_env === "test"</code> falling through to false; bun test harness code never relies on is_dev (verify with a grep; if anything does, fix the call site to pass explicit opts).</li>
+                <li>Tests (new file): full precedence matrix as table-driven cases over in-memory DevSignals — deployed-pages case (no define, no node_env, hostname f0rbit.github.io) MUST be false; same + <code>?debug=1</code> MUST be true; localhost MUST be true; localhost + <code>?debug=0</code> MUST be false; define beats node_env; param beats define.</li>
+                <li>Docs: update the debug docs page + BootOpts.debug JSDoc — document precedence, the <code>?debug=1</code> live-page recipe, and that fixtures hard-code <code>debug: true</code>. CHANGELOG entry under 0.6.0-unreleased marked BREAKING-BEHAVIOUR.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/forge &amp;&amp; bun test test/debug/ &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: new matrix tests pass (≥10 cases), full suite green, build clean. No publish in this phase.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Resolver is pure — no global reads inside <code>resolve_dev_mode</code>; all global access in the thin wrapper only.</li>
+                  <li>Deployed-pages signal combo (undefined/undefined/github.io/"") resolves false — the exact shipped bug is a named test case.</li>
+                  <li><code>?debug=0</code> on localhost resolves false (explicit off beats heuristic).</li>
+                  <li>No <code>any</code>, no <code>as</code> casts reading globals — narrow via typeof checks.</li>
+                  <li>Old NODE_ENV-!==-production logic fully deleted, not left as fallback.</li>
+                  <li>BootOpts.debug override path untouched (fixtures with <code>debug: true</code> unaffected).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-2">
+          <h3>Phase 2 (forge): API polish + release v0.6.0</h3>
+          <p>Repo: /Users/tom/dev/forge. Docs-heavy, no renames. Tasks 2.1-2.3 parallel (worktrees); 2.4 small code change; 2.5 is the release close-out.</p>
+
+          <article class="task" id="task-2-1">
+            <header>
+              <h3>Task 2.1: JSDoc sweep over public factories</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>forge: src/world.ts, time.ts, resources.ts, schedule.ts, rng.ts, grid/, input/, palette/, storage/, autotile/, presets/ (light), pixi/index.ts</code> — exported factories only</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~180 (comment lines across ~15 files)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-2-2, task-2-3, task-2-4</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Audit: JSDoc coverage ~30%; core factories <code>time()</code>, <code>resources()</code>, <code>schedule()</code>, <code>grid()</code>, <code>input()</code>, <code>make_light_system()</code> have none. Forge docs site is separate (62 pages) — JSDoc is for editor hover + agents reading source. House style: 2-3 lines max per factory — one sentence what it is, one on the key param/return, optionally one gotcha with a docs-page pointer. No @param spam restating types.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Enumerate every exported factory/function from src/index.ts + subpath exports (pixi, debug, storage, autotile, light, input).</li>
+                <li>Add 2-3-line JSDoc to each currently-undocumented one. Match the tone of the existing BootOpts.debug JSDoc (src/pixi/index.ts).</li>
+                <li>Where an existing gotcha is documented in echo (marker elision in query tuples, despawn Result, ctx.res vs world.res, variadic spawn) put the one-liner on the forge symbol itself — the engine is the right home for engine gotchas.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/forge &amp;&amp; bun run typecheck &amp;&amp; bun test</pre>
+              <p>Expected: green; comments-only diff (no runtime changes). Spot-check: hover docs render for <code>time()</code>, <code>grid()</code>, <code>make_light_system()</code>.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Diff contains zero non-comment changes.</li>
+                  <li>No JSDoc restates the type signature verbatim (adds information or is deleted).</li>
+                  <li>Every factory listed in the audit (time/resources/schedule/grid/input/make_light_system) is covered.</li>
+                  <li>Gotcha one-liners match echo's docs/forge.md wording (no contradictions).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-2">
+            <header>
+              <h3>Task 2.2: naming-convention doc (no renames)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>forge: CONTRIBUTING.md</code> (new or extend), docs site naming page (new, small)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~70</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-2-1, task-2-3, task-2-4</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Audit: the de-facto convention is plain-lowercase value factories (<code>world()</code>, <code>time()</code>, <code>input()</code>) vs <code>make_*</code> for System factories (<code>make_light_system</code>). Strays: input sources (<code>noop_source</code>/<code>scripted</code>/<code>ticked</code> vs <code>browser_source</code>), flicker fns (<code>torch_flicker</code> etc.), <code>grid_index_sync_system</code>. Constraint: NO renames now — they batch into the v0.6-alignment at echo Phase 8.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Write the convention: value/context factories = plain lowercase noun; System-returning factories = <code>make_&lt;x&gt;_system</code>; components <code>&lt;x&gt;_c</code>; resources <code>&lt;x&gt;_r</code>; input sources <code>&lt;x&gt;_source</code>.</li>
+                <li>Table of current strays → target names, each marked "rename at v0.6 alignment (echo Phase 8)". This is the deferred-rename manifest, not a task list.</li>
+                <li>Link from README (one line).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/forge &amp;&amp; bun run typecheck</pre>
+              <p>Expected: green; docs-only diff. Stray table names verified against actual exports (grep each).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero source renames in the diff.</li>
+                  <li>Every stray in the table actually exists as an export (no invented symbols).</li>
+                  <li>Convention statements match what ≥80% of existing exports already do (descriptive, not aspirational).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-3">
+            <header>
+              <h3>Task 2.3: BootOpts tier docs + README Result explainer</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>forge: docs boot page (boot.mdx), README.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~60</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-2-1, task-2-2, task-2-4</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>BootOpts has ~20 optional fields with interdependencies (replay requires a snapshotter; debug tiers 1-5; camera/window pairing). README (83 lines) quickstart uses <code>.ok</code>/<code>.value</code> with zero explanation of the corpus Result pattern. Audit verdict: document tiers; a discriminated union only if cheap — it is NOT cheap (BootOpts is additive opt-ins, not variants), so docs-only.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>boot.mdx: a "config tiers" table — minimal (mount only) / rendered game (camera, window, assets) / debuggable (debug, app_id) / replayable (replay.snapshotter, bindings) — with the interdependency rules stated per row, incl. the new is_dev precedence from task 1.1.</li>
+                <li>README: 5-line Result explainer right before the quickstart's first <code>.ok</code> — what Result is, ok/err shape, why no throw, link to @f0rbit/corpus. Keep README under ~100 lines total.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/forge &amp;&amp; bun run typecheck &amp;&amp; wc -l README.md</pre>
+              <p>Expected: green; README ≤ ~100 lines; docs site builds if it has a build step.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Tier table's interdependency claims verified against boot() source (e.g. replay commands' error string when snapshotter absent).</li>
+                  <li>Result explainer compiles if pasted (uses real corpus API names: ok/err/.ok/.value/.error).</li>
+                  <li>No BootOpts type changes snuck in.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-4">
+            <header>
+              <h3>Task 2.4: debug stats HUD anchors bottom-left</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>forge: src/pixi/debug-pixi.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~50</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-2-1, task-2-2, task-2-3</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Forge's tick/fps/ents/tscale stats block renders top-left of <code>debug_overlay</code> (canvas-pixel space, crisp mono recipe). Echo's HUD placement contract reserves top-left for game vitals; the audit found progress's HUD visually colliding with the stats block. Fix globally in forge: anchor the stats block bottom-left, offset ~8px, re-anchored on resize (debug_overlay is canvas-pixel space — compute y from canvas height each frame or on resize callback).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Move the stats text container's position from top-left to bottom-left (8px margins), height-aware (stack grows upward or is measured before placement).</li>
+                <li>Handle window resize (re-position on the render resize path — find the existing resize hook in src/pixi/render.ts).</li>
+                <li>Leave palette overlay + other debug draws untouched.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/forge &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green. Visual confirmation deferred to echo phase 3 smoke (localhost = debug-on): stats block bottom-left, no overlap with game HUD. Reference <code>visual-review</code> there.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Position derives from live canvas height, not a hard-coded 320/640.</li>
+                  <li>No per-tick re-layout when a resize hook exists (mirror the loot overlay convention: apply at boot + on resize).</li>
+                  <li>Zero behaviour change when debug disabled.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-5">
+            <header>
+              <h3>Task 2.5: release forge v0.6.0</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>forge: package.json, CHANGELOG.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~20</dd>
+              <dt>Dependencies</dt>
+              <dd>task-2-1, task-2-2, task-2-3, task-2-4</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>verification</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Single release carrying phases 1+2: is_dev behaviour flip (BREAKING-BEHAVIOUR), debug HUD anchor move, JSDoc/docs. Version 0.6.0 (semantics change pre-1.0 → minor). Echo phase 3 consumes this from npm. Known consumers: echo (5 subsystems), coin-collector.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Merge phase-1+2 worktrees, run full verify, finalize CHANGELOG 0.6.0 section (call out is_dev precedence + HUD anchor + docs), bump version to 0.6.0.</li>
+                <li>Commit (git-workflow skill), push, PR, merge via pr-shepherd, then publish: <code>bun publish</code> (or the repo's existing release script — check package.json scripts / previous release commits first) + git tag v0.6.0.</li>
+                <li>Confirm on npm: <code>npm view @f0rbit/forge version</code> → 0.6.0.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/forge &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build &amp;&amp; npm view @f0rbit/forge version</pre>
+              <p>Expected: all green; npm reports 0.6.0.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>CHANGELOG explicitly labels the is_dev change BREAKING-BEHAVIOUR with the ?debug=1 migration line.</li>
+                  <li>dist/ artifacts include the debug subpath export (exports map unchanged).</li>
+                  <li>No unpublished phase-1 changes left dangling (single release covers both phases).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-3">
+          <h3>Phase 3 (echo): forge 0.6.0 bump + prod-debug-off verification</h3>
+          <p>The P0 lands in echo. Blocks on task 2.5 (npm publish).</p>
+
+          <article class="task" id="task-3-1">
+            <header>
+              <h3>Task 3.1: bump forge to ^0.6.0 across subsystems + verify debug posture</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/{arena,bestiary,dungeon-walk,loot,progress}/package.json</code>, <code>bun.lock</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~15</dd>
+              <dt>Dependencies</dt>
+              <dd>task-2-5</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none (single-task phase)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>All five subsystems are on <code>@f0rbit/forge ^0.5.4</code> from npm (never workspace symlink). v0.6.0 changes: is_dev default-off outside localhost/?debug=1/__DEV__/NODE_ENV=development; debug stats HUD anchors bottom-left. The bump does NOT touch sim/rng behaviour, so replay fixtures must stay green with NO re-record — if any replay test reddens, STOP and escalate (foundational assumption invalidated). Debug fixtures hard-code <code>debug: true</code> and keep the surface regardless.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Update the five package.json deps to <code>"@f0rbit/forge": "^0.6.0"</code>; <code>bun install</code>; <code>bun run verify</code>.</li>
+                <li>Build + serve progress (<code>bun run serve:progress</code>), curl-check freshness per docs/verification.md, then screenshot via chrome-devtools: (a) plain localhost load → debug HUD present (localhost heuristic) and anchored BOTTOM-LEFT, not colliding with the game HUD; (b) <code>?debug=0</code> → no debug HUD, no window.__forge (evaluate <code>typeof window.__forge</code> → "undefined") — this is the prod posture; (c) <code>?debug=1</code> → surface present, <code>await window.__forge.palette.run("dump-state")</code> returns a string.</li>
+                <li>Repeat check (b) quickly on arena. Reference <code>visual-review</code> for the screenshots.</li>
+                <li>Post-merge follow-up for the verification coder: after Pages deploy, confirm f0rbit.github.io/echo/progress/ shows NO debug HUD and <code>?debug=1</code> restores it.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>bun run verify
+curl -s http://localhost:4567/ | head -5   # freshness before screenshots</pre>
+              <p>Expected: verify green with zero replay hash changes; screenshots per (a)/(b)/(c) above; live-URL check post-deploy.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No replay fixture or expected_hash modified in this PR.</li>
+                  <li>All five package.json bumped (none missed), lockfile updated once.</li>
+                  <li><code>?debug=0</code> case checked with a fresh page load (not a cached tab).</li>
+                  <li>No subsystem source changes — bump-only diff.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-4">
+          <h3>Phase 4 (echo): pixel font + HUD contract sweep (5 parallel)</h3>
+          <p>Non-rng visual value. Five worktree tasks, one per subsystem. Shared spec (repeated in each task): player-facing text → Press Start 2P per docs/rendering.md pixel recipe (resolution 1, NO scale.set, fontSize 8/16/24); Google Fonts link triplet in every HTML entry; <code>await document.fonts.load("8px 'Press Start 2P'")</code> in EVERY entry point (main, main-debug, main-debug-gui where present); debug overlays keep crisp mono. HUD contract: vitals top-left, goal/timer top-right, pixel font, colors from docs/design-language.md tokens. Adversary invariant for all five: no <code>ctx.rng</code> draws added, no snapshot-surface changes, replay tests green with NO re-record.</p>
+
+          <article class="task" id="task-4-1">
+            <header>
+              <h3>Task 4.1: arena — pixel font + HUD</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/arena/src/systems/{menu-screen,win-screen,lost-screen,debug-overlay}.ts</code>, <code>index.html</code>, <code>debug.html</code>, <code>src/main.ts</code>, <code>src/main-debug.ts</code>, new <code>src/systems/hud.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~300</dd>
+              <dt>Dependencies</dt>
+              <dd>task-0-1, task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-4-2, task-4-3, task-4-4, task-4-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Arena is continuous-motion with the full shell FSM (menu/playing/won/lost) — screens are app.stage siblings mirroring surface_sprite (see src/main.ts:100-115). Its shell text currently uses the crisp mono recipe; player-facing HUD is debug-only. Spec: swap shell-screen text to Press Start 2P pixel recipe; add a real HUD system (render-stage, on debug_overlay? NO — player-facing HUD goes on the app.stage overlay container per docs/rendering.md container map): HP top-left, wave counter + kills top-right. Colors: HP red #ff4a4a when low / white otherwise; wave gold #ffd24a. Font loading: both entry points + Google Fonts triplet in both HTMLs. Screens keep working at menu (render systems never gate).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Add fonts.load pre-boot in main.ts + main-debug.ts; link triplet in index.html + debug.html.</li>
+                <li>Convert menu/win/lost screen Text styles to PIXEL_STYLE (fontFamily "Press Start 2P", resolution 1, no scale.set, sizes 8/16/24; title 24, body 8). Re-fit wordWrapWidth per the -16px padding rule.</li>
+                <li>New <code>hud.ts</code>: render-stage system reading health + wave resources, drawing HP (top-left, 8px) and wave/kills (top-right) on the shell overlay container; hidden when state !== playing.</li>
+                <li>Leave debug-overlay.ts on crisp mono (it is a debug surface).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/arena &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual (verification coder, <code>visual-review</code>): serve + screenshot menu (PS2P title, no blur), start game, HUD top-left/top-right in PS2P, no overlap with bottom-left debug stats.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No <code>resolution: 4</code> + <code>scale.set(0.5)</code> applied to PS2P text (recipes are opposites).</li>
+                  <li>fonts.load present in BOTH entry points.</li>
+                  <li>No ctx.rng draws; replay hash untouched.</li>
+                  <li>HUD hidden on menu/won/lost states.</li>
+                  <li>fontSize values are 8/16/24 only (integer grid multiples).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-4-2">
+            <header>
+              <h3>Task 4.2: loot — pixel font + HUD placement</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/loot/src/systems/{stat-panel-hud,inventory-ui}.ts</code> (text styles only), <code>index.html</code>, <code>debug.html</code> (if present), entry points</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~280</dd>
+              <dt>Dependencies</dt>
+              <dd>task-0-1, task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-4-1, task-4-3, task-4-4, task-4-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Loot is cell-step with an inventory modal (app.stage sibling, loot FRICTION §5-6) and a 4-line stat text top-right (stat-panel-hud.ts) on the crisp recipe. Spec: all player-facing text → PS2P pixel recipe; stat panel stays top-right (it IS the goal/stats surface, contract-compliant) restyled at 8px with token colors (#ffd24a for gold/loot counts, #7aa2f7 for stat labels); inventory modal TEXT restyles now, but modal chrome (gray Graphics) is task 6.1 — do not touch panel visuals here to avoid worktree overlap; 6.1 depends on this task's text styles. Every entry point gets fonts.load; HTMLs get the link triplet.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>fonts.load in main.ts + any debug entry; link triplet in HTML entries.</li>
+                <li>stat-panel-hud.ts: PS2P 8px, top-right, token colors, wordWrap re-fit (-16px rule).</li>
+                <li>inventory-ui.ts: swap Text styles to PS2P (sizes 8/16); leave Graphics rectangles untouched (task 6.1 replaces them).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/loot &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual: PS2P crisp at 8px (no bilinear blur), stat panel top-right, modal text readable on the old gray panels.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Pixel recipe exact (resolution 1, no scale.set) — check every changed Text constructor.</li>
+                  <li>No inventory Graphics/layout changes (reserved for 6.1).</li>
+                  <li>No ctx.rng draws; replay green without re-record.</li>
+                  <li>Synthetic F1-F12 click bindings untouched.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-4-3">
+            <header>
+              <h3>Task 4.3: bestiary — pixel font + NEW survival-timer/HP HUD</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/bestiary/src/systems/hud.ts</code> (new), existing text call sites, <code>index.html</code>, <code>debug.html</code>, entry points, <code>src/main.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~350</dd>
+              <dt>Dependencies</dt>
+              <dd>task-0-1, task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-4-1, task-4-2, task-4-4, task-4-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Bestiary is cell-step with chaser AI and a 60s survival objective — currently ZERO HUD (players cannot see the timer or their HP; worst finding of the HUD audit). It has no shell overlay container yet (that arrives in phase 7): create the app.stage-sibling overlay container now per docs/rendering.md ("Game UI overlays" + addChildAt recipe + resize mirror) — phase 7's screens will reuse it. HUD: HP top-left (red #ff4a4a at ≤25%), countdown top-right mm:ss in gold #ffd24a. PS2P pixel recipe everywhere player-facing; fonts.load in every entry point; link triplet in HTMLs.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Create the mirrored overlay container in main.ts (boot + resize callback, addChildAt below palette overlay).</li>
+                <li>New <code>hud.ts</code> render-stage system: reads the survival-timer + health resources (locate in src/resources.ts), renders countdown + HP.</li>
+                <li>Font wiring: fonts.load in main.ts + main-debug.ts; link triplet in index.html + debug.html; convert any existing player-facing Text to pixel recipe.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/bestiary &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual: countdown ticks down on screen, HP visible, PS2P crisp, nothing under the lighting filter (overlay unlit).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>HUD on the mirrored app.stage overlay, NOT app.render.world (would get darkened) and NOT debug_overlay (reserved).</li>
+                  <li>Overlay mirror applied at boot + resize only, not per-tick.</li>
+                  <li>Timer read from the existing resource — no new timing state invented.</li>
+                  <li>No ctx.rng; replay green without re-record.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-4-4">
+            <header>
+              <h3>Task 4.4: dungeon-walk — pixel font + minimal HUD</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/dungeon-walk/src/</code> text call sites, new <code>systems/hud.ts</code> (only if a depth/level resource exists), <code>index.html</code>, <code>debug.html</code>, entry points</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~280</dd>
+              <dt>Dependencies</dt>
+              <dd>task-0-1, task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-4-1, task-4-2, task-4-3, task-4-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Dungeon-walk is cell-step exploration (procedural dungeons, warm_torch lighting, no combat, no HUD). Contract minimum: HUD only "where relevant" — inspect src/resources.ts for a depth/floor/rooms-explored resource; if one exists, show it top-right (PS2P 8px, gold); if none exists, DO NOT invent state — font sweep only, and note it in the task report. Same overlay-container recipe as bestiary if a HUD is added (app.stage sibling, mirror at boot + resize). fonts.load every entry point; link triplet in HTMLs.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Font wiring (all entry points incl. main-debug.ts; both HTMLs).</li>
+                <li>Convert player-facing Text to pixel recipe; debug fixtures' overlay text stays crisp mono.</li>
+                <li>Conditional HUD per context block.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/dungeon-walk &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual: PS2P crisp; warm lighting unchanged.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No fabricated game state for HUD content.</li>
+                  <li>Pixel recipe exact on every converted Text.</li>
+                  <li>No ctx.rng; replay green without re-record.</li>
+                  <li>Wall-autotile debug fixture untouched visually (crisp mono retained there).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-4-5">
+            <header>
+              <h3>Task 4.5: progress — HUD placement to contract</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/progress/src/systems/hud.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150</dd>
+              <dt>Dependencies</dt>
+              <dd>task-0-1, task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-4-1, task-4-2, task-4-3, task-4-4</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Progress already uses PS2P (PR #1) — no font work. Its rich HUD sits top-left and used to collide with the forge debug stats block; forge v0.6.0 moved stats bottom-left, so the collision is resolved engine-side. Remaining work: re-lay the HUD to the contract — vitals (HP hearts/number, XP bar, level) top-left; kills / run-goal counters top-right; token colors (#7aa2f7 xp, #ff4a4a low HP, #ffd24a gold); consistent 8px grid spacing. Do NOT touch perk modal or dead screen (task 5.1).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Split hud.ts layout into the two anchor groups; align to an 8px grid; apply token colors.</li>
+                <li>Verify no overlap with bottom-left debug stats at 320-design-height with debug on (localhost).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/progress &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual: vitals top-left, counters top-right, debug stats bottom-left, zero overlap.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No perk-choice-ui.ts / dead-screen-ui.ts changes (reserved for 5.1).</li>
+                  <li>No snapshot-surface or rng changes; replay green.</li>
+                  <li>Pixel recipe preserved (no resolution-4 regressions).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-5">
+          <h3>Phase 5 (echo): modal / lighting / layout fixes (4 parallel)</h3>
+          <p>Still non-rng. Four independent worktree tasks.</p>
+
+          <article class="task" id="task-5-1">
+            <header>
+              <h3>Task 5.1: progress — perk modal re-fit, tint decay, cookbook re-fit</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/progress/src/systems/{perk-choice-ui,flash,dead-screen-ui}.ts</code>, <code>src/main-debug-gui.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~350</dd>
+              <dt>Dependencies</dt>
+              <dd>task-4-5</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-2, task-5-3, task-5-4</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Three audit findings. (1) Perk modal (perk-choice-ui.ts, 9-slice panel + 3 buttons 100x60, PS2P labels) stretches near-fullscreen with dead space below the buttons, and labels wrap badly — the "N. " numeric prefix plus wordWrap orphans "2." on its own line. (2) Player sprite appears persistently red-tinted at low HP — either flash.ts tint decay never restores neutral, or an intentional low-HP tint; per the contract, low-HP signalling belongs to the HUD, not a stuck sprite tint. (3) The debug-gui cookbook (main-debug-gui.ts, /debug-gui/ fixture) was not re-fit after the font swap: "Panel sample" title clipped, idle button invisible (white-on-white), caption oversized/overflowing (FRICTION §27-28). Relevant recipes: pixel-font wordWrapWidth = width - 16; button floor 100px wide; panel insets are module constants in src/ui/panel.ts.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Modal: size panel to content (title + 3 buttons + padding, 8px grid), centered; drop the "N. " prefix from label text and render the keycap hint ("1"/"2"/"3") as a separate 8px Text beside/below each button; verify no wrap orphans with the longest perk name in data/.</li>
+                <li>Tint: trace flash.ts tint application/decay on the player sprite; fix decay to always return tint to 0xffffff; if a deliberate low-HP tint exists, delete it (HUD owns low-HP signalling per contract).</li>
+                <li>Cookbook: re-fit main-debug-gui.ts to the post-font-swap primitives — title sized/positioned unclipped, idle button given a visible fill/tint against the background, caption at 8px inside panel bounds. One concern per fixture: no gameplay additions.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/progress &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual (<code>visual-review</code>): serve, grant XP via <code>?debug=1</code> palette (<code>/grant-xp</code>), screenshot modal — compact, centered, no orphan wraps, keycap hints visible; take damage → flash decays fully back to neutral within ~1s; /debug-gui/ cookbook — title unclipped, all three button states visible, caption inside panel.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Longest perk name in data/ verified against wrap (not just "Hardened").</li>
+                  <li>Tint fix does not remove the flash effect itself (impact feedback stays, decay completes).</li>
+                  <li>Snapshot surface untouched (swing_state_r etc. unchanged); replay green without re-record.</li>
+                  <li>Cookbook fixture gains no gameplay systems (one-concern rule).</li>
+                  <li>Panel/button wrapper APIs (src/ui/) unchanged — loot copies them in 6.1.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-5-2">
+            <header>
+              <h3>Task 5.2: arena — vignette investigation + normalisation</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/arena/src/main.ts</code> (light config ~lines 50-56); findings → <code>docs/design-language.md</code> lighting baseline</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~120</dd>
+              <dt>Dependencies</dt>
+              <dd>task-0-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-1, task-5-3, task-5-4</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Arena and progress both use <code>presets.moon_cavern</code> (arena src/main.ts:50-56, progress src/main.ts:87-98) yet arena's playfield is mostly pitch black while progress is readable — so the divergence is in the non-preset params (eye-light radius_cells / falloff / intensity, or a missing whole-arena fill light per the docs/rendering.md "ambient [1,1,1] + wide eye-light" recipe). Target: whole playfield readable, vignette only at edges, cold mood preserved.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Diff the two make_light_system configs param-by-param; identify the culprit values.</li>
+                <li>Normalise arena to the progress-equivalent visibility (adjust radius_cells/falloff/intensity; keep moon_cavern colors).</li>
+                <li>Write the resulting numeric baseline into docs/design-language.md's lighting section (fills the placeholder from task 0.1).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/arena &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record (lighting is render-only). Visual (<code>visual-review</code>): side-by-side screenshots arena vs progress — comparable readability, edges vignetted, mood still cold/blue.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Preset itself unmodified (fix is in arena's params, not forge's moon_cavern).</li>
+                  <li>No rng/sim change; replay hash identical.</li>
+                  <li>design-language.md baseline updated with the actual landed numbers.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-5-3">
+            <header>
+              <h3>Task 5.3: bestiary canvas centering + dungeon-walk pixel_perfect</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/bestiary/src/main.ts</code> + <code>index.html</code>, <code>subsystems/dungeon-walk/src/main.ts</code> (camera opts ~line 34)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~80</dd>
+              <dt>Dependencies</dt>
+              <dd>task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-1, task-5-2, task-5-4</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Two boot-config bugs. (1) Bestiary's canvas anchors top-left with all letterbox on right/bottom (480x320 design outlier) — compare its boot camera/window config + index.html CSS against arena/progress (which center); fix to centered letterboxing. (2) Dungeon-walk's camera opts (src/main.ts:34) are the only ones missing <code>pixel_perfect: true</code> — add it, matching arena:27 / bestiary:23 / progress:68.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Bestiary: align boot config + host-element CSS with a centered sibling (likely flex/margin centering in index.html or forge mount sizing); keep 480x320 design res unless the fix is trivially "use the standard 320-height design size" — if changing design res, STOP: that may shift world-gen; config/CSS centering only in this task.</li>
+                <li>Dungeon-walk: add <code>pixel_perfect: true</code>.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/bestiary &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build &amp;&amp; cd ../dungeon-walk &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, no re-record. Visual: bestiary letterbox symmetric at a wide window; dungeon-walk sprites integer-scaled (no shimmer).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Bestiary design resolution NOT changed (centering only).</li>
+                  <li>event_to_world hit-testing still correct post-centering (click a cell, verify via debug pin).</li>
+                  <li>Replay hashes untouched in both subsystems.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-5-4">
+            <header>
+              <h3>Task 5.4: fps-counter anomaly investigation</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd>investigation: <code>forge dist/ time+render loop</code>, subsystem boot configs; outcome routed per findings</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~60 (fix if echo-side; else findings only)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-1, task-5-2, task-5-3</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Audit: fps counter reads 270-420 on loot/dungeon-walk/deployed-progress vs 60 on arena. All subsystems now sit on the same forge ^0.6.0 (post task 3.1), so version drift is ruled out. Hypotheses: (a) render loop uncapped (raw rAF vs Pixi Ticker maxFPS) in some boot path, (b) the counter measures ticks not frames somewhere, (c) a per-subsystem boot option difference (arena's shell/camera path caps, others don't). Deliverable is a root cause, not necessarily a fix.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Reproduce locally with <code>?debug=1</code> on two affected + one unaffected subsystem; cross-check against devtools' own FPS meter to split hypothesis (b) from (a)/(c).</li>
+                <li>Read forge's frame loop (time.advance / render ticker in node_modules dist or the forge repo) and diff the boot options between arena and loot.</li>
+                <li>If echo-side config: fix in the affected subsystems. If forge-side: write the finding + proposed fix into this plan's out-of-scope section and echo's .plans/backlog.md — do NOT hold this pass for a forge patch release.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>bun run verify</pre>
+              <p>Expected: green. Report states the root cause with evidence (counter values + devtools FPS side-by-side screenshot). If fixed: affected pages read ~60. If deferred: backlog entry exists.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Root cause is demonstrated (measurement vs real overdraw distinguished), not guessed.</li>
+                  <li>No forge source edits from the echo repo (separate workstream).</li>
+                  <li>If uncapped rendering is real: fix does not change fixed-dt sim determinism (replays green).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-6">
+          <h3>Phase 6 (echo): loot ui-kit adoption + juice floor (2 parallel)</h3>
+          <p>Last non-rng phase. Juice systems MUST use tick-seeded decorative rng (never <code>ctx.rng</code>) and keep juice entities out of world-hash projections — replays stay green with no re-record. If an effect can't satisfy that, it moves to the subsystem's phase-7/8 rng batch instead.</p>
+
+          <article class="task" id="task-6-1">
+            <header>
+              <h3>Task 6.1: loot — 9-slice inventory modal (ui-kit consumer #2) + pickup juice</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/loot/src/ui/{assets,panel,button}.ts</code> (new, copied from progress), <code>src/systems/inventory-ui.ts</code>, <code>src/systems/pickups.ts</code>, new <code>src/systems/{flash,particles}.ts</code> (copied from arena/progress), <code>public/</code> Kenney PNGs, <code>src/main.ts</code>, <code>docs/forge.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~700</dd>
+              <dt>Dependencies</dt>
+              <dd>task-4-2, task-5-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-6-2</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Loot's inventory modal is raw gray Graphics rectangles with a large empty info panel, no title, no slot labels. Progress ships the canonical 9-slice ui kit at <code>subsystems/progress/src/ui/</code> (assets.ts: UiTextureName union + load_ui_assets pre-boot; panel.ts: make_panel → {container}; button.ts: make_button → {container,set_state,get_bounds}). Copy-don't-share rule: copy the three files into loot, keep <code>// FORGE-PROMOTION-CANDIDATE</code> headers updated to list consumers (progress, loot) + planned promotion Phase 8. Kenney 9-slice PNGs are copied into loot/public/ (kebab-case folders). Modal placement recipes: app.stage sibling, addChildAt below palette, mirror at boot+resize (loot already does this — FRICTION §5-6). Juice: pickups currently give zero feedback; arena/progress ship flash.ts + particles.ts worth copying (add promotion-candidate headers there too — this makes flash/particles a 3-4-consumer bundle; add the tracker row). Await load_ui_assets BEFORE boot (blank-first-frame trap).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Copy progress src/ui/* → loot src/ui/*; adjust UiTextureName to loot's asset names; copy the Kenney PNGs; wire load_ui_assets pre-boot in main.ts.</li>
+                <li>Rebuild inventory-ui.ts chrome on make_panel/make_button: title "INVENTORY" (PS2P 16), 12 slot cells with labels, equipped-item info panel populated (name, stat modifiers) or a proper empty-state line; keep the existing click queue + synthetic F1-F12 binding path byte-compatible.</li>
+                <li>Pickup juice: copy flash.ts + particles.ts (tick-seeded rng variant), trigger a gold #ffd24a pop + small burst on pickup; annotate FORGE-PROMOTION-CANDIDATE headers on both copies.</li>
+                <li>docs/forge.md tracker: forge.ui consumers → progress, loot (2/3); add flash/particles bundle row (arena, progress, loot + bestiary after 6.2).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/loot &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green — replay test green WITHOUT re-record (inventory clicks replay through the synthetic bindings; juice consumes no ctx.rng). Visual (<code>visual-review</code>): modal is 9-sliced, titled, labelled; info panel non-empty; pickup pops gold.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero imports across subsystem boundaries (files copied, not imported from progress).</li>
+                  <li>FORGE-PROMOTION-CANDIDATE headers list both consumers in BOTH copies (progress's headers updated too).</li>
+                  <li>No ctx.rng draws in flash/particles/pickup-juice; juice entities absent from loot's world-hash projection; expected_hash unchanged.</li>
+                  <li>load_ui_assets awaited before boot() (no lazy Texture.from).</li>
+                  <li>Click hit-testing still uses event_to_world + get_bounds (no hand-rolled scale math).</li>
+                  <li>docs/forge.md tracker counts updated.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-6-2">
+            <header>
+              <h3>Task 6.2: bestiary — juice floor (flash + particles)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/bestiary/src/systems/{flash,particles}.ts</code> (new, copied), hook sites in combat/damage systems, <code>src/main.ts</code>, <code>src/plugin.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~400</dd>
+              <dt>Dependencies</dt>
+              <dd>task-4-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-6-1</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Bestiary has combat (chasers, player damage, 60s survival) but ZERO impact feedback — the deepest point of the juice cliff. Minimum bar per docs/design-language.md: kill/hit → screen flash + particle burst. Copy arena's flash.ts + particles.ts (or progress's — pick whichever has the cleaner tick-seeded rng shape; if both use ctx.rng, convert the copy to a module-local mulberry32-style PRNG seeded from time.tick). Colors: damage red #ff4a4a, kill white flash + red burst. Copies get FORGE-PROMOTION-CANDIDATE headers (consumers: arena, progress, loot, bestiary). Hook into the existing damage/kill code paths (grep for health decrement / despawn of chasers). Render-stage systems keep running through any pause gates.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Copy + adapt flash.ts, particles.ts; register in plugin.ts at the same stages arena uses (update for spawn/decay logic, render for draw — mirror the source subsystem).</li>
+                <li>Trigger sites: player-takes-damage → red flash; chaser death → burst at its cell.</li>
+                <li>Headers + docs/forge.md tracker row update (bundle now 4 consumers — flags it for Phase-8 promotion).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/bestiary &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build</pre>
+              <p>Expected: green, expected_hash UNCHANGED (the load-bearing assertion for tick-seeded juice). Visual (<code>visual-review</code>): getting hit flashes red; kills burst; effects decay fully.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero ctx.rng draws (grep the two new files + hook sites).</li>
+                  <li>Juice entities/resources not registered with the snapshotter and absent from the world-hash projection.</li>
+                  <li>Replay expected_hash byte-identical to before the task.</li>
+                  <li>Flash/tint fully decays (no progress-style stuck-tint regression).</li>
+                  <li>Promotion headers list all four consumers.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-7">
+          <h3>Phase 7 (echo): shell sweep batch 1 — bestiary, dungeon-walk, loot (rng-shifting; 3 re-records)</h3>
+          <p>Everything rng-shifting for these three subsystems lands here, once: shell FSM (setup deferred into the FSM), bestiary's spawn grace, any startup-order change. Shared spec (repeat per task): copy arena's <code>fsm.ts</code> (12 LOC) + <code>game-state.ts</code> pattern (pre-stage phase 0 transitions; FSM owns idempotent setup; boot does NOT call setup); every update-stage gameplay system gains a <code>state !== "playing"</code> early-return; render systems never gate; input sweep per docs/architecture.md "Input-driven systems need state gates" (restart → menu, pause gated, debug toggles reviewed); screens as mirrored app.stage siblings, PS2P per contract (title 24, controls 8, "Enter/Space to start"); FORGE-PROMOTION-CANDIDATE header on each fsm.ts copy (tracker row already exists). Deferring setup shifts rng draw order → each subsystem's replay fixture re-recorded exactly once, in task 7-4.</p>
+
+          <article class="task" id="task-7-1">
+            <header>
+              <h3>Task 7.1: bestiary — shell FSM + spawn grace</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/bestiary/src/fsm.ts</code> (new copy), <code>src/systems/game-state.ts</code> (new), <code>src/systems/{menu,won,lost}-screen.ts</code> (new), gameplay systems (gates), <code>src/main.ts</code>, <code>src/plugin.ts</code>, <code>src/snapshot.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~550</dd>
+              <dt>Dependencies</dt>
+              <dd>task-6-2</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-7-2, task-7-3</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Bestiary: cell-step, chaser AI (the original source of the copied AI bundle — its own systems have no pause gates today because bestiary never paused; the shell adds the first gate, so EVERY gameplay system needs the early-return sweep: movement, ai-chaser, path-step, contact/damage, occupancy, survival timer). States: menu / playing / won (survived 60s) / lost (death). Spawn grace: chasers must not reach the player in the first ~2s — add an aggro-delay window (e.g. chasers spawn or activate N ticks after entering playing; pick the mechanism that consumes rng identically every run). game_state_r goes INTO the snapshot surface (dynamic state). Overlay container already exists from task 4.3 — reuse it for the three screens. The 60s timer must only tick during playing.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Copy fsm.ts from arena (byte-identical + header); write game-state.ts: menu→playing on Enter/Space (re-runs idempotent setup), playing→won at timer 0, playing→lost at hp 0, won/lost→menu on Enter/R.</li>
+                <li>Move setup out of boot into the FSM transition (this is the rng shift); sweep ALL update-stage systems with the state gate; sweep input systems (restart→menu).</li>
+                <li>Three screens on the mirrored overlay: menu (title, "ARROWS/WASD move — survive 60s", start prompt), won (time survived + restart), lost (time reached + restart). PS2P, token colors (#9ece6a won, #ff4a4a lost).</li>
+                <li>Aggro/spawn grace of ~120 ticks; HUD countdown (task 4.3) shows only during playing.</li>
+                <li>Add game_state_r to snapshot surface; DO NOT re-record here — task 7-4 owns it (test will be red until then in this worktree; the phase verification merges + re-records).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/bestiary &amp;&amp; bun run typecheck &amp;&amp; bun run build</pre>
+              <p>Expected: typecheck + build green (replay test intentionally pending until 7-4). Visual: menu → play → survive-to-won and die-to-lost paths reachable; chasers hold off ~2s.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>EVERY update-stage gameplay system gated (list them; the copied chaser bundle is the known miss — AGENTS.md paused-gate warning).</li>
+                  <li>No <code>time.scale = 0</code> anywhere (gate-resource pattern only).</li>
+                  <li>setup not called at boot; FSM re-entry idempotent (menu→playing→menu→playing spawns exactly one world).</li>
+                  <li>Restart during menu does nothing (arena's 5.9.4 bug class).</li>
+                  <li>game_state_r snapshotted; screens are render-stage and never gated.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-7-2">
+            <header>
+              <h3>Task 7.2: dungeon-walk — shell FSM (menu only)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/dungeon-walk/src/fsm.ts</code> (new copy), <code>src/systems/game-state.ts</code> (new), <code>src/systems/menu-screen.ts</code> (new), gameplay-system gates, <code>src/main.ts</code>, <code>src/plugin.ts</code>, <code>src/snapshot.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~450</dd>
+              <dt>Dependencies</dt>
+              <dd>task-4-4</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-7-1, task-7-3</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Dungeon-walk: cell-step exploration, procedural dungeon gen (rng-heavy startup), warm_torch lighting, no win/loss condition → shell contract says menu + playing only; no fabricated won/lost. Overlay container likely doesn't exist yet — create per docs/rendering.md (app.stage sibling, addChildAt, mirror boot+resize). Deferring dungeon gen into the FSM is the rng shift. Menu content: title, "ARROWS/WASD move — explore the dungeon", controls for any extra bindings (check src/bindings.ts), start prompt. PS2P per contract.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>fsm.ts copy + game-state.ts with two states; setup/dungeon-gen moves into the menu→playing transition (idempotent); R regenerates via menu.</li>
+                <li>State-gate sweep over movement/tween/lighting-follow inputs (update stage only); input sweep (restart→menu).</li>
+                <li>Menu screen on new mirrored overlay; game_state_r into snapshot surface. Re-record deferred to 7-4.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/dungeon-walk &amp;&amp; bun run typecheck &amp;&amp; bun run build</pre>
+              <p>Expected: typecheck + build green (replay pending 7-4). Visual: menu shows controls; Enter starts; R returns to menu and a new dungeon generates on next start.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No won/lost states invented.</li>
+                  <li>Dungeon gen runs exactly once per menu→playing (no double-gen on tick 1 — the "restart sweep when changing startup spawn timing" trap: dependent startup systems moved to pre + idempotent bail-out).</li>
+                  <li>No time.scale manipulation; render/lighting systems ungated.</li>
+                  <li>Debug fixture (autotile) entry point unaffected — it uses its own stripped plugin.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-7-3">
+            <header>
+              <h3>Task 7.3: loot — shell FSM (menu only)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/loot/src/fsm.ts</code> (new copy), <code>src/systems/game-state.ts</code> (new), <code>src/systems/menu-screen.ts</code> (new), gameplay-system gates, <code>src/main.ts</code>, <code>src/plugin.ts</code>, <code>src/snapshot.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~500</dd>
+              <dt>Dependencies</dt>
+              <dd>task-6-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-7-1, task-7-2</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Loot: cell-step, pickups + inventory/equipment, no win/loss → menu + playing only. Its pickup placement consumes rng at startup — deferring setup into the FSM shifts draws (the batched rng change). Menu: title, "WASD move — walk over items to collect, I opens inventory, click to equip", start prompt. The inventory modal (from 6.1) must only open during playing (gate the I-toggle + click queue). Overlay container exists (inventory modal) — screens can share the mirrored container but render below the modal. Synthetic F1-F12 replay bindings must keep functioning during playing.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>fsm.ts copy + game-state.ts (menu/playing); setup + pickup placement moves into the transition (idempotent); input sweep (inventory toggle gated to playing; restart→menu).</li>
+                <li>Menu screen per contract; game_state_r into snapshot surface. Re-record deferred to 7-4.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/loot &amp;&amp; bun run typecheck &amp;&amp; bun run build</pre>
+              <p>Expected: typecheck + build green (replay pending 7-4). Visual: menu → play → inventory only opens in-game.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Inventory click queue (factory-closure transient state) NOT moved into a resource during the refactor.</li>
+                  <li>Pickup placement runs once per menu→playing; no orphan pickups on re-entry.</li>
+                  <li>Synthetic slot-click bridge still consumed only during playing.</li>
+                  <li>No won/lost invented; no time.scale use.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-7-4">
+            <header>
+              <h3>Task 7.4: merge + re-record 3 replay fixtures</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/{bestiary,dungeon-walk,loot}/replays/*.replay.json</code>, <code>test/replay.test.ts</code> expected_hash values</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~30 (hashes) + fixture JSON</dd>
+              <dt>Dependencies</dt>
+              <dd>task-7-1, task-7-2, task-7-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>verification</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Phase close-out. The three shell conversions shifted rng draw order (setup deferred into FSM) — per docs/persistence-replay.md each fixture is invalid and must be re-recorded ONCE. Workflow per subsystem: build + serve production build locally, curl freshness check, drive a short representative run via the in-page recorder with <code>?debug=1</code> (recordings can be short — they must exercise menu→playing plus each subsystem's core loop: bestiary a few kills + damage; dungeon-walk a corridor walk; loot pickups + an inventory equip via the F-key synthetic bindings), save JSON to replays/, update expected_hash, re-run tests. Note the recorder starts at menu now — the recording includes the start action.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Merge the three worktrees; run <code>bun run typecheck:all</code>; fix integration issues.</li>
+                <li>Re-record each fixture per the workflow above (chrome-devtools MCP: navigate, evaluate palette commands, synthesize the run, download/save the JSON).</li>
+                <li>Update expected_hash x3; <code>bun run verify</code> green; run each task's adversary checklist; fill proof slots; write agents-md-updates entries; commit; PR.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>bun run verify</pre>
+              <p>Expected: all green including 3 fresh replay tests. Each new fixture exercises the shell start transition (assert menu→playing action present in the JSON).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Exactly 3 fixtures re-recorded — arena/progress untouched (their batch is phase 8).</li>
+                  <li>New hashes computed via canonical_stringify path (loot's key-order trap).</li>
+                  <li>Restore-target tests still boot-first (destructive-restore trap).</li>
+                  <li>No expected_hash updated without a matching new recording.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-8">
+          <h3>Phase 8 (echo): combat first-impression — arena + progress (rng-shifting; 2 re-records)</h3>
+          <p>The two games that kill the player within ~2-3s of load. All their rng-shifting changes batch here: spawn grace, arena's menu-over-scene, progress's shell conversion.</p>
+
+          <article class="task" id="task-8-1">
+            <header>
+              <h3>Task 8.1: arena — spawn grace + menu renders over live scene</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/arena/src/systems/{waves,game-state,menu-screen}.ts</code>, <code>src/main.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~250</dd>
+              <dt>Dependencies</dt>
+              <dd>task-4-1, task-5-2</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-8-2</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Arena already has the full shell (menu/playing/won/lost; FSM owns setup_arena; lost-screen already overlays gameplay — the overlay-over-scene pattern exists in lost-screen.ts). Audit: (1) player dies within ~2-3s of pressing start — first wave spawns immediately and close; (2) menu is white text in a black void. Fixes: (1) delay the first wave ~180 ticks (3s) after entering playing + spawn-distance floor from the player if trivially available in waves.ts; (2) run setup_arena on entering MENU (not playing) so the arena renders behind the menu panel, with gameplay systems still gated to playing — the world exists but nothing moves until start; on menu→playing, do NOT re-setup (world already spawned; the FSM transition just flips state; restart path re-runs setup). Both changes shift rng timing (setup at menu-entry tick instead of playing-entry) → single re-record in 8-3.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>waves.ts: first-wave delay counter (ticks since playing) ≥ 180 before wave 1 spawns; grace also applies after restart.</li>
+                <li>game-state.ts: setup_arena fires on entry to menu (boot→menu included) and on lost/won→menu; menu→playing no longer re-runs it. Keep idempotence.</li>
+                <li>menu-screen.ts: panel/title/controls sit over the live (frozen) scene — dim with a translucent scrim rect (~40% black) so PS2P text stays readable; verify with the normalized lighting from 5.2.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/arena &amp;&amp; bun run typecheck &amp;&amp; bun run build</pre>
+              <p>Expected: typecheck/build green (replay pending 8-3). Visual (<code>visual-review</code>): menu shows the arena behind a scrim; after start, ≥3s pass before the first enemy contact is possible; player no longer dead-before-input.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Enemies/waves do NOT advance during menu (update systems gated; only render ticks).</li>
+                  <li>Grace timer counts playing-ticks, not wall time, and resets on restart.</li>
+                  <li>setup idempotence: menu→playing→lost→menu→playing spawns exactly one arena each cycle.</li>
+                  <li>Scrim is on the overlay container, not the lighting-filtered world.</li>
+                  <li>All rng-shifting arena changes are in THIS task (nothing arena-rng left for later phases).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-8-2">
+            <header>
+              <h3>Task 8.2: progress — shell FSM + spawn grace</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/progress/src/fsm.ts</code> (new copy), <code>src/systems/game-state.ts</code> (new), <code>src/systems/menu-screen.ts</code> (new), <code>src/systems/dead-screen-ui.ts</code> (becomes lost state), <code>src/systems/enemy-spawn.ts</code>, gameplay gates, <code>src/main.ts</code>, <code>src/plugin.ts</code>, <code>src/snapshot.ts</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~550</dd>
+              <dt>Dependencies</dt>
+              <dd>task-5-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-8-1</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Progress boots straight into gameplay and the player is at HP 2/10 within ~2.5s. It already has: level-up pause gate (paused_r), dead-screen modal (dead-screen-ui.ts), perk modal, disk save (auto-save.ts + slot key echo:progress:save:slot-1), PS2P everywhere. Convert to shell: menu / playing / lost (dead-screen becomes the lost state; won does not exist). CRITICAL interactions: (1) the existing paused_r level-up gate composes with the FSM — systems gate on <code>state !== "playing" || paused</code>; (2) auto-save/restore must only run during playing and restore must land the player in playing, not menu-with-restored-world (decide: menu shows "Continue" when a save exists — Continue restores; "New Run" clears the slot); (3) enemy-spawn grace: no chaser within ~2s of run start + spawn-distance floor ≥ 6 cells from player; (4) the perk-shuffle + spawn RNG closure-fork trap — re-fork per tick already applied (FRICTION §5); keep it. Setup deferral + grace shift rng → re-record in 8-3 (batched: this is progress's ONE rng phase).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>fsm.ts copy + game-state.ts: menu→playing (New Run: clear save, fresh setup / Continue: restore save), playing→lost on death, lost→menu. Setup moves out of boot.</li>
+                <li>Gate sweep across the 25 systems in src/systems/ (update-stage only; melee window, xp, ai, movement, contact-damage, auto-save); input sweep (restart→menu; perk picks only while paused_r in playing).</li>
+                <li>Menu screen per contract (title, "WASD move / Z swing / collect XP", start + continue prompts); rework dead-screen into the lost state (keep its modal, add "Enter → menu").</li>
+                <li>enemy-spawn.ts: 120-tick grace + min spawn distance.</li>
+                <li>game_state_r into snapshot surface; keep static config out (registry rehydration contract).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/progress &amp;&amp; bun run typecheck &amp;&amp; bun run build</pre>
+              <p>Expected: typecheck/build green (replay pending 8-3). Visual (<code>visual-review</code>): menu with Continue only when a save exists; new run survives &gt;5s untouched; death → lost → menu loop works; level-up pause still freezes gameplay with perk modal.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>paused_r and game_state_r gates compose (level-up during playing still pauses; menu ignores paused_r leftovers — clear paused_r on entering menu).</li>
+                  <li>Save/restore respects the FSM (restore → playing; no restored-world-behind-menu ghost state).</li>
+                  <li>Chaser copies keep their paused early-return AND gain the state gate (AGENTS.md chaser-copy convention).</li>
+                  <li>All 25 systems audited — list the gated ones in the task report (the known failure mode is missing one).</li>
+                  <li>Spawn grace consumes rng deterministically (same draw count every run start).</li>
+                  <li>No time.scale use; render systems ungated.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-8-3">
+            <header>
+              <h3>Task 8.3: merge + re-record arena + progress fixtures</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/{arena,progress}/replays/*.replay.json</code>, expected_hash values</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~20 + fixture JSON</dd>
+              <dt>Dependencies</dt>
+              <dd>task-8-1, task-8-2</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>verification</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Same workflow as task 7-4 (build + serve prod build, curl freshness, record via in-page recorder with ?debug=1, save JSON, update expected_hash). Arena's recording must include: menu start, the 3s grace window, one wave clear or partial (arena's previous fixture was 2812 frames ≈ 30s — keep comparable coverage; REPLAY_TIMEOUT_MS=30000 already set). Progress's recording: new run, movement, a kill via Z swing, an XP pickup + level-up perk pick (via the synthetic perk-pick binding), death or save round-trip per what the existing test asserts — read test/replay.test.ts first and reproduce equivalent coverage.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Merge both worktrees; typecheck:all; fix integration issues.</li>
+                <li>Re-record both fixtures with coverage matching what each replay test asserts; update hashes; <code>bun run verify</code>.</li>
+                <li>Adversary checklists for 8-1/8-2; proof slots; agents-md-updates; commit; PR. Post-merge: live-URL smoke on both games (no debug HUD, menu present, grace works).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>bun run verify</pre>
+              <p>Expected: green; both new fixtures exercise the start transition + grace window; test assertions (e.g. arena wave_r.total_kills) hold against the new recordings.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Exactly 2 fixtures re-recorded; phase-7 fixtures untouched.</li>
+                  <li>Replay tests' semantic assertions updated only where the recording legitimately differs (kill counts), never weakened.</li>
+                  <li>Progress save-slot side effects cleaned between recording runs (debug fixture shares slot-1 — stale saves poison the recording).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-9">
+          <h3>Phase 9 (echo): hub identity</h3>
+          <p>Integrate game identity into the existing landing — no new pages (gate answered in alternatives).</p>
+
+          <article class="task" id="task-9-1">
+            <header>
+              <h3>Task 9.1: per-game thumbnails + restrained pixel accent</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>hub/public/thumbs/*.png</code> (new x5), <code>hub/src/components/DemoCard.astro</code>, <code>hub/src/pages/index.astro</code>, hub layout head</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~200</dd>
+              <dt>Dependencies</dt>
+              <dd>task-8-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none (single-task phase)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Hub is a static Astro site (@f0rbit/ui ^0.1.9 + lucide-astro) with a clean Card grid (DemoCard.astro) but zero visual connection to the games. @f0rbit/ui primitives available: Card (CardHeader/CardTitle/CardDescription/CardContent/CardFooter, interactive mode), Grid, Stack, Row, Badge, Stat, Empty — use them natively, no raw div soup. Scheduled after phase 8 so thumbnails show the polished games (shell menus, lighting, HUDs). Capture recipe: serve each subsystem's production build, load with <code>?debug=1</code>, start a run to a representative frame (mid-gameplay, not menu), <code>await window.__forge.app.screenshot()</code> → save Blob as hub/public/thumbs/&lt;name&gt;.png. Pixel accent: Google Fonts PS2P link in the hub head; apply ONLY to the site h1 and card titles — body text stays on the current @f0rbit/ui typography (restrained: it's a landing page, not a game).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Capture 5 thumbnails via the __forge recipe (consistent design-res crops, one per game, mid-action frames); optimize (~&lt;100KB each).</li>
+                <li>DemoCard: image slot above the title (plain img inside CardContent or the card's media area; <code>image-rendering: pixelated</code> so upscaled pixels stay sharp; alt text per game).</li>
+                <li>Head: PS2P link triplet; CSS scoping pixel font to h1 + card title elements only.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>bun run hub:typecheck &amp;&amp; bun run hub:build &amp;&amp; bun run serve:hub</pre>
+              <p>Expected: astro check + build green. Visual (<code>visual-review</code>): desktop + 360px mobile screenshots — 5 thumbnailed cards, pixelated-crisp images, PS2P on headings only, no layout breakage, page still reads as a restrained landing (taste/IA critic pass per visual-ia-guidelines).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No new pages/nav items; card grid structure preserved.</li>
+                  <li>@f0rbit/ui primitives used (no bespoke card rebuild).</li>
+                  <li>Thumbnails show gameplay (not menus, not debug HUDs — capture with debug HUD hidden: use ?debug=1 for the palette but screenshot excludes overlay, or toggle /pause + hide; verify no tick/fps text in the PNGs).</li>
+                  <li>image-rendering: pixelated applied; images have width/height attrs (no CLS).</li>
+                  <li>PS2P scoped — body/description text unchanged.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-10">
+          <h3>Phase 10 (echo): living template + scaffold script</h3>
+          <p>Decision B lands. Scheduled after the sweeps so the template snapshots the post-polish conventions.</p>
+
+          <article class="task" id="task-10-1">
+            <header>
+              <h3>Task 10.1: subsystems/_template — minimal convention-complete stub game</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>subsystems/_template/</code> (new package: package.json, tsconfig, index.html, debug.html, public/, src/{components,resources,bindings,grid,plugin,main,snapshot,fsm}.ts, src/systems/{movement,input,tween,sprite-attach,hud,menu-screen,game-state,flash,particles}.ts, src/main-debug.ts, src/debug-plugin.ts, test/fixtures/template-scenario.ts, test/template.test.ts)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~900</dd>
+              <dt>Dependencies</dt>
+              <dd>task-8-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-10-2</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Per decision B4: a real workspace package that IS the executable design language. Content: cell-step player (live-input movement per the dir_c/movement split in docs/architecture.md — movement reads ctx.input.vector, NOT dir_c), 20x11 tiled floors + perimeter autotile walls (z 1/2/3), shell FSM menu/playing (fsm.ts copy + header), PS2P HUD stub (HP top-left per contract), one flash+particles juice hook (tick-seeded rng) wired to a demo action, moon_cavern lighting at the 5.2 baseline, debug fixture (one concern: renders the arena + HUD deterministically), scenario test using seed helpers (harness.tick only runs update — seed resources directly) asserting movement + determinism. Deliberately NO recorded replay fixture (re-record maintenance would defeat the living-template purpose — document this in the package README). Workspace glob subsystems/* picks it up automatically; deploy exclusion is task 10-2's job. package.json name "_template", scripts matching siblings (dev/build/serve/test/typecheck), forge from npm ^0.6.0. Every copied file keeps FORGE-PROMOTION-CANDIDATE headers with consumers updated.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Scaffold the package per docs/new-subsystem.md steps 2-5, at minimum-viable scope (no AI, no combat beyond the juice demo hook, no persistence).</li>
+                <li>Short README.md in the package: what the template embodies, the scaffold-time decision table (movement model, dir_c pattern, shell states, snapshot surface), why no recorded replay.</li>
+                <li>Tests: scenario test green under root bun test.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd subsystems/_template &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build &amp;&amp; cd ../.. &amp;&amp; bun run verify</pre>
+              <p>Expected: all green including root verify with the new package. Visual: serve _template — menu → playing, movement works, HUD + juice demo render, PS2P crisp.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Every contract rule from docs/design-language.md is instantiated (palette tokens, font recipe, HUD anchors, shell gates, juice-rng rule) — this file set IS the contract's executable form.</li>
+                  <li>No recorded replay fixture committed.</li>
+                  <li>movement reads live input vector, not dir_c (the slides-forever bug class).</li>
+                  <li>No imports from sibling subsystems (copies only).</li>
+                  <li>Package builds a servable dist (index.html + main.js + assets).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-10-2">
+            <header>
+              <h3>Task 10.2: tools/new-subsystem.ts + underscore deploy-exclusion</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>tools/new-subsystem.ts</code> (new), <code>.github/workflows/pages.yml</code>, root <code>package.json</code>, <code>tools/</code> tests if trivially possible</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150</dd>
+              <dt>Dependencies</dt>
+              <dd>task-10-1 (needs the template to copy)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-10-1 (script can be written against the template's planned shape; verify after merge)</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Thin, mechanical scaffolder: <code>bun tools/new-subsystem.ts &lt;name&gt;</code> → validates kebab-case name + non-collision, copies subsystems/_template → subsystems/&lt;name&gt;, rewrites identifiers ("_template" → name in package.json name, app_id, HTML titles, localStorage key prefixes), strips the template README's meta-notes, adds <code>serve:&lt;name&gt;</code> to root package.json scripts, prints next steps (the scaffold-time decision table). Use corpus Result for the fallible steps (name collision, fs errors); no throw. Deploy exclusion: pages.yml aggregates subsystems/&lt;name&gt;/dist → _site/&lt;name&gt;/ — add a skip for directories whose basename starts with "_" (and confirm subsystems:build loop keeps building it — build yes, deploy no).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Write the script (~80 LOC) + a small test that scaffolds into a temp dir and asserts renames landed (run against the real template).</li>
+                <li>pages.yml: underscore-skip in the aggregation step; verify with a dry-run of the aggregation shell snippet locally.</li>
+                <li>Root package.json: <code>serve:template</code> script (underscore dir, still serveable locally).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>bun tools/new-subsystem.ts scratch-test &amp;&amp; cd subsystems/scratch-test &amp;&amp; bun run typecheck &amp;&amp; bun test &amp;&amp; bun run build &amp;&amp; cd ../.. &amp;&amp; rm -rf subsystems/scratch-test &amp;&amp; git checkout package.json bun.lock</pre>
+              <p>Expected: scaffolded copy typechecks, tests, builds green first-try; cleanup restores the tree. Also: local dry-run of the pages aggregation skips _template.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Scaffolded output has zero remaining "_template" strings (grep).</li>
+                  <li>Script is idempotent-safe: existing target dir → clean Result error, no partial copy left behind.</li>
+                  <li>pages.yml still deploys all five real subsystems (skip is basename-anchored, not substring).</li>
+                  <li>No templating engine dependency added (plain fs copy + string replace).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-10-3">
+            <header>
+              <h3>Task 10.3: rewrite docs/new-subsystem.md around the template</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>docs/new-subsystem.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~80 (net shrink expected)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-10-1, task-10-2</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>The playbook's step 2 ("copy from subsystems/progress and adjust", 8 manual sub-steps) collapses to "run <code>bun tools/new-subsystem.ts &lt;name&gt;</code>". Steps 0-1 (plan calibration, scaffold-time decisions) and 4-6 (tests, fixtures, definition of done) remain — trim step 2/3 to the script + the decision table, pointing at the template's README. Keep the LOC-multiplier warning and the promotion-tracker consult. The doc should get SHORTER.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Rewrite step 2-3 around the script; fold boot conventions into "already in the template — here's what you still decide".</li>
+                <li>Add the template-maintenance rule: convention changes MUST update _template in the same PR (it is the executable contract; verify will force it anyway).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>wc -l docs/new-subsystem.md   # shorter than before
+bun run verify</pre>
+              <p>Expected: doc shrank; every command in it actually runs (execute each verbatim).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No stale "copy from progress" instructions survive.</li>
+                  <li>All commands copy-paste-run clean.</li>
+                  <li>Scaffold-time decision table retained (the judgement steps are the point of the playbook).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-11">
+          <h3>Phase 11 (echo): docs tightening (no restructure)</h3>
+          <p>Final consistency pass over the existing 7+1 docs files + AGENTS.md.</p>
+
+          <article class="task" id="task-11-1">
+            <header>
+              <h3>Task 11.1: sweep docs for post-plan reality</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>AGENTS.md</code>, <code>docs/{forge,rendering,architecture,new-subsystem,verification,design-language}.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150 (mostly edits/deletions)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-10-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none (single-task phase)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Docs were recently restructured (AGENTS.md routing + 7 files) — do NOT restructure again; this is a truth-sync pass. Known stale-after-this-plan items: AGENTS.md + docs/forge.md say "is_dev() auto-detects via __DEV__ global + NODE_ENV" (now: precedence chain, default off, ?debug=1); docs/forge.md promotion tracker (ui kit → 2 consumers; flash/particles bundle row → 4 consumers; fsm.ts → 6 consumers post-shells); docs/architecture.md shell section ("apply to other subsystems only after a third consumer materialises" — now all six ship it); docs/verification.md visual-smoke section gains the ?debug=1-on-live-URL recipe; AGENTS.md status section (phase/date); design-language.md lighting baseline confirmed against landed values.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Grep-driven sweep: "is_dev", "NODE_ENV", "__DEV__", "promotion", "consumers", "third consumer" across AGENTS.md + docs/ — fix or delete every stale claim.</li>
+                <li>Update the promotion tracker counts + the AGENTS.md status section; add the ?debug= recipes where the old auto-detect text lived.</li>
+                <li>Read each doc top-to-bottom once for contradictions with design-language.md; fix on the spot (living-docs rule).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>grep -rn "NODE_ENV !== \|auto-detects" AGENTS.md docs/ | wc -l   # → 0 stale hits
+bun run verify</pre>
+              <p>Expected: no stale is_dev claims; verify green (docs-only).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No file added/removed/renamed under docs/ (no restructure).</li>
+                  <li>Promotion tracker counts match reality (grep FORGE-PROMOTION-CANDIDATE headers and count consumers).</li>
+                  <li>No doc contradicts design-language.md (spot-check font + HUD + juice rules).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+      </section>
+
+      <section id="breaking">
+        <h2>Breaking changes</h2>
+        <ul>
+          <li><strong>BREAKING (forge v0.6.0):</strong> <code>is_dev()</code> default flips from effectively-true-in-browsers to false unless a signal opts in (<code>?debug=1</code> / <code>__DEV__</code> / <code>NODE_ENV=development</code> / localhost). Deployed consumer pages relying on the implicit debug surface lose it — that is the fix. Known consumers to migrate: echo (phase 3), <code>~/dev/coin-collector</code> (out of scope here; flagged for its own bump).</li>
+          <li><strong>BREAKING-VISUAL (forge v0.6.0):</strong> debug stats HUD moves top-left → bottom-left (dev-only surface).</li>
+          <li><strong>Replay fixtures:</strong> 5 fixtures re-recorded (bestiary, dungeon-walk, loot in phase 7; arena, progress in phase 8) — old recordings + hashes invalid by design, each re-recorded exactly once.</li>
+          <li><strong>Behavioural:</strong> all five games now boot to a menu instead of straight into gameplay; progress's dead screen becomes the lost state with a menu loop.</li>
+        </ul>
+      </section>
+
+      <section id="out-of-scope">
+        <h2>Out of scope</h2>
+        <ul>
+          <li>Forge naming renames (noop_source/browser_source, torch_flicker, grid_index_sync_system) — manifest written in task 2.2; renames batch into the v0.6-alignment at echo Phase 8.</li>
+          <li>BootOpts discriminated-union refactor — documented as tiers instead (not cheap; BootOpts is additive opt-ins, not variants).</li>
+          <li>fps-counter fix if root cause is forge-side (task 5.4 routes it to .plans/backlog.md + forge backlog).</li>
+          <li>Bundle-size DCE via --define (option A3) — revisit at forge v1.0 if page weight matters.</li>
+          <li>coin-collector's forge 0.6.0 migration.</li>
+          <li>forge.ui / flash-particles / fsm / AI-bundle promotions — tracker counts updated here; promotion itself stays gated to echo Phase 8 per docs/forge.md.</li>
+          <li>Audio/sound design — audit didn't cover it; belongs to a future juice pass.</li>
+          <li>Continuous-motion variant of _template — cell-step only for now; revisit if boss/main scaffolds hurt.</li>
+          <li>Existing backlog items B1 (headless-pixi helper) and B2 (visual regression harness) — unchanged, still in .plans/backlog.md.</li>
+        </ul>
+      </section>
+
+      <section id="agents-md-updates">
+        <h2>AGENTS.md updates</h2>
+        <p>Written into the project files by the phase verification coders (echo AGENTS.md / docs per the routing rules; forge notes into forge's docs). Audit trail:</p>
+        <ul>
+          <li>(after phase 0) Routing line: read <code>docs/design-language.md</code> before any visual/UI/juice/HUD task — it is the contract phases 4-10 execute against.</li>
+          <li>(after phase 3) Replace the stale "is_dev() auto-detects via __DEV__ global + NODE_ENV" note with the v0.6.0 precedence chain (<code>?debug=1|0</code> &gt; <code>__DEV__</code> &gt; <code>NODE_ENV=development</code> &gt; localhost &gt; off) + the ?debug=1 live-page verification recipe; note debug stats HUD now anchors bottom-left.</li>
+          <li>(after phase 6) Juice convention: decorative effects use tick-seeded module-local rng, never <code>ctx.rng</code>; juice entities stay out of world-hash projections → no re-record. Enforced by adversary checklists.</li>
+          <li>(after phase 7) Shell contract is now repo-standard: menu mandatory, won/lost only where real; game_state_r is snapshotted; the "only after a third consumer" hedge in docs/architecture.md is obsolete.</li>
+          <li>(after phase 8) Spawn-grace convention for combat subsystems: no lethal contact within ~2s of entering playing; grace counts playing-ticks and consumes rng deterministically.</li>
+          <li>(after phase 10) New-subsystem flow: <code>bun tools/new-subsystem.ts &lt;name&gt;</code> copies <code>subsystems/_template</code>; convention changes MUST update _template in the same PR (verify enforces); underscore-prefixed subsystems build+test but never deploy.</li>
+          <li>(forge, after phase 2) Naming convention doc location + the deferred-rename manifest; JSDoc house style (2-3 lines, gotcha pointers).</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,6 +1,8 @@
 # Rendering & UI conventions
 
 > **Read this in full before touching anything visual** — sprites, text, HUD, modals, overlays, lighting, camera, particles, debug fixtures. Every recipe here replaced a shipped bug or a rejected alternative; deviating means re-discovering why.
+>
+> The visual **contract** (palette tokens, font choice, lighting moods, shell screens, HUD placement, juice bar) is `docs/design-language.md` — this file holds the implementation recipes.
 
 ## Quick checklist
 
