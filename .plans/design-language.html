@@ -959,7 +959,7 @@ bun run verify                   # docs-only change; stays green</pre>
           <article class="task" id="task-1-1">
             <header>
               <h3>Task 1.1: pure dev-mode resolver, default-off, ?debug= + localhost signals</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1007,7 +1007,14 @@ bun run verify                   # docs-only change; stays green</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Forge PR: <a href="https://github.com/f0rbit/forge/pull/7">f0rbit/forge#7</a> — branch <code>dev/debug-gate-safe-default</code>, commit <code>79a385e</code>. No version bump; rides with the v0.6.0 release in phase 2.</li>
+                <li><code>resolve_dev_mode(s: DevSignals): boolean</code> pure resolver + typeof-narrowed signal gatherer landed in <code>src/debug/debug.ts</code>; old <code>NODE_ENV !== "production"</code> IIFE deleted, no compat shim. <code>is_dev()</code> signature unchanged; <code>resolve_dev_mode</code> + <code>DevSignals</code> exported from <code>@f0rbit/forge/debug</code>.</li>
+                <li>Tests: <code>test/debug/dev-mode.test.ts</code> — 21-case precedence matrix + 5 <code>is_dev()</code> wrapper tests (26 total, ≥10 required). Named deployed-pages regression case (undefined/undefined/f0rbit.github.io/"" → false), <code>?debug=1</code> on deployed → true, localhost → true, localhost + <code>?debug=0</code> → false, param beats define, define beats node_env, no-location safety. Full suite <code>481 pass / 0 fail</code> across 53 files; <code>tsc --noEmit</code> clean; <code>bun run build</code> clean; <code>check:determinism</code> ok.</li>
+                <li>Adversary checklist: resolver pure (all global reads in the gatherer); shipped-bug combo is a named test case; <code>?debug=0</code> beats localhost (tested); no <code>any</code>, globals narrowed via typeof (values typed <code>unknown</code> pre-narrow); old logic fully deleted; BootOpts.debug override intact — <code>boot()</code> now threads its resolved flag into the default Debug instance + fps meter so <code>debug: true</code> fixtures keep draws/fps on deployed hosts (scope deviation: +<code>src/pixi/index.ts</code>, +<code>src/pixi/render.ts</code> RenderOpts.dev, required by this checklist item).</li>
+                <li>Docs: <code>debug/dev-gating.mdx</code> rewritten (precedence table + <code>?debug=1</code> recipe + fixtures-hard-code-true), <code>surface.mdx</code> + <code>exports.ts</code> + BootOpts.debug JSDoc updated. CHANGELOG entry under <code>0.6.0 (unreleased)</code> marked BREAKING-BEHAVIOUR. Pre-existing (main) docs-site build failure on <code>/autotile/</code> MDX noted in PR — unrelated.</li>
+                <li>Test-env behaviour change (per plan note): <code>NODE_ENV === "test"</code> now falls through to false; bare <code>debug()</code> call sites in forge's own tests fixed to <code>debug({ dev: true })</code> (test/debug.test.ts, test/integration/palette-save.test.ts).</li>
+              </ul>
             </section>
           </article>
         </section>
